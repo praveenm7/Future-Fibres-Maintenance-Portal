@@ -46,7 +46,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <header className="bg-primary text-primary-foreground py-4 px-6 shadow-lg">
         <Link to="/" className="flex items-center gap-3">
           <Wrench className="h-8 w-8" />
-          <h1 className="text-xl font-bold tracking-wide">MAINTENANCE DATABASE</h1>
+          <h1 className="text-xl font-bold tracking-wide">MAINTENANCE PORTAL</h1>
         </Link>
       </header>
 
