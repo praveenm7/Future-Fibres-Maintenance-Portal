@@ -58,18 +58,20 @@ interface InputFieldProps {
   onChange: (value: string) => void;
   type?: string;
   placeholder?: string;
-  className?: string;
-  readOnly?: boolean;
+  id?: string;
+  min?: string;
 }
 
-export function InputField({ 
-  label, 
-  value, 
-  onChange, 
-  type = 'text', 
+export function InputField({
+  label,
+  value,
+  onChange,
+  type = 'text',
   placeholder = '',
   className = '',
-  readOnly = false
+  readOnly = false,
+  id,
+  min
 }: InputFieldProps) {
   return (
     <div className={`flex border border-border ${className}`}>
@@ -78,6 +80,8 @@ export function InputField({
       </div>
       <div className="flex-1 form-input">
         <input
+          id={id}
+          min={min}
           type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}
