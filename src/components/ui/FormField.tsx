@@ -58,6 +58,8 @@ interface InputFieldProps {
   onChange: (value: string) => void;
   type?: string;
   placeholder?: string;
+  className?: string;
+  readOnly?: boolean;
   id?: string;
   min?: string;
 }

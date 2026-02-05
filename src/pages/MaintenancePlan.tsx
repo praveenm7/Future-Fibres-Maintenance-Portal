@@ -57,10 +57,13 @@ export default function MaintenancePlan() {
       setSelectedRowId(item.id);
       setMode('edit');
       setFormData({
+        id: item.id,
+        machineId: item.machineId,
         action: item.action,
         periodicity: item.periodicity,
         timeNeeded: item.timeNeeded,
         maintenanceInCharge: item.maintenanceInCharge,
+        status: item.status,
         month: item.month || 'JANUARY'
       });
     }
@@ -87,7 +90,7 @@ export default function MaintenancePlan() {
         id: crypto.randomUUID(),
         machineId: selectedMachineId,
         ...formData,
-        status: 'PENDING' // Default/Mock status
+        status: 'IDEAL' // Default status
       };
       addMaintenanceAction(newActionItem);
       // Don't fully reset, user might want to add another similar one, but specific request usually implies reset
