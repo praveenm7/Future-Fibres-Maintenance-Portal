@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import { 
-  Settings, 
-  Wrench, 
-  AlertTriangle, 
-  MessageSquare, 
+import {
+  Settings,
+  Wrench,
+  AlertTriangle,
+  MessageSquare,
   Package,
   Users,
   List,
@@ -13,91 +13,131 @@ import {
   FileText,
   Shield
 } from 'lucide-react';
+import { useDashboard } from '@/hooks/useDashboard';
 
 const formItems = [
-  { 
-    path: '/machines', 
-    label: '01-MACHINE MANAGEMENT', 
+  {
+    path: '/machines',
+    label: '01-MACHINE MANAGEMENT',
     description: 'ADD/MODIFY A NEW MACHINE ON THE LIST',
-    icon: Settings 
+    icon: Settings
   },
-  { 
-    path: '/maintenance-plan', 
-    label: '02-MAINTENANCE PLAN CREATION/MODIFICATION', 
+  {
+    path: '/maintenance-plan',
+    label: '02-MAINTENANCE PLAN CREATION/MODIFICATION',
     description: 'SETUP THE MAINTENANCE PLAN FOR A MACHINE',
-    icon: Wrench 
+    icon: Wrench
   },
-  { 
-    path: '/non-conformities', 
-    label: '03-MAINTENANCE NO CONFORMITIES', 
+  {
+    path: '/non-conformities',
+    label: '03-MAINTENANCE NO CONFORMITIES',
     description: 'MANAGE MAINTENANCE NO CONFORMITIES',
-    icon: AlertTriangle 
+    icon: AlertTriangle
   },
-  { 
-    path: '/nc-comments', 
-    label: '04-NC\'S COMMENTS', 
+  {
+    path: '/nc-comments',
+    label: '04-NC\'S COMMENTS',
     description: 'MANAGE COMMENTS FOR EACH NC',
-    icon: MessageSquare 
+    icon: MessageSquare
   },
-  { 
-    path: '/spare-parts', 
-    label: '05-SPARE PARTS', 
+  {
+    path: '/spare-parts',
+    label: '05-SPARE PARTS',
     description: 'MANAGE SPARE PARTS FOR EACH MACHINE',
-    icon: Package 
+    icon: Package
   },
-  { 
-    path: '/authorization-matrix', 
-    label: '06-AUTHORIZATION MATRIX', 
+  {
+    path: '/authorization-matrix',
+    label: '06-AUTHORIZATION MATRIX',
     description: 'MANAGE AUTHORIZATION TOOLING FOR PERSONAL',
-    icon: Users 
+    icon: Users
   },
-  { 
-    path: '/lists', 
-    label: '07-LISTS MODIFICATION', 
+  {
+    path: '/lists',
+    label: '07-LISTS MODIFICATION',
     description: 'MANAGE LISTS',
-    icon: List 
+    icon: List
   },
 ];
 
 const reportItems = [
-  { 
-    path: '/reports/machinery-list', 
-    label: '01-TOOLING & MACHINERY LIST', 
+  {
+    path: '/reports/machinery-list',
+    label: '01-TOOLING & MACHINERY LIST',
     description: 'SHOW THE MAIN LIST OF TOOLING & MACHINERY',
-    icon: LayoutDashboard 
+    icon: LayoutDashboard
   },
-  { 
-    path: '/reports/nc-maintenance', 
-    label: '02-NC\'S MAINTENANCE', 
+  {
+    path: '/reports/nc-maintenance',
+    label: '02-NC\'S MAINTENANCE',
     description: 'SHOW THE MAIN LIST OF MAINTENANCE NC\'S',
-    icon: ClipboardList 
+    icon: ClipboardList
   },
-  { 
-    path: '/reports/maintenance-summary', 
-    label: '03-MAINTENANCE SUMMARY', 
+  {
+    path: '/reports/maintenance-summary',
+    label: '03-MAINTENANCE SUMMARY',
     description: 'SHOW THE SUMMARY OF THE MAINTENANCE PLAN',
-    icon: BarChart3 
+    icon: BarChart3
   },
-  { 
-    path: '/reports/maintenance-plan', 
-    label: '04-MAINTENANCE PLAN', 
+  {
+    path: '/reports/maintenance-plan',
+    label: '04-MAINTENANCE PLAN',
     description: 'SHOW FOR A SPECIFIC MACHINE THE MAINTENANCE PLAN',
-    icon: FileText 
+    icon: FileText
   },
-  { 
-    path: '/reports/authorization', 
-    label: '05-AUTHORIZATION MATRIX', 
+  {
+    path: '/reports/authorization',
+    label: '05-AUTHORIZATION MATRIX',
     description: 'SHOW AUTHORIZATION MACHINE LIST FOR A SPECIFIC USER',
-    icon: Shield 
+    icon: Shield
   },
 ];
 
 export default function Dashboard() {
+  const { useGetStats } = useDashboard();
+  const { data: stats, isLoading: loadingStats } = useGetStats();
+
   return (
     <div className="max-w-5xl mx-auto">
       {/* Header */}
       <div className="page-header mb-8 inline-block">
         MAINTENANCE DATABASE: MENU
+      </div>
+
+      {/* Stats Quick View */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="bg-card border border-border p-4 rounded-lg shadow-sm">
+          <div className="text-xs text-muted-foreground uppercase font-bold mb-1">Total Machines</div>
+          {loadingStats ? (
+            <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+          ) : (
+            <div className="text-2xl font-bold text-primary">{stats?.totalMachines || 0}</div>
+          )}
+        </div>
+        <div className="bg-card border border-border p-4 rounded-lg shadow-sm">
+          <div className="text-xs text-muted-foreground uppercase font-bold mb-1">Active NCs</div>
+          {loadingStats ? (
+            <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+          ) : (
+            <div className="text-2xl font-bold text-destructive">{stats?.activeNCs || 0}</div>
+          )}
+        </div>
+        <div className="bg-card border border-border p-4 rounded-lg shadow-sm">
+          <div className="text-xs text-muted-foreground uppercase font-bold mb-1">Pending Actions</div>
+          {loadingStats ? (
+            <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+          ) : (
+            <div className="text-2xl font-bold text-info">{stats?.pendingActions || 0}</div>
+          )}
+        </div>
+        <div className="bg-card border border-border p-4 rounded-lg shadow-sm">
+          <div className="text-xs text-muted-foreground uppercase font-bold mb-1">Critical Spare Parts</div>
+          {loadingStats ? (
+            <div className="h-8 w-16 bg-muted animate-pulse rounded" />
+          ) : (
+            <div className="text-2xl font-bold text-warning">{stats?.criticalSpareParts || 0}</div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -2,20 +2,22 @@ import { useState } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { DataTable } from '@/components/ui/DataTable';
-import { machines } from '@/data/mockData';
+import { useMachines } from '@/hooks/useMachines';
 import type { Machine } from '@/types/maintenance';
-import { Eye } from 'lucide-react';
+import { Eye, Loader2 } from 'lucide-react';
 
 export default function MachineryListReport() {
+  const { useGetMachines } = useMachines();
+  const { data: machines = [], isLoading } = useGetMachines();
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
 
   const columns = [
-    { 
-      key: 'select', 
+    {
+      key: 'select',
       header: '',
       render: (item: Machine) => (
-        <input 
-          type="checkbox" 
+        <input
+          type="checkbox"
           checked={selectedMachine?.id === item.id}
           onChange={() => setSelectedMachine(selectedMachine?.id === item.id ? null : item)}
           className="h-4 w-4 accent-primary cursor-pointer"
@@ -27,19 +29,28 @@ export default function MachineryListReport() {
     { key: 'area', header: 'AREA' },
     { key: 'manufacturer', header: 'MANUFACTURER' },
     { key: 'model', header: 'MODEL' },
-    { 
-      key: 'permissionRequired', 
+    {
+      key: 'permissionRequired',
       header: 'PERMISSION REQUIRED',
       render: (item: Machine) => item.permissionRequired ? 'Y' : 'N'
     },
     { key: 'authorizationGroup', header: 'AUTHORIZATION GROUP' },
-    { 
-      key: 'maintenanceNeeded', 
+    {
+      key: 'maintenanceNeeded',
       header: 'MAINTENANCE NEEDED',
       render: (item: Machine) => item.maintenanceNeeded ? 'Y' : 'N'
     },
     { key: 'personInCharge', header: 'PERSON IN CHARGE' },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading machinery list...</p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -63,8 +74,8 @@ export default function MachineryListReport() {
             Select machine and press button to see more details
           </div>
 
-          <ActionButton 
-            variant="blue" 
+          <ActionButton
+            variant="blue"
             className="w-full flex items-center justify-center gap-2"
             disabled={!selectedMachine}
           >
@@ -134,9 +145,9 @@ export default function MachineryListReport() {
               <div className="p-3 bg-card">
                 <div className="aspect-video bg-muted rounded flex items-center justify-center border border-border">
                   {selectedMachine.imageUrl ? (
-                    <img 
-                      src={selectedMachine.imageUrl} 
-                      alt="Machine" 
+                    <img
+                      src={selectedMachine.imageUrl}
+                      alt="Machine"
                       className="max-w-full max-h-full object-contain"
                     />
                   ) : (

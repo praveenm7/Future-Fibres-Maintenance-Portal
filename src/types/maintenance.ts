@@ -65,7 +65,10 @@ export interface SparePart {
 
 export interface AuthorizationMatrix {
   id: string;
+  operatorId?: string;
   operatorName: string;
+  email?: string;
+  department?: string;
   updatedDate: string;
   authorizations: Record<string, boolean>;
 }

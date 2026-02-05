@@ -1,27 +1,45 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable } from '@/components/ui/DataTable';
-import { machines, maintenanceActions, spareParts, nonConformities } from '@/data/mockData';
-import type { MaintenanceAction, SparePart, NonConformity } from '@/types/maintenance';
+import { useMachines } from '@/hooks/useMachines';
+import { useMaintenanceActions } from '@/hooks/useMaintenanceActions';
+import { useSpareParts } from '@/hooks/useSpareParts';
+import { useNonConformities } from '@/hooks/useNonConformities';
+import type { MaintenanceAction, SparePart, NonConformity, Machine } from '@/types/maintenance';
+import { Loader2 } from 'lucide-react';
 
 export default function MaintenancePlanReport() {
-  const [selectedMachineId, setSelectedMachineId] = useState(machines[0]?.id || '');
+  const { useGetMachines } = useMachines();
+  const { useGetActions } = useMaintenanceActions();
+  const { useGetParts } = useSpareParts();
+  const { useGetNCs } = useNonConformities();
+
+  const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
+  const [selectedMachineId, setSelectedMachineId] = useState<string>('');
+
+  // Update selected machine ID when machines load
+  useEffect(() => {
+    if (machines.length > 0 && !selectedMachineId) {
+      setSelectedMachineId(machines[0].id);
+    }
+  }, [machines, selectedMachineId]);
+
+  const { data: machineActions = [], isLoading: loadingActions } = useGetActions(selectedMachineId);
+  const { data: machineParts = [], isLoading: loadingParts } = useGetParts(selectedMachineId);
+  const { data: machineNCs = [], isLoading: loadingNCs } = useGetNCs(selectedMachineId);
 
   const selectedMachine = machines.find(m => m.id === selectedMachineId);
-  const machineActions = maintenanceActions.filter(a => a.machineId === selectedMachineId);
-  const machineParts = spareParts.filter(p => p.machineId === selectedMachineId);
-  const machineNCs = nonConformities.filter(nc => nc.machineId === selectedMachineId);
 
   const actionColumns = [
     { key: 'action', header: 'ACTION', className: 'max-w-[300px]' },
     { key: 'periodicity', header: 'PERIODICITY' },
-    { 
-      key: 'timeNeeded', 
+    {
+      key: 'timeNeeded',
       header: 'TIME NEEDED',
       render: (item: MaintenanceAction) => `${item.timeNeeded} min`
     },
-    { 
-      key: 'maintenanceInCharge', 
+    {
+      key: 'maintenanceInCharge',
       header: 'MAINTENANCE IN CHARGE',
       render: (item: MaintenanceAction) => item.maintenanceInCharge ? 'Y' : 'N'
     },
@@ -31,11 +49,11 @@ export default function MaintenancePlanReport() {
     { key: 'description', header: 'DESCRIPTION' },
     { key: 'reference', header: 'REFERENCE' },
     { key: 'quantity', header: 'QUANTITY' },
-    { 
-      key: 'link', 
+    {
+      key: 'link',
       header: 'LINK',
       render: (item: SparePart) => (
-        <a href={`https://${item.link}`} target="_blank" rel="noopener noreferrer" className="text-info hover:underline">
+        <a href={item.link?.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noopener noreferrer" className="text-info hover:underline">
           {item.link}
         </a>
       )
@@ -52,6 +70,15 @@ export default function MaintenancePlanReport() {
     { key: 'category', header: 'CATEGORY', render: (item: NonConformity) => item.category || '-' },
     { key: 'priority', header: 'PRIORITY' },
   ];
+
+  if (loadingMachines) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading maintenance plan data...</p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -74,6 +101,9 @@ export default function MaintenancePlanReport() {
           </select>
           <div className="bg-card px-4 py-2 italic flex-1">
             {selectedMachine?.description}
+            {(loadingActions || loadingParts || loadingNCs) && (
+              <Loader2 className="inline ml-2 h-4 w-4 animate-spin text-muted-foreground" />
+            )}
           </div>
         </div>
 
@@ -118,9 +148,9 @@ export default function MaintenancePlanReport() {
               <div className="p-4 bg-card">
                 <div className="aspect-square bg-muted rounded flex items-center justify-center border border-border">
                   {selectedMachine?.imageUrl ? (
-                    <img 
-                      src={selectedMachine.imageUrl} 
-                      alt="Machine" 
+                    <img
+                      src={selectedMachine.imageUrl}
+                      alt="Machine"
                       className="max-w-full max-h-full object-contain"
                     />
                   ) : (

@@ -3,39 +3,42 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { DataTable } from '@/components/ui/DataTable';
 import { InputField } from '@/components/ui/FormField';
-import { authorizationGroups, areas, machineGroups, machineTypes } from '@/data/mockData';
-import { Plus, Pencil, Trash2, Save, X } from 'lucide-react';
-import { useMaintenance } from '@/context/MaintenanceContext';
+import { Plus, Pencil, Trash2, Save, X, Loader2 } from 'lucide-react';
+import { useListOptions } from '@/hooks/useListOptions';
 import { toast } from 'sonner';
 
-// Define the available lists to modify
-const LIST_TYPES = {
-  'Authorization Groups': authorizationGroups,
-  'Areas': areas,
-  'Machine Groups': machineGroups,
-  'Machine Types': machineTypes,
-};
+// Define the available list types
+const LIST_TYPES = [
+  'Authorization Groups',
+  'Areas',
+  'Machine Groups',
+  'Machine Types',
+];
 
 export default function ListsModification() {
-  const { listOptions, addListOption, updateListOption, deleteListOption } = useMaintenance();
+  const {
+    useGetListOptions,
+    useCreateListOption,
+    useUpdateListOption,
+    useDeleteListOption
+  } = useListOptions();
 
-  const [selectedListType, setSelectedListType] = useState(Object.keys(LIST_TYPES)[0]);
+  const [selectedListType, setSelectedListType] = useState(LIST_TYPES[0]);
+  const { data: dynamicListOptions = [], isLoading: loadingOptions } = useGetListOptions(selectedListType);
+  const createMutation = useCreateListOption();
+  const updateMutation = useUpdateListOption();
+  const deleteMutation = useDeleteListOption();
+
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [mode, setMode] = useState<'view' | 'new' | 'edit'>('view');
   const [newValue, setNewValue] = useState('');
 
-  // Combine static mock data with dynamic context data
-  // Note: For a real app, we'd probably migrate entirely to context, 
-  // but here we mix them to show initial state + user changes.
-  // We wrap static items in objects to match the shape.
-  const staticItems = (LIST_TYPES[selectedListType as keyof typeof LIST_TYPES] || []).map(val => ({
-    id: `static-${val}`,
-    listType: selectedListType,
-    value: val,
-    isStatic: true
-  }));
+  const staticItems: any[] = [];
 
-  const dynamicItems = listOptions.filter(opt => opt.listType === selectedListType);
+  const dynamicItems = dynamicListOptions.map(opt => ({
+    ...opt,
+    isStatic: false
+  }));
 
   const allItems = [...staticItems, ...dynamicItems];
 
@@ -51,48 +54,54 @@ export default function ListsModification() {
     setNewValue(item.value);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!newValue.trim()) {
       toast.error("Value is required");
       return;
     }
 
-    if (mode === 'new') {
-      // Check for duplicates
-      if (allItems.some(i => i.value.toLowerCase() === newValue.toLowerCase())) {
-        toast.error("Item already exists in this list");
-        return;
-      }
+    try {
+      if (mode === 'new') {
+        if (allItems.some(i => i.value.toLowerCase() === newValue.trim().toLowerCase())) {
+          toast.error("Item already exists in this list");
+          return;
+        }
 
-      addListOption({
-        id: crypto.randomUUID(),
-        listType: selectedListType,
-        value: newValue
-      });
-      resetForm();
-    } else if (mode === 'edit' && selectedRowId) {
-      if (selectedRowId.startsWith('static-')) {
-        toast.error("Cannot modify default system items. Create a new one instead.");
-        return;
-      }
+        await createMutation.mutateAsync({
+          listType: selectedListType,
+          value: newValue.trim()
+        });
+        resetForm();
+      } else if (mode === 'edit' && selectedRowId) {
+        if (selectedRowId.startsWith('static-')) {
+          toast.error("Cannot modify system items.");
+          return;
+        }
 
-      const existing = listOptions.find(o => o.id === selectedRowId);
-      if (existing) {
-        updateListOption({ ...existing, value: newValue });
+        await updateMutation.mutateAsync({
+          id: selectedRowId,
+          data: { value: newValue.trim() }
+        });
         resetForm();
       }
+    } catch (error) {
+      // Handled by mutation toast
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (selectedRowId) {
       if (selectedRowId.startsWith('static-')) {
-        toast.error("Cannot delete default system items.");
+        toast.error("Cannot delete system items.");
         return;
       }
       if (confirm("Delete this item?")) {
-        deleteListOption(selectedRowId);
-        resetForm();
+        try {
+          await deleteMutation.mutateAsync(selectedRowId);
+          resetForm();
+        } catch (error) {
+          // Handled by mutation toast
+        }
       }
     }
   };
@@ -112,7 +121,7 @@ export default function ListsModification() {
           <div className="border border-primary rounded overflow-hidden shadow-sm">
             <div className="section-header">Select the List</div>
             <div className="max-h-96 overflow-y-auto bg-card">
-              {Object.keys(LIST_TYPES).map((type) => (
+              {LIST_TYPES.map((type) => (
                 <button
                   key={type}
                   onClick={() => {
@@ -139,13 +148,20 @@ export default function ListsModification() {
             Editing: {selectedListType}
           </div>
 
-          <DataTable
-            columns={columns}
-            data={allItems}
-            keyExtractor={(item) => item.id}
-            onRowClick={handleRowClick}
-            selectedId={selectedRowId || undefined}
-          />
+          {loadingOptions ? (
+            <div className="flex flex-col items-center justify-center p-12 bg-card border border-border rounded">
+              <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
+              <p className="text-sm text-muted-foreground">Loading list items...</p>
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={allItems}
+              keyExtractor={(item) => item.id}
+              onRowClick={handleRowClick}
+              selectedId={selectedRowId || undefined}
+            />
+          )}
 
           {/* Actions */}
           <div className="flex gap-2">
@@ -163,7 +179,7 @@ export default function ListsModification() {
             <ActionButton
               variant="blue"
               className="flex items-center gap-2"
-              disabled={!selectedRowId}
+              disabled={!selectedRowId || updateMutation.isPending}
             >
               <Pencil className="h-4 w-4" />
               {selectedRowId ? 'EDIT ITEM' : 'SELECT TO EDIT'}
@@ -171,10 +187,14 @@ export default function ListsModification() {
             <ActionButton
               variant="red"
               className="flex items-center gap-2"
-              disabled={!selectedRowId}
+              disabled={!selectedRowId || deleteMutation.isPending}
               onClick={handleDelete}
             >
-              <Trash2 className="h-4 w-4" />
+              {deleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
               {selectedRowId ? 'DELETE ITEM' : 'SELECT TO DELETE'}
             </ActionButton>
           </div>
@@ -196,6 +216,7 @@ export default function ListsModification() {
                       value={newValue}
                       onChange={setNewValue}
                       placeholder="Enter value..."
+                      disabled={createMutation.isPending || updateMutation.isPending}
                     />
                     {mode === 'edit' && selectedRowId?.startsWith('static-') && (
                       <p className="text-xs text-destructive mt-1">System items cannot be edited.</p>
@@ -204,9 +225,13 @@ export default function ListsModification() {
                   <ActionButton
                     variant={mode === 'edit' ? 'blue' : 'green'}
                     onClick={handleSave}
-                    disabled={mode === 'edit' && selectedRowId?.startsWith('static-')}
+                    disabled={(mode === 'edit' && selectedRowId?.startsWith('static-')) || createMutation.isPending || updateMutation.isPending}
                   >
-                    {mode === 'edit' ? 'UPDATE' : 'ADD'}
+                    {createMutation.isPending || updateMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      mode === 'edit' ? 'UPDATE' : 'ADD'
+                    )}
                   </ActionButton>
                 </div>
               </div>

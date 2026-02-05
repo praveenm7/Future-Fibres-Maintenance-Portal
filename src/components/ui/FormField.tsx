@@ -26,11 +26,12 @@ interface SelectFieldProps {
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
   className?: string;
+  disabled?: boolean;
 }
 
-export function SelectField({ label, value, onChange, options, className = '' }: SelectFieldProps) {
+export function SelectField({ label, value, onChange, options, className = '', disabled = false }: SelectFieldProps) {
   return (
-    <div className={`flex border border-border ${className}`}>
+    <div className={`flex border border-border ${className} ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
       <div className="form-label min-w-[180px] flex items-center">
         {label}
       </div>
@@ -38,7 +39,8 @@ export function SelectField({ label, value, onChange, options, className = '' }:
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1 bg-transparent border-none focus:outline-none cursor-pointer"
+          disabled={disabled}
+          className="flex-1 bg-transparent border-none focus:outline-none cursor-pointer disabled:cursor-not-allowed"
         >
           {options.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -60,6 +62,7 @@ interface InputFieldProps {
   placeholder?: string;
   className?: string;
   readOnly?: boolean;
+  disabled?: boolean;
   id?: string;
   min?: string;
 }
@@ -72,11 +75,12 @@ export function InputField({
   placeholder = '',
   className = '',
   readOnly = false,
+  disabled = false,
   id,
   min
 }: InputFieldProps) {
   return (
-    <div className={`flex border border-border ${className}`}>
+    <div className={`flex border border-border ${className} ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
       <div className="form-label min-w-[180px] flex items-center">
         {label}
       </div>
@@ -89,7 +93,8 @@ export function InputField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           readOnly={readOnly}
-          className="w-full bg-transparent border-none focus:outline-none"
+          disabled={disabled}
+          className="w-full bg-transparent border-none focus:outline-none disabled:cursor-not-allowed"
         />
       </div>
     </div>
@@ -101,11 +106,12 @@ interface CheckboxFieldProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   className?: string;
+  disabled?: boolean;
 }
 
-export function CheckboxField({ label, checked, onChange, className = '' }: CheckboxFieldProps) {
+export function CheckboxField({ label, checked, onChange, className = '', disabled = false }: CheckboxFieldProps) {
   return (
-    <div className={`flex border border-border ${className}`}>
+    <div className={`flex border border-border ${className} ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
       <div className="form-label min-w-[180px] flex items-center">
         {label}
       </div>
@@ -115,7 +121,8 @@ export function CheckboxField({ label, checked, onChange, className = '' }: Chec
           type="checkbox"
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
-          className="h-5 w-5 accent-primary cursor-pointer"
+          disabled={disabled}
+          className="h-5 w-5 accent-primary cursor-pointer disabled:cursor-not-allowed"
         />
       </div>
     </div>

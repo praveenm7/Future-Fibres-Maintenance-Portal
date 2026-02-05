@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { FormField, SelectField, InputField, CheckboxField } from '@/components/ui/FormField';
-import { machineTypes, machineGroups, areas } from '@/data/mockData';
 import type { Machine } from '@/types/maintenance';
-import { Eye, Upload, Printer, FileText, BookOpen, Save, Trash, Plus, RotateCcw } from 'lucide-react';
-import { useMaintenance } from '@/context/MaintenanceContext';
+import { Eye, Upload, Printer, FileText, BookOpen, Save, Trash, Plus, RotateCcw, Loader2 } from 'lucide-react';
+import { useMachines } from '@/hooks/useMachines';
+import { useListOptions } from '@/hooks/useListOptions';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -36,7 +36,21 @@ type Mode = 'new' | 'modify' | 'delete';
 
 export default function MachineManagement() {
   const navigate = useNavigate();
-  const { machines, addMachine, updateMachine, deleteMachine } = useMaintenance();
+  const {
+    useGetMachines,
+    useCreateMachine,
+    useUpdateMachine,
+    useDeleteMachine
+  } = useMachines();
+  const { useGetListOptions } = useListOptions();
+
+  const { data: machines = [], isLoading: loadingMachines, isError } = useGetMachines();
+  const { data: typeOptions = [] } = useGetListOptions('Machine Types');
+  const { data: groupOptions = [] } = useGetListOptions('Machine Groups');
+  const { data: areaOptions = [] } = useGetListOptions('Areas');
+  const createMachineMutation = useCreateMachine();
+  const updateMachineMutation = useUpdateMachine();
+  const deleteMachineMutation = useDeleteMachine();
 
   const [mode, setMode] = useState<Mode>('new');
   const [selectedMachineId, setSelectedMachineId] = useState<string>('');
@@ -81,44 +95,71 @@ export default function MachineManagement() {
     return `${typeNum}-${groupNum}-${seq}`;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.description) {
       toast.error("Description is required");
       return;
     }
 
-    if (mode === 'new') {
-      const newMachine: Machine = {
-        ...formData,
-        id: crypto.randomUUID(),
-        finalCode: generateFinalCode(),
-      };
-      addMachine(newMachine);
-      setFormData({ ...emptyMachine }); // Reset after add
-    } else if (mode === 'modify') {
-      updateMachine(formData);
+    try {
+      if (mode === 'new') {
+        const newMachine = {
+          ...formData,
+          finalCode: generateFinalCode(),
+        };
+        await createMachineMutation.mutateAsync(newMachine);
+        setFormData({ ...emptyMachine }); // Reset after add
+      } else if (mode === 'modify') {
+        await updateMachineMutation.mutateAsync({
+          id: selectedMachineId,
+          data: formData
+        });
+      }
+    } catch (error) {
+      // Error handled by mutation toast
     }
   };
 
-  const handleDeleteAction = () => {
+  const handleDeleteAction = async () => {
     if (selectedMachineId) {
       if (confirm(`Are you sure you want to delete ${formData.description}?`)) {
-        deleteMachine(selectedMachineId);
-        // Reset selection
-        setSelectedMachineId('');
-        setFormData({ ...emptyMachine });
+        try {
+          await deleteMachineMutation.mutateAsync(selectedMachineId);
+          // Reset selection
+          setSelectedMachineId('');
+          setFormData({ ...emptyMachine });
 
-        // If no machines left, switch to new mode
-        if (machines.length <= 1) {
-          handleSetMode('new');
-        } else {
-          // Try to select the next available one or just clear
-          const remaining = machines.filter(m => m.id !== selectedMachineId);
-          if (remaining.length > 0) handleSelectMachine(remaining[0].id);
+          // If no machines left, switch to new mode
+          if (machines.length <= 1) {
+            handleSetMode('new');
+          }
+        } catch (error) {
+          // Error handled by mutation toast
         }
       }
     }
   };
+
+  if (loadingMachines) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading machines from database...</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
+        <RotateCcw className="h-8 w-8 text-destructive mb-4" />
+        <p className="text-destructive font-medium">Failed to load machines</p>
+        <ActionButton variant="blue" onClick={() => window.location.reload()} className="mt-4">
+          RETRY
+        </ActionButton>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -203,13 +244,13 @@ export default function MachineManagement() {
                 label="SELECT TYPE"
                 value={formData.type}
                 onChange={(v) => handleInputChange('type', v)}
-                options={machineTypes.map(t => ({ value: t, label: t }))}
+                options={typeOptions.map(t => ({ value: t.value, label: t.value }))}
               />
               <SelectField
                 label="SELECT GROUP"
                 value={formData.group}
                 onChange={(v) => handleInputChange('group', v)}
-                options={machineGroups.map(g => ({ value: g, label: g }))}
+                options={groupOptions.map(g => ({ value: g.value, label: g.value }))}
               />
               <FormField label="FINAL CODE">
                 <span className="font-mono font-bold text-primary text-lg">
@@ -253,7 +294,7 @@ export default function MachineManagement() {
                 label="AREA"
                 value={formData.area}
                 onChange={(v) => handleInputChange('area', v)}
-                options={areas.map(a => ({ value: a, label: a }))}
+                options={areaOptions.map(a => ({ value: a.value, label: a.value }))}
               />
               <InputField
                 label="MANUFACTURER"
@@ -362,9 +403,13 @@ export default function MachineManagement() {
                 variant="red"
                 className="flex-1 shadow-md hover:shadow-lg transition-all animate-in zoom-in duration-300"
                 onClick={handleDeleteAction}
-                disabled={!selectedMachineId}
+                disabled={!selectedMachineId || deleteMachineMutation.isPending}
               >
-                <Trash className="h-4 w-4 mr-2" />
+                {deleteMachineMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash className="h-4 w-4 mr-2" />
+                )}
                 DELETE
               </ActionButton>
             ) : (
@@ -372,8 +417,13 @@ export default function MachineManagement() {
                 variant="green"
                 className="flex-1 shadow-md hover:shadow-lg transition-all"
                 onClick={handleSave}
+                disabled={createMachineMutation.isPending || updateMachineMutation.isPending}
               >
-                <Save className="h-4 w-4 mr-2" />
+                {createMachineMutation.isPending || updateMachineMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
                 SAVE
               </ActionButton>
             )}
@@ -382,6 +432,7 @@ export default function MachineManagement() {
               variant="red"
               className="flex-1 shadow-md hover:shadow-lg transition-all"
               onClick={() => handleSetMode('new')}
+              disabled={createMachineMutation.isPending || updateMachineMutation.isPending || deleteMachineMutation.isPending}
             >
               <RotateCcw className="h-4 w-4 mr-2" />
               CANCEL
@@ -391,4 +442,9 @@ export default function MachineManagement() {
       </div>
     </div>
   );
+}
+
+// Helper to wrap the component if error occurs
+export function MachineManagementWithErrorBoundary() {
+  return <MachineManagement />;
 }

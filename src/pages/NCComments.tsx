@@ -4,20 +4,37 @@ import { ActionButton } from '@/components/ui/ActionButton';
 import { DataTable } from '@/components/ui/DataTable';
 import { InputField } from '@/components/ui/FormField';
 import type { NCComment } from '@/types/maintenance';
-import { Plus, Pencil, Trash2, Save, X } from 'lucide-react';
-import { useMaintenance } from '@/context/MaintenanceContext';
+import { Plus, Pencil, Trash2, Save, X, Loader2, RotateCcw } from 'lucide-react';
+import { useMachines } from '@/hooks/useMachines';
+import { useNonConformities } from '@/hooks/useNonConformities';
 import { toast } from 'sonner';
 
 export default function NCComments() {
-  const { machines, nonConformities, ncComments, addNCComment, updateNCComment, deleteNCComment } = useMaintenance();
+  const { useGetMachines } = useMachines();
+  const {
+    useGetNCs,
+    useGetNCComments,
+    useAddComment,
+    useUpdateComment,
+    useDeleteComment
+  } = useNonConformities();
+
+  const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
+  const { data: nonConformities = [], isLoading: loadingNCs } = useGetNCs();
 
   const [selectedNCId, setSelectedNCId] = useState('');
+
   // Auto-select first NC
   useEffect(() => {
     if (nonConformities.length > 0 && !selectedNCId) {
       setSelectedNCId(nonConformities[0].id);
     }
-  }, [nonConformities]);
+  }, [nonConformities, selectedNCId]);
+
+  const { data: comments = [], isLoading: loadingComments } = useGetNCComments(selectedNCId);
+  const addMutation = useAddComment();
+  const updateMutation = useUpdateComment();
+  const deleteMutation = useDeleteComment();
 
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [mode, setMode] = useState<'new' | 'edit'>('new');
@@ -25,12 +42,11 @@ export default function NCComments() {
   const [formData, setFormData] = useState({
     date: new Date().toLocaleDateString('en-GB'),
     comment: '',
-    operator: 'FERNANDO' // Default user for now as auth usage wasn't specified
+    operator: 'FERNANDO' // Default user
   });
 
   const selectedNC = nonConformities.find(nc => nc.id === selectedNCId);
   const selectedMachine = machines.find(m => m.id === selectedNC?.machineId);
-  const comments = ncComments.filter(c => c.ncId === selectedNCId);
 
   const resetForm = () => {
     setMode('new');
@@ -56,41 +72,56 @@ export default function NCComments() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.comment) {
       toast.error("Comment is required");
       return;
     }
 
-    if (mode === 'new') {
-      if (!selectedNCId) {
-        toast.error("No NC Selected");
-        return;
-      }
-      const newComment: NCComment = {
-        id: crypto.randomUUID(),
-        ncId: selectedNCId,
-        ...formData
-      };
-      addNCComment(newComment);
-      resetForm();
-    } else if (mode === 'edit' && selectedRowId) {
-      const existing = ncComments.find(c => c.id === selectedRowId);
-      if (existing) {
-        updateNCComment({ ...existing, ...formData });
+    try {
+      if (mode === 'new') {
+        if (!selectedNCId) {
+          toast.error("No NC Selected");
+          return;
+        }
+        await addMutation.mutateAsync({
+          ncId: selectedNCId,
+          ...formData
+        });
         resetForm();
+      } else if (mode === 'edit' && selectedRowId) {
+        await updateMutation.mutateAsync({
+          id: selectedRowId,
+          data: formData
+        });
+        resetForm();
+      }
+    } catch (error) {
+      // Handled by mutation toast
+    }
+  };
+
+  const handleDelete = async () => {
+    if (selectedRowId) {
+      if (confirm("Delete this comment?")) {
+        try {
+          await deleteMutation.mutateAsync(selectedRowId);
+          resetForm();
+        } catch (error) {
+          // Handled by mutation toast
+        }
       }
     }
   };
 
-  const handleDelete = () => {
-    if (selectedRowId) {
-      if (confirm("Delete this comment?")) {
-        deleteNCComment(selectedRowId);
-        resetForm();
-      }
-    }
-  };
+  if (loadingMachines || loadingNCs) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading NC data...</p>
+      </div>
+    );
+  }
 
   const columns = [
     { key: 'date', header: 'DATE' },
@@ -129,13 +160,20 @@ export default function NCComments() {
         </div>
 
         {/* Comments Table */}
-        <DataTable
-          columns={columns}
-          data={comments}
-          keyExtractor={(item) => item.id}
-          onRowClick={handleRowClick}
-          selectedId={selectedRowId || undefined}
-        />
+        {loadingComments ? (
+          <div className="flex flex-col items-center justify-center p-12 bg-card border border-border rounded">
+            <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
+            <p className="text-sm text-muted-foreground">Loading comments...</p>
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={comments}
+            keyExtractor={(item) => item.id}
+            onRowClick={handleRowClick}
+            selectedId={selectedRowId || undefined}
+          />
+        )}
 
         {/* Table Actions */}
         <div className="flex gap-2">
@@ -151,7 +189,11 @@ export default function NCComments() {
           <ActionButton
             variant="blue"
             className="flex items-center gap-2"
-            disabled={!selectedRowId}
+            disabled={!selectedRowId || updateMutation.isPending}
+            onClick={() => {
+              const input = document.getElementById('comment-input');
+              if (input) input.focus();
+            }}
           >
             <Pencil className="h-4 w-4" />
             {selectedRowId ? 'EDIT SELECTED' : 'SELECT TO EDIT'}
@@ -159,10 +201,14 @@ export default function NCComments() {
           <ActionButton
             variant="red"
             className="flex items-center gap-2"
-            disabled={!selectedRowId}
+            disabled={!selectedRowId || deleteMutation.isPending}
             onClick={handleDelete}
           >
-            <Trash2 className="h-4 w-4" />
+            {deleteMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
             {selectedRowId ? 'DELETE SELECTED' : 'DELETE LINE'}
           </ActionButton>
         </div>
@@ -189,13 +235,16 @@ export default function NCComments() {
                 value={formData.date}
                 onChange={(v) => setFormData(prev => ({ ...prev, date: v }))}
                 placeholder="DD/MM/YYYY"
+                disabled={addMutation.isPending || updateMutation.isPending}
               />
               <div className="md:col-span-2">
                 <InputField
+                  id="comment-input"
                   label="COMMENT"
                   value={formData.comment}
                   onChange={(v) => setFormData(prev => ({ ...prev, comment: v }))}
                   placeholder="Enter your comment..."
+                  disabled={addMutation.isPending || updateMutation.isPending}
                 />
               </div>
             </div>
@@ -204,8 +253,13 @@ export default function NCComments() {
               <ActionButton
                 variant={mode === 'edit' ? 'blue' : 'green'}
                 onClick={handleSave}
+                disabled={addMutation.isPending || updateMutation.isPending}
               >
-                {mode === 'edit' ? <Save className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                {addMutation.isPending || updateMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  mode === 'edit' ? <Save className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />
+                )}
                 {mode === 'edit' ? 'UPDATE LINE' : 'ADD LINE'}
               </ActionButton>
             </div>

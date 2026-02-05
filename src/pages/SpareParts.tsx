@@ -4,14 +4,28 @@ import { ActionButton } from '@/components/ui/ActionButton';
 import { DataTable } from '@/components/ui/DataTable';
 import { InputField } from '@/components/ui/FormField';
 import type { SparePart } from '@/types/maintenance';
-import { Plus, Pencil, Trash2, ExternalLink, Save, X } from 'lucide-react';
-import { useMaintenance } from '@/context/MaintenanceContext';
+import { Plus, Pencil, Trash2, ExternalLink, Save, X, Loader2, RotateCcw } from 'lucide-react';
+import { useMachines } from '@/hooks/useMachines';
+import { useSpareParts } from '@/hooks/useSpareParts';
 import { toast } from 'sonner';
 
 export default function SpareParts() {
-  const { machines, spareParts, addSparePart, updateSparePart, deleteSparePart } = useMaintenance();
+  const { useGetMachines } = useMachines();
+  const {
+    useGetParts,
+    useCreatePart,
+    useUpdatePart,
+    useDeletePart
+  } = useSpareParts();
 
+  const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
   const [selectedMachineId, setSelectedMachineId] = useState('');
+
+  const { data: machineParts = [], isLoading: loadingParts } = useGetParts(selectedMachineId);
+  const createMutation = useCreatePart();
+  const updateMutation = useUpdatePart();
+  const deleteMutation = useDeletePart();
+
   useEffect(() => {
     if (machines.length > 0 && !selectedMachineId) {
       setSelectedMachineId(machines[0].id);
@@ -28,7 +42,6 @@ export default function SpareParts() {
   });
 
   const selectedMachine = machines.find(m => m.id === selectedMachineId);
-  const machineParts = spareParts.filter(p => p.machineId === selectedMachineId);
 
   const resetForm = () => {
     setMode('new');
@@ -56,41 +69,56 @@ export default function SpareParts() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!newPart.description) {
       toast.error("Description is required");
       return;
     }
 
-    if (mode === 'new') {
-      if (!selectedMachineId) {
-        toast.error("Select a machine first");
-        return;
-      }
-      const part: SparePart = {
-        id: crypto.randomUUID(),
-        machineId: selectedMachineId,
-        ...newPart
-      };
-      addSparePart(part);
-      resetForm();
-    } else if (mode === 'edit' && selectedRowId) {
-      const existing = spareParts.find(p => p.id === selectedRowId);
-      if (existing) {
-        updateSparePart({ ...existing, ...newPart });
+    try {
+      if (mode === 'new') {
+        if (!selectedMachineId) {
+          toast.error("Select a machine first");
+          return;
+        }
+        await createMutation.mutateAsync({
+          machineId: selectedMachineId,
+          ...newPart
+        });
         resetForm();
+      } else if (mode === 'edit' && selectedRowId) {
+        await updateMutation.mutateAsync({
+          id: selectedRowId,
+          data: newPart
+        });
+        resetForm();
+      }
+    } catch (error) {
+      // Handled by mutation toast
+    }
+  };
+
+  const handleDelete = async () => {
+    if (selectedRowId) {
+      if (confirm("Delete this spare part?")) {
+        try {
+          await deleteMutation.mutateAsync(selectedRowId);
+          resetForm();
+        } catch (error) {
+          // Handled by mutation toast
+        }
       }
     }
   };
 
-  const handleDelete = () => {
-    if (selectedRowId) {
-      if (confirm("Delete this spare part?")) {
-        deleteSparePart(selectedRowId);
-        resetForm();
-      }
-    }
-  };
+  if (loadingMachines) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading machines...</p>
+      </div>
+    );
+  }
 
   const columns = [
     { key: 'description', header: 'DESCRIPTION' },
@@ -142,13 +170,20 @@ export default function SpareParts() {
         </div>
 
         {/* Spare Parts Table */}
-        <DataTable
-          columns={columns}
-          data={machineParts}
-          keyExtractor={(item) => item.id}
-          onRowClick={handleRowClick}
-          selectedId={selectedRowId || undefined}
-        />
+        {loadingParts ? (
+          <div className="flex flex-col items-center justify-center p-12 bg-card border border-border rounded">
+            <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
+            <p className="text-sm text-muted-foreground">Loading spare parts...</p>
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={machineParts}
+            keyExtractor={(item) => item.id}
+            onRowClick={handleRowClick}
+            selectedId={selectedRowId || undefined}
+          />
+        )}
 
         {/* Table Actions */}
         <div className="flex gap-2">
@@ -164,7 +199,11 @@ export default function SpareParts() {
           <ActionButton
             variant="blue"
             className="flex items-center gap-2"
-            disabled={!selectedRowId}
+            disabled={!selectedRowId || updateMutation.isPending}
+            onClick={() => {
+              const input = document.getElementById('part-description');
+              if (input) input.focus();
+            }}
           >
             <Pencil className="h-4 w-4" />
             {selectedRowId ? 'EDIT SELECTED' : 'SELECT TO EDIT'}
@@ -172,10 +211,14 @@ export default function SpareParts() {
           <ActionButton
             variant="red"
             className="flex items-center gap-2"
-            disabled={!selectedRowId}
+            disabled={!selectedRowId || deleteMutation.isPending}
             onClick={handleDelete}
           >
-            <Trash2 className="h-4 w-4" />
+            {deleteMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
             {selectedRowId ? 'DELETE SELECTED' : 'DELETE LINE'}
           </ActionButton>
         </div>
@@ -193,16 +236,19 @@ export default function SpareParts() {
           <div className="p-4 bg-card">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <InputField
+                id="part-description"
                 label="DESCRIPTION"
                 value={newPart.description}
                 onChange={(v) => setNewPart(prev => ({ ...prev, description: v }))}
                 placeholder="Part name..."
+                disabled={createMutation.isPending || updateMutation.isPending}
               />
               <InputField
                 label="REFERENCE"
                 value={newPart.reference}
                 onChange={(v) => setNewPart(prev => ({ ...prev, reference: v }))}
                 placeholder="REF0000"
+                disabled={createMutation.isPending || updateMutation.isPending}
               />
               <InputField
                 label="QUANTITY"
@@ -210,12 +256,14 @@ export default function SpareParts() {
                 onChange={(v) => setNewPart(prev => ({ ...prev, quantity: parseInt(v) || 0 }))}
                 type="number"
                 min="0"
+                disabled={createMutation.isPending || updateMutation.isPending}
               />
               <InputField
                 label="LINK"
                 value={newPart.link}
                 onChange={(v) => setNewPart(prev => ({ ...prev, link: v }))}
                 placeholder="www.example.com"
+                disabled={createMutation.isPending || updateMutation.isPending}
               />
             </div>
 
@@ -223,8 +271,13 @@ export default function SpareParts() {
               <ActionButton
                 variant={mode === 'edit' ? 'blue' : 'green'}
                 onClick={handleSave}
+                disabled={createMutation.isPending || updateMutation.isPending}
               >
-                {mode === 'edit' ? <Save className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                {createMutation.isPending || updateMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  mode === 'edit' ? <Save className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />
+                )}
                 {mode === 'edit' ? 'UPDATE LINE' : 'ADD LINE'}
               </ActionButton>
             </div>

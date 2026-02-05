@@ -1,24 +1,32 @@
 import { useState } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { DataTable } from '@/components/ui/DataTable';
-import { machines, nonConformities, ncComments } from '@/data/mockData';
-import type { NonConformity } from '@/types/maintenance';
+import { useNonConformities } from '@/hooks/useNonConformities';
+import { useMachines } from '@/hooks/useMachines';
+import type { NonConformity, Machine } from '@/types/maintenance';
+import { Loader2 } from 'lucide-react';
 
 export default function NCMaintenanceReport() {
+  const { useGetNCs, useGetNCComments } = useNonConformities();
+  const { useGetMachines } = useMachines();
+
+  const { data: nonConformities = [], isLoading: loadingNCs } = useGetNCs();
+  const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
+
   const [selectedNC, setSelectedNC] = useState<NonConformity | null>(null);
+  const { data: comments = [], isLoading: loadingComments } = useGetNCComments(selectedNC?.id || '');
 
   const selectedMachine = machines.find(m => m.id === selectedNC?.machineId);
-  const comments = ncComments.filter(c => c.ncId === selectedNC?.id);
 
   const columns = [
     { key: 'ncCode', header: 'NC CODE' },
-    { 
-      key: 'machineCode', 
+    {
+      key: 'machineCode',
       header: 'MACHINE CODE',
       render: (item: NonConformity) => machines.find(m => m.id === item.machineId)?.finalCode
     },
-    { 
-      key: 'description', 
+    {
+      key: 'description',
       header: 'DESCRIPTION',
       render: (item: NonConformity) => machines.find(m => m.id === item.machineId)?.description
     },
@@ -36,6 +44,15 @@ export default function NCMaintenanceReport() {
     { key: 'comment', header: 'COMMENT' },
   ];
 
+  if (loadingNCs || loadingMachines) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading NC maintenance report...</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <PageHeader title="02-NC'S MAINTENANCE" />
@@ -47,7 +64,7 @@ export default function NCMaintenanceReport() {
             columns={columns}
             data={nonConformities}
             keyExtractor={(item) => item.id}
-            onRowClick={(item) => setSelectedNC(item)}
+            onRowClick={(item) => setSelectedNC(item as NonConformity)}
             selectedId={selectedNC?.id}
           />
         </div>
@@ -81,7 +98,11 @@ export default function NCMaintenanceReport() {
               <div className="border border-primary rounded overflow-hidden">
                 <div className="section-header">Maintenance Comments</div>
                 <div className="p-2 bg-card">
-                  {comments.length > 0 ? (
+                  {loadingComments ? (
+                    <div className="flex justify-center p-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : comments.length > 0 ? (
                     <DataTable
                       columns={commentColumns}
                       data={comments}

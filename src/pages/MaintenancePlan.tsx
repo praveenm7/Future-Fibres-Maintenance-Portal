@@ -3,10 +3,11 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { DataTable } from '@/components/ui/DataTable';
 import { SelectField, InputField, CheckboxField } from '@/components/ui/FormField';
-import { periodicities } from '@/data/mockData';
 import type { MaintenanceAction } from '@/types/maintenance';
-import { Plus, Pencil, Trash2, Save, X } from 'lucide-react';
-import { useMaintenance } from '@/context/MaintenanceContext'; // Use context
+import { Plus, Pencil, Trash2, Save, X, Loader2, RotateCcw } from 'lucide-react';
+import { useMachines } from '@/hooks/useMachines';
+import { useMaintenanceActions } from '@/hooks/useMaintenanceActions';
+import { useListOptions } from '@/hooks/useListOptions';
 import { toast } from 'sonner';
 
 const months = [
@@ -26,10 +27,24 @@ const emptyAction: MaintenanceAction = {
 };
 
 export default function MaintenancePlan() {
-  const { machines, maintenanceActions, addMaintenanceAction, updateMaintenanceAction, deleteMaintenanceAction } = useMaintenance();
+  const { useGetMachines } = useMachines();
+  const {
+    useGetActions,
+    useCreateAction,
+    useUpdateAction,
+    useDeleteAction
+  } = useMaintenanceActions();
+  const { useGetListOptions } = useListOptions();
 
-  // Default to first machine if available
+  // Data Fetching
+  const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
   const [selectedMachineId, setSelectedMachineId] = useState('');
+
+  const { data: machineActions = [], isLoading: loadingActions } = useGetActions(selectedMachineId);
+  const { data: periodicityOptions = [] } = useGetListOptions('Periodicities');
+  const createMutation = useCreateAction();
+  const updateMutation = useUpdateAction();
+  const deleteMutation = useDeleteAction();
 
   useEffect(() => {
     if (machines.length > 0 && !selectedMachineId) {
@@ -45,8 +60,6 @@ export default function MaintenancePlan() {
   const [formData, setFormData] = useState(emptyAction);
 
   const selectedMachine = machines.find(m => m.id === selectedMachineId);
-  // Filter actions by selected machine
-  const machineActions = maintenanceActions.filter(a => a.machineId === selectedMachineId);
 
   // When row selected, populate form
   const handleRowClick = (item: MaintenanceAction) => {
@@ -75,49 +88,57 @@ export default function MaintenancePlan() {
     setFormData(emptyAction);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.action) {
       toast.error("Action description is required");
       return;
     }
 
-    if (mode === 'new') {
-      if (!selectedMachineId) {
-        toast.error("No machine selected");
-        return;
-      }
-      const newActionItem: MaintenanceAction = {
-        id: crypto.randomUUID(),
-        machineId: selectedMachineId,
-        ...formData,
-        status: 'IDEAL' // Default status
-      };
-      addMaintenanceAction(newActionItem);
-      // Don't fully reset, user might want to add another similar one, but specific request usually implies reset
-      setFormData(prev => ({ ...prev, action: '' }));
-      toast.success("Added new action");
-    } else if (mode === 'edit' && selectedRowId) {
-      // Find existing to preserve ID and MachineID
-      const existing = maintenanceActions.find(a => a.id === selectedRowId);
-      if (existing) {
-        const updated: MaintenanceAction = {
-          ...existing,
-          ...formData
-        };
-        updateMaintenanceAction(updated);
+    try {
+      if (mode === 'new') {
+        if (!selectedMachineId) {
+          toast.error("No machine selected");
+          return;
+        }
+        await createMutation.mutateAsync({
+          ...formData,
+          machineId: selectedMachineId,
+          status: 'IDEAL'
+        });
+        setFormData(prev => ({ ...prev, action: '' }));
+      } else if (mode === 'edit' && selectedRowId) {
+        await updateMutation.mutateAsync({
+          id: selectedRowId,
+          data: formData
+        });
         resetForm();
+      }
+    } catch (error) {
+      // Handled by mutation toast
+    }
+  };
+
+  const handleDelete = async () => {
+    if (selectedRowId) {
+      if (confirm("Are you sure you want to delete this line?")) {
+        try {
+          await deleteMutation.mutateAsync(selectedRowId);
+          resetForm();
+        } catch (error) {
+          // Handled by mutation toast
+        }
       }
     }
   };
 
-  const handleDelete = () => {
-    if (selectedRowId) {
-      if (confirm("Are you sure you want to delete this line?")) {
-        deleteMaintenanceAction(selectedRowId);
-        resetForm();
-      }
-    }
-  };
+  if (loadingMachines) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading machines...</p>
+      </div>
+    );
+  }
 
   const columns = [
     {
@@ -170,13 +191,20 @@ export default function MaintenancePlan() {
           </div>
 
           {/* Actions Table */}
-          <DataTable
-            columns={columns}
-            data={machineActions}
-            keyExtractor={(item) => item.id}
-            onRowClick={handleRowClick}
-            selectedId={selectedRowId || undefined}
-          />
+          {loadingActions ? (
+            <div className="flex flex-col items-center justify-center p-12 bg-card border border-border rounded">
+              <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
+              <p className="text-sm text-muted-foreground">Loading maintenance actions...</p>
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              data={machineActions}
+              keyExtractor={(item) => item.id}
+              onRowClick={handleRowClick}
+              selectedId={selectedRowId || undefined}
+            />
+          )}
 
           {/* Table Actions */}
           <div className="flex gap-2">
@@ -184,7 +212,7 @@ export default function MaintenancePlan() {
               variant="green"
               className="flex items-center gap-2"
               onClick={resetForm}
-              disabled={mode === 'new' && !selectedRowId} // "Add Mode" is default logic
+              disabled={mode === 'new' && !selectedRowId}
             >
               <Plus className="h-4 w-4" />
               ADD NEW LINE
@@ -193,9 +221,8 @@ export default function MaintenancePlan() {
             <ActionButton
               variant="blue"
               className="flex items-center gap-2"
-              disabled={!selectedRowId}
+              disabled={!selectedRowId || updateMutation.isPending}
               onClick={() => {
-                // Focus logic
                 const input = document.getElementById('action-input');
                 if (input) input.focus();
               }}
@@ -207,10 +234,14 @@ export default function MaintenancePlan() {
             <ActionButton
               variant="red"
               className="flex-1 flex items-center justify-center gap-2 max-w-[200px]"
-              disabled={!selectedRowId}
+              disabled={!selectedRowId || deleteMutation.isPending}
               onClick={handleDelete}
             >
-              <Trash2 className="h-4 w-4" />
+              {deleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
               {selectedRowId ? 'DELETE SELECTED' : 'DELETE LINE'}
             </ActionButton>
           </div>
@@ -240,12 +271,14 @@ export default function MaintenancePlan() {
                   value={formData.action}
                   onChange={(v) => setFormData(prev => ({ ...prev, action: v }))}
                   placeholder="Enter action description..."
+                  disabled={createMutation.isPending || updateMutation.isPending}
                 />
                 <SelectField
                   label="PERIODICITY"
                   value={formData.periodicity}
                   onChange={(v) => setFormData(prev => ({ ...prev, periodicity: v as any }))}
-                  options={periodicities.map(p => ({ value: p, label: p }))}
+                  options={periodicityOptions.map(p => ({ value: p.value, label: p.value }))}
+                  disabled={createMutation.isPending || updateMutation.isPending}
                 />
               </div>
 
@@ -256,17 +289,20 @@ export default function MaintenancePlan() {
                   onChange={(v) => setFormData(prev => ({ ...prev, timeNeeded: parseInt(v) || 0 }))}
                   type="number"
                   min="0"
+                  disabled={createMutation.isPending || updateMutation.isPending}
                 />
                 <CheckboxField
                   label="MAINT. IN CHARGE"
                   checked={formData.maintenanceInCharge}
                   onChange={(v) => setFormData(prev => ({ ...prev, maintenanceInCharge: v }))}
+                  disabled={createMutation.isPending || updateMutation.isPending}
                 />
                 <SelectField
                   label="MONTH"
                   value={formData.month}
                   onChange={(v) => setFormData(prev => ({ ...prev, month: v }))}
                   options={months.map(m => ({ value: m, label: m }))}
+                  disabled={createMutation.isPending || updateMutation.isPending}
                 />
               </div>
 
@@ -275,8 +311,13 @@ export default function MaintenancePlan() {
                   variant={mode === 'edit' ? 'blue' : 'green'}
                   className="w-full md:w-auto min-w-[150px]"
                   onClick={handleSave}
+                  disabled={createMutation.isPending || updateMutation.isPending}
                 >
-                  {mode === 'edit' ? <Save className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                  {createMutation.isPending || updateMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    mode === 'edit' ? <Save className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />
+                  )}
                   {mode === 'edit' ? 'UPDATE LINE' : 'ADD LINE'}
                 </ActionButton>
               </div>

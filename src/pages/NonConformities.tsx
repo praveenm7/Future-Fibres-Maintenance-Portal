@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { FormField, SelectField, InputField } from '@/components/ui/FormField';
-import { statuses, priorities } from '@/data/mockData';
 import type { NonConformity } from '@/types/maintenance';
-import { Plus, Save, Trash, RotateCcw } from 'lucide-react';
-import { useMaintenance } from '@/context/MaintenanceContext';
+import { Plus, Save, Trash, RotateCcw, Loader2 } from 'lucide-react';
+import { useMachines } from '@/hooks/useMachines';
+import { useNonConformities } from '@/hooks/useNonConformities';
+import { useListOptions } from '@/hooks/useListOptions';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -25,11 +26,27 @@ const emptyNC: NonConformity = {
 type Mode = 'new' | 'modify' | 'delete';
 
 export default function NonConformities() {
-  const { machines, nonConformities, addNonConformity, updateNonConformity, deleteNonConformity } = useMaintenance();
+  const { useGetMachines } = useMachines();
+  const {
+    useGetNCs,
+    useCreateNC,
+    useUpdateNC,
+    useDeleteNC
+  } = useNonConformities();
+  const { useGetListOptions } = useListOptions();
+
+  const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
 
   const [selectedMachineId, setSelectedMachineId] = useState('');
   const [mode, setMode] = useState<Mode>('new');
   const [selectedNCId, setSelectedNCId] = useState('');
+
+  const { data: nonConformities = [], isLoading: loadingNCs } = useGetNCs(selectedMachineId);
+  const { data: statusOptions = [] } = useGetListOptions('Statuses');
+  const { data: priorityOptions = [] } = useGetListOptions('Priorities');
+  const createMutation = useCreateNC();
+  const updateMutation = useUpdateNC();
+  const deleteMutation = useDeleteNC();
 
   // Initialize machine selection
   useEffect(() => {
@@ -57,7 +74,6 @@ export default function NonConformities() {
   // Handle machine selection change
   const handleMachineChange = (machineId: string) => {
     setSelectedMachineId(machineId);
-    // If in modify/delete mode, clear selected NC as it might not belong to new machine
     if (mode !== 'new') {
       setSelectedNCId('');
       setFormData({ ...emptyNC, machineId });
@@ -76,9 +92,7 @@ export default function NonConformities() {
     setMode(newMode);
     if (newMode === 'new') {
       setSelectedNCId('');
-      // Logic to reset form handled by useEffect
     } else {
-      // Attempt to auto-select first NC for this machine
       const machineNCs = nonConformities.filter(nc => nc.machineId === selectedMachineId);
       if (machineNCs.length > 0) {
         handleSelectNC(machineNCs[0].id);
@@ -89,41 +103,46 @@ export default function NonConformities() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.maintenanceOperator) {
       toast.error("Operator name is required");
       return;
     }
 
-    if (mode === 'new') {
-      const newNC = {
-        ...formData,
-        id: crypto.randomUUID(),
-        machineId: selectedMachineId,
-        area: selectedMachine?.area || ''
-      };
-      addNonConformity(newNC);
-      // Reset will be triggered by re-render or manual reset if needed, but useEffect depends on [mode] primarily.
-      // Let's force a code refresh implies staying in new mode
-      const nextNum = nonConformities.length + 2; // +1 for the one just added
-      const newCode = `NC${new Date().getFullYear()}-${String(nextNum).padStart(4, '0')}`;
-      setFormData(prev => ({ ...prev, ncCode: newCode, maintenanceOperator: '' }));
-
-    } else if (mode === 'modify' && selectedNCId) {
-      updateNonConformity(formData);
+    try {
+      if (mode === 'new') {
+        const newNC = {
+          ...formData,
+          machineId: selectedMachineId,
+          area: selectedMachine?.area || ''
+        };
+        await createMutation.mutateAsync(newNC);
+        // Reset will be handled by useEffect after re-fetch
+      } else if (mode === 'modify' && selectedNCId) {
+        await updateMutation.mutateAsync({
+          id: selectedNCId,
+          data: formData
+        });
+      }
+    } catch (error) {
+      // Handled by mutation toast
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (selectedNCId) {
       if (confirm(`Delete Non-Conformity ${formData.ncCode}?`)) {
-        deleteNonConformity(selectedNCId);
-        setSelectedNCId('');
-        setFormData({ ...emptyNC, machineId: selectedMachineId });
+        try {
+          await deleteMutation.mutateAsync(selectedNCId);
+          setSelectedNCId('');
+          setFormData({ ...emptyNC, machineId: selectedMachineId });
 
-        const remaining = nonConformities.filter(n => n.machineId === selectedMachineId && n.id !== selectedNCId);
-        if (remaining.length > 0) handleSelectNC(remaining[0].id);
-        else handleModeChange('new');
+          if (nonConformities.length <= 1) {
+            handleModeChange('new');
+          }
+        } catch (error) {
+          // Handled by mutation toast
+        }
       }
     }
   };
@@ -134,6 +153,15 @@ export default function NonConformities() {
 
   const selectedMachine = machines.find(m => m.id === selectedMachineId);
   const filteredNCs = nonConformities.filter(nc => nc.machineId === selectedMachineId);
+
+  if (loadingMachines) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading machines...</p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -203,25 +231,33 @@ export default function NonConformities() {
               <label className="block text-sm font-medium mb-2">
                 {mode === 'delete' ? 'Select NC to Delete:' : 'Select NC to Modify:'}
               </label>
-              <select
-                value={selectedNCId}
-                onChange={(e) => handleSelectNC(e.target.value)}
-                className="w-full p-2 rounded border border-input bg-background"
-              >
-                <option value="" disabled>Select an NC...</option>
-                {filteredNCs.length === 0 && <option disabled>No NCs found for this machine</option>}
-                {filteredNCs.map(nc => (
-                  <option key={nc.id} value={nc.id}>
-                    {nc.ncCode} - {nc.status} ({nc.creationDate})
-                  </option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  value={selectedNCId}
+                  onChange={(e) => handleSelectNC(e.target.value)}
+                  className="w-full p-2 rounded border border-input bg-background pr-10"
+                  disabled={loadingNCs}
+                >
+                  <option value="" disabled>Select an NC...</option>
+                  {filteredNCs.length === 0 && !loadingNCs && <option disabled>No NCs found for this machine</option>}
+                  {filteredNCs.map(nc => (
+                    <option key={nc.id} value={nc.id}>
+                      {nc.ncCode} - {nc.status} ({nc.creationDate})
+                    </option>
+                  ))}
+                </select>
+                {loadingNCs && (
+                  <div className="absolute right-3 top-2.5">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
           {/* NC Details */}
           <div className={cn("border border-primary rounded overflow-hidden transition-opacity",
-            mode === 'delete' && !selectedNCId && "opacity-50 pointer-events-none"
+            (mode === 'delete' && !selectedNCId) || (mode === 'modify' && !selectedNCId) ? "opacity-50 pointer-events-none" : ""
           )}>
             <div className="section-header">NC Details</div>
 
@@ -239,6 +275,7 @@ export default function NonConformities() {
                 onChange={(v) => handleInputChange('maintenanceOperator', v)}
                 placeholder="Enter operator name..."
                 readOnly={mode === 'delete'}
+                disabled={createMutation.isPending || updateMutation.isPending}
               />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <InputField
@@ -247,6 +284,7 @@ export default function NonConformities() {
                   onChange={(v) => handleInputChange('creationDate', v)}
                   placeholder="DD/MM/YYYY"
                   readOnly={mode === 'delete'}
+                  disabled={createMutation.isPending || updateMutation.isPending}
                 />
                 <InputField
                   label="INITIATION DATE"
@@ -254,6 +292,7 @@ export default function NonConformities() {
                   onChange={(v) => handleInputChange('initiationDate', v)}
                   placeholder="DD/MM/YYYY"
                   readOnly={mode === 'delete'}
+                  disabled={createMutation.isPending || updateMutation.isPending}
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -261,15 +300,15 @@ export default function NonConformities() {
                   label="STATUS"
                   value={formData.status}
                   onChange={(v) => handleInputChange('status', v)}
-                  options={statuses.map(s => ({ value: s, label: s }))}
-                  disabled={mode === 'delete'}
+                  options={statusOptions.map(s => ({ value: s.value, label: s.value }))}
+                  disabled={mode === 'delete' || createMutation.isPending || updateMutation.isPending}
                 />
                 <SelectField
                   label="PRIORITY"
                   value={String(formData.priority)}
                   onChange={(v) => handleInputChange('priority', parseInt(v))}
-                  options={priorities.map(p => ({ value: String(p), label: String(p) }))}
-                  disabled={mode === 'delete'}
+                  options={priorityOptions.map(p => ({ value: p.value, label: p.value }))}
+                  disabled={mode === 'delete' || createMutation.isPending || updateMutation.isPending}
                 />
               </div>
             </div>
@@ -281,18 +320,27 @@ export default function NonConformities() {
                   variant="red"
                   className="w-full"
                   onClick={handleDelete}
-                  disabled={!selectedNCId}
+                  disabled={!selectedNCId || deleteMutation.isPending}
                 >
-                  <Trash className="h-4 w-4 mr-2" /> DELETE NC
+                  {deleteMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Trash className="h-4 w-4 mr-2" />
+                  )}
+                  DELETE NC
                 </ActionButton>
               ) : (
                 <ActionButton
                   variant={mode === 'new' ? 'green' : 'blue'}
                   className="w-full"
                   onClick={handleSave}
-                  disabled={mode === 'modify' && !selectedNCId}
+                  disabled={(mode === 'modify' && !selectedNCId) || createMutation.isPending || updateMutation.isPending}
                 >
-                  {mode === 'new' ? <Plus className="h-4 w-4 mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                  {createMutation.isPending || updateMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    mode === 'new' ? <Plus className="h-4 w-4 mr-2" /> : <Save className="h-4 w-4 mr-2" />
+                  )}
                   {mode === 'new' ? 'ADD NC' : 'UPDATE NC'}
                 </ActionButton>
               )}

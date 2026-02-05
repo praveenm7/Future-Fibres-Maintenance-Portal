@@ -1,39 +1,63 @@
+import { useState } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { machines, maintenanceActions } from '@/data/mockData';
+import { useDashboard } from '@/hooks/useDashboard';
+import { useMachines } from '@/hooks/useMachines';
+import { Loader2 } from 'lucide-react';
 
 const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
-// Generate mock efficiency data
-const generateEfficiencyData = () => {
-  return machines.map(machine => {
-    const weeklyData: number[] = [];
-    const baseEfficiency = 50 + Math.random() * 40;
-    
-    // 48 weeks (4 per month)
-    for (let i = 0; i < 48; i++) {
-      const completed = Math.random() > (1 - baseEfficiency / 100);
-      weeklyData.push(completed ? 1 : 0);
-    }
-    
-    const totalCompleted = weeklyData.filter(v => v === 1).length;
-    const efficiency = ((totalCompleted / 48) * 100).toFixed(2);
-    
+export default function MaintenanceSummary() {
+  const [periodicity, setPeriodicity] = useState('WEEKLY');
+  const { useGetMaintenanceReport } = useDashboard();
+  const { useGetMachines } = useMachines();
+
+  const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
+  const { data: reportData = [], isLoading: loadingReport } = useGetMaintenanceReport(periodicity);
+
+  const isLoading = loadingMachines || loadingReport;
+
+  // Merge report data with machine info
+  const displayData = machines.map(machine => {
+    const machineReport = reportData.find(r => r.machineId === machine.id) || {
+      efficiency: 0,
+      weeklyData: new Array(48).fill(0)
+    };
+
     return {
       machine,
-      efficiency,
-      weeklyData,
+      efficiency: machineReport.efficiency,
+      weeklyData: machineReport.weeklyData || new Array(48).fill(0)
     };
   });
-};
 
-export default function MaintenanceSummary() {
-  const efficiencyData = generateEfficiencyData();
+  if (isLoading && machines.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading maintenance summary...</p>
+      </div>
+    );
+  }
 
   return (
     <div>
       <PageHeader title="03-MAINTENANCE SUMMARY" />
 
-      <div className="overflow-x-auto">
+      <div className="mb-4 flex gap-4 items-center">
+        <label className="text-sm font-medium">Periodicity:</label>
+        <select
+          value={periodicity}
+          onChange={(e) => setPeriodicity(e.target.value)}
+          className="bg-card border border-border rounded px-3 py-1 text-sm"
+        >
+          <option value="WEEKLY">WEEKLY</option>
+          <option value="MONTHLY">MONTHLY</option>
+          <option value="YEARLY">YEARLY</option>
+        </select>
+        {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+      </div>
+
+      <div className="overflow-x-auto border border-border rounded">
         <table className="data-table text-xs">
           <thead>
             <tr>
@@ -41,52 +65,64 @@ export default function MaintenanceSummary() {
               <th className="sticky left-[100px] bg-table-header z-10">DESCRIPTION</th>
               <th>AREA</th>
               <th>EFFICIENCY</th>
-              {months.map((month, idx) => (
-                <th key={month} colSpan={4} className="text-center">
+              {months.map((month) => (
+                <th key={month} colSpan={4} className="text-center border-l border-border/50">
                   {month.toUpperCase()}-25
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {efficiencyData.map(({ machine, efficiency, weeklyData }) => (
-              <tr key={machine.id}>
-                <td className="sticky left-0 bg-card z-10 font-medium">{machine.finalCode}</td>
-                <td className="sticky left-[100px] bg-card z-10">{machine.description}</td>
-                <td>{machine.area}</td>
-                <td className={`font-bold ${
-                  parseFloat(efficiency) >= 80 ? 'text-success' :
-                  parseFloat(efficiency) >= 60 ? 'text-warning' :
-                  'text-destructive'
-                }`}>
-                  {efficiency}%
+            {displayData.length === 0 ? (
+              <tr>
+                <td colSpan={52} className="text-center p-8 text-muted-foreground">
+                  No maintenance records found.
                 </td>
-                {weeklyData.map((value, idx) => (
-                  <td 
-                    key={idx} 
-                    className={`text-center ${
-                      value === 1 ? 'bg-success/30' : 'bg-destructive/30'
-                    }`}
-                  >
-                    {value}
-                  </td>
-                ))}
               </tr>
-            ))}
+            ) : (
+              displayData.map(({ machine, efficiency, weeklyData }) => (
+                <tr key={machine.id}>
+                  <td className="sticky left-0 bg-card z-10 font-medium">{machine.finalCode}</td>
+                  <td className="sticky left-[100px] bg-card z-10">{machine.description}</td>
+                  <td>{machine.area}</td>
+                  <td className={`font-bold ${efficiency >= 80 ? 'text-success' :
+                      efficiency >= 60 ? 'text-warning' :
+                        'text-destructive'
+                    }`}>
+                    {efficiency}%
+                  </td>
+                  {weeklyData.map((value: number, idx: number) => (
+                    <td
+                      key={idx}
+                      className={`text-center border-l border-border/10 ${value === 1 ? 'bg-success/30' :
+                          value === 2 ? 'bg-warning/30' :
+                            value === 0 ? 'bg-destructive/30' : 'bg-muted/10'
+                        }`}
+                    >
+                      {value}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
       <div className="mt-6 p-4 bg-card border border-border rounded">
         <p className="text-sm text-muted-foreground italic">
-          Fill the cells for each week with "ideal" or "mandatory". 
-          Ideal counts as 100% of the maintenance for this week. 
-          Mandatory counts as 50% of maintenance for this week.
+          Fill the cells for each week with "ideal" or "mandatory".
+          Ideal (1) counts as 100% of the maintenance for this week.
+          Mandatory (2) counts as 50% of maintenance for this week.
         </p>
         <div className="flex gap-4 mt-3">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-success/30 border border-success rounded"></div>
             <span className="text-sm">Completed (1)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-warning/30 border border-warning rounded"></div>
+            <span className="text-sm">Partial/Mandatory (2)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-destructive/30 border border-destructive rounded"></div>
