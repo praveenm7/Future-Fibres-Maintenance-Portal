@@ -57,6 +57,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   }
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-background flex">
       {/* Sidebar Navigation */}
       <aside
@@ -81,6 +82,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
             </Link>
           )}
         </div>
+=======
+    <div className="min-h-screen bg-background">
+      {/* Top Header */}
+      <header className="bg-primary text-primary-foreground py-4 px-6 shadow-lg">
+        <Link to="/" className="flex items-center gap-3">
+          <Wrench className="h-8 w-8" />
+          <h1 className="text-xl font-bold tracking-wide">MAINTENANCE PORTAL</h1>
+        </Link>
+      </header>
+>>>>>>> ea95eb0f1a4e706b9441a557c012876485e7e454
 
         {/* Toggle Button */}
         <button
