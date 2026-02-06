@@ -82,36 +82,37 @@ export default function AuthorizationReport() {
         <div className="mt-6 border border-primary rounded overflow-hidden max-w-2xl">
           <div className="section-header">
             Authorizations for {selectedUserData.operatorName}
-            <div className="p-4 bg-card space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm border-b border-border pb-4">
-                <div>
-                  <span className="text-muted-foreground block text-xs uppercase">Email</span>
-                  <span className="font-medium">{selectedUserData.email || '-'}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block text-xs uppercase">Department</span>
-                  <span className="font-medium">{selectedUserData.department || '-'}</span>
-                </div>
+          </div>
+          <div className="p-4 bg-card space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-sm border-b border-border pb-4">
+              <div>
+                <span className="text-muted-foreground block text-xs uppercase">Email</span>
+                <span className="font-medium">{selectedUserData.email || '-'}</span>
               </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {authorizationGroups.map((group) => (
-                  <div
-                    key={group}
-                    className={`
-                    px-3 py-2 rounded text-xs font-medium text-center
-                    ${selectedUserData.authorizations?.[group]
-                        ? 'bg-success/20 text-success border border-success/30'
-                        : 'bg-destructive/20 text-destructive border border-destructive/30'}
-                  `}
-                  >
-                    {group}
-                  </div>
-                ))}
+              <div>
+                <span className="text-muted-foreground block text-xs uppercase">Department</span>
+                <span className="font-medium">{selectedUserData.department || '-'}</span>
               </div>
             </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              {authorizationGroups.map((group) => (
+                <div
+                  key={group}
+                  className={`
+                  px-3 py-2 rounded text-xs font-medium text-center
+                  ${selectedUserData.authorizations?.[group]
+                      ? 'bg-success/20 text-success border border-success/30'
+                      : 'bg-destructive/20 text-destructive border border-destructive/30'}
+                `}
+                >
+                  {group}
+                </div>
+              ))}
+            </div>
           </div>
-      )}
         </div>
-      );
+      )}
+    </div>
+  );
 }
