@@ -1,13 +1,24 @@
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { DataTable } from '@/components/ui/DataTable';
+import { BulkActionsBar } from '@/components/ui/BulkActionsBar';
 import { InputField } from '@/components/ui/FormField';
 import type { NCComment } from '@/types/maintenance';
-import { Plus, Pencil, Trash2, Save, X, Loader2, RotateCcw } from 'lucide-react';
+import { Plus, Pencil, Trash2, Save, X, Loader2 } from 'lucide-react';
 import { useMachines } from '@/hooks/useMachines';
 import { useNonConformities } from '@/hooks/useNonConformities';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { ncCommentFormSchema, type NCCommentFormValues } from '@/lib/schemas/ncCommentSchema';
 import { toast } from 'sonner';
+
+const getDefaultValues = (): NCCommentFormValues => ({
+  date: new Date().toLocaleDateString('en-GB'),
+  comment: '',
+  operator: '',
+});
 
 export default function NCComments() {
   const { useGetMachines } = useMachines();
@@ -37,12 +48,24 @@ export default function NCComments() {
 
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [mode, setMode] = useState<'new' | 'edit'>('new');
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<string[]>([]);
 
-  const [formData, setFormData] = useState({
-    date: new Date().toLocaleDateString('en-GB'),
-    comment: '',
-    operator: 'FERNANDO'
+  const {
+    watch,
+    setValue,
+    handleSubmit,
+    reset,
+    formState: { errors, isDirty },
+  } = useForm<NCCommentFormValues>({
+    resolver: zodResolver(ncCommentFormSchema),
+    defaultValues: getDefaultValues(),
   });
+
+  const formValues = watch();
+
+  // Unsaved changes warning
+  useUnsavedChanges(isDirty);
+
 
   const selectedNC = nonConformities.find(nc => nc.id === selectedNCId);
   const selectedMachine = machines.find(m => m.id === selectedNC?.machineId);
@@ -50,11 +73,7 @@ export default function NCComments() {
   const resetForm = () => {
     setMode('new');
     setSelectedRowId(null);
-    setFormData({
-      date: new Date().toLocaleDateString('en-GB'),
-      comment: '',
-      operator: 'FERNANDO'
-    });
+    reset(getDefaultValues());
   };
 
   const handleRowClick = (item: NCComment) => {
@@ -63,20 +82,15 @@ export default function NCComments() {
     } else {
       setSelectedRowId(item.id);
       setMode('edit');
-      setFormData({
+      reset({
         date: item.date,
         comment: item.comment,
-        operator: item.operator || 'FERNANDO'
+        operator: item.operator || 'FERNANDO',
       });
     }
   };
 
-  const handleSave = async () => {
-    if (!formData.comment) {
-      toast.error("Comment is required");
-      return;
-    }
-
+  const onSubmit = async (data: NCCommentFormValues) => {
     try {
       if (mode === 'new') {
         if (!selectedNCId) {
@@ -85,17 +99,17 @@ export default function NCComments() {
         }
         await addMutation.mutateAsync({
           ncId: selectedNCId,
-          ...formData
+          ...data
         });
         resetForm();
       } else if (mode === 'edit' && selectedRowId) {
         await updateMutation.mutateAsync({
           id: selectedRowId,
-          data: formData
+          data
         });
         resetForm();
       }
-    } catch (error) {
+    } catch {
       // Handled by mutation toast
     }
   };
@@ -106,10 +120,24 @@ export default function NCComments() {
         try {
           await deleteMutation.mutateAsync(selectedRowId);
           resetForm();
-        } catch (error) {
+        } catch {
           // Handled by mutation toast
         }
       }
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (bulkSelectedIds.length === 0) return;
+    if (!confirm(`Delete ${bulkSelectedIds.length} comment(s)?`)) return;
+    try {
+      for (const id of bulkSelectedIds) {
+        await deleteMutation.mutateAsync(id);
+      }
+      setBulkSelectedIds([]);
+      resetForm();
+    } catch {
+      // Handled by mutation toast
     }
   };
 
@@ -139,7 +167,7 @@ export default function NCComments() {
             <div className="bg-muted/40 px-4 py-2.5 text-sm font-medium border-r border-border">NC Code</div>
             <select
               value={selectedNCId}
-              onChange={(e) => { setSelectedNCId(e.target.value); resetForm(); }}
+              onChange={(e) => { setSelectedNCId(e.target.value); resetForm(); setBulkSelectedIds([]); }}
               className="flex-1 bg-transparent text-foreground text-sm px-4 py-2.5 font-medium max-w-xs focus:outline-none"
             >
               {nonConformities.map(nc => (
@@ -162,13 +190,30 @@ export default function NCComments() {
             <p className="text-sm text-muted-foreground">Loading comments...</p>
           </div>
         ) : (
-          <DataTable
-            columns={columns}
-            data={comments}
-            keyExtractor={(item) => item.id}
-            onRowClick={handleRowClick}
-            selectedId={selectedRowId || undefined}
-          />
+          <div>
+            <DataTable
+              columns={columns}
+              data={comments}
+              keyExtractor={(item) => item.id}
+              onRowClick={handleRowClick}
+              selectedId={selectedRowId || undefined}
+              selectable
+              selectedIds={bulkSelectedIds}
+              onSelectionChange={setBulkSelectedIds}
+            />
+            <BulkActionsBar
+              selectedCount={bulkSelectedIds.length}
+              onClear={() => setBulkSelectedIds([])}
+              actions={[
+                {
+                  label: 'Delete Selected',
+                  icon: <Trash2 className="h-3.5 w-3.5" />,
+                  onClick: handleBulkDelete,
+                  variant: 'destructive',
+                },
+              ]}
+            />
+          </div>
         )}
 
         {/* Table Actions */}
@@ -187,11 +232,11 @@ export default function NCComments() {
         </div>
 
         {/* Add Comment Form */}
-        <div className={`bg-card border rounded-lg overflow-hidden transition-colors duration-200 ${mode === 'edit' ? 'border-primary/50' : 'border-border'}`}>
+        <form onSubmit={handleSubmit(onSubmit)} className={`bg-card border rounded-lg overflow-hidden transition-colors duration-200 ${mode === 'edit' ? 'border-primary/50' : 'border-border'}`}>
           <div className={`section-header flex justify-between items-center ${mode === 'edit' ? 'bg-primary/5' : ''}`}>
             <span>{mode === 'edit' ? 'Edit Comment' : 'Add Comment'}</span>
             {mode === 'edit' && (
-              <button onClick={resetForm} className="text-xs flex items-center gap-1 text-muted-foreground hover:text-destructive px-2 py-1 rounded transition-colors">
+              <button type="button" onClick={resetForm} className="text-xs flex items-center gap-1 text-muted-foreground hover:text-destructive px-2 py-1 rounded transition-colors">
                 <X className="h-3 w-3" /> Cancel
               </button>
             )}
@@ -200,25 +245,28 @@ export default function NCComments() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <InputField
                 label="Comment Date"
-                value={formData.date}
-                onChange={(v) => setFormData(prev => ({ ...prev, date: v }))}
+                value={formValues.date}
+                onChange={(v) => setValue('date', v, { shouldDirty: true })}
                 placeholder="DD/MM/YYYY"
                 disabled={addMutation.isPending || updateMutation.isPending}
+                error={errors.date?.message}
               />
               <div className="md:col-span-2">
                 <InputField
                   id="comment-input"
                   label="Comment"
-                  value={formData.comment}
-                  onChange={(v) => setFormData(prev => ({ ...prev, comment: v }))}
+                  value={formValues.comment}
+                  onChange={(v) => setValue('comment', v, { shouldValidate: true, shouldDirty: true })}
                   placeholder="Enter your comment..."
                   disabled={addMutation.isPending || updateMutation.isPending}
+                  required
+                  error={errors.comment?.message}
                 />
               </div>
             </div>
             <div className="pt-2">
               <ActionButton variant={mode === 'edit' ? 'blue' : 'green'} className="min-w-[140px]"
-                onClick={handleSave} disabled={addMutation.isPending || updateMutation.isPending}>
+                type="submit" disabled={addMutation.isPending || updateMutation.isPending}>
                 {addMutation.isPending || updateMutation.isPending ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
@@ -228,7 +276,7 @@ export default function NCComments() {
               </ActionButton>
             </div>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );

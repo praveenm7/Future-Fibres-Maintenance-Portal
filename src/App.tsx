@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 import MainLayout from "@/components/layout/MainLayout";
 
 // Sections
@@ -17,6 +18,7 @@ import NCComments from "./pages/NCComments";
 import SpareParts from "./pages/SpareParts";
 import AuthorizationMatrix from "./pages/AuthorizationMatrix";
 import ListsModification from "./pages/ListsModification";
+import MaintenanceCalendar from "./pages/MaintenanceCalendar";
 
 // Reports Pages
 import MachineryListReport from "./pages/MachineryListReport";
@@ -32,6 +34,7 @@ import NCAnalyticsDashboard from "./pages/dashboards/NCAnalyticsDashboard";
 import EquipmentHealthDashboard from "./pages/dashboards/EquipmentHealthDashboard";
 import SparePartsDashboard from "./pages/dashboards/SparePartsDashboard";
 import WorkforceDashboard from "./pages/dashboards/WorkforceDashboard";
+import CustomDashboard from "./pages/dashboards/CustomDashboard";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -42,14 +45,31 @@ import ActivityLogs from "./pages/admin/ActivityLogs";
 
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      networkMode: 'offlineFirst',
+      staleTime: 5 * 60 * 1000,        // 5 minutes
+      gcTime: 30 * 60 * 1000,           // 30 minutes
+      retry: (failureCount, error) => {
+        // Don't retry if offline
+        if (!navigator.onLine) return false;
+        return failureCount < 3;
+      },
+    },
+    mutations: {
+      networkMode: 'always',
+    },
+  },
+});
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
+  <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
         <Routes>
           {/* Landing Page - Sidebar Hidden */}
           <Route path="/" element={<MainLayout><LandingPage /></MainLayout>} />
@@ -66,6 +86,7 @@ const App = () => (
           <Route path="/spare-parts" element={<MainLayout><SpareParts /></MainLayout>} />
           <Route path="/authorization-matrix" element={<MainLayout><AuthorizationMatrix /></MainLayout>} />
           <Route path="/lists" element={<MainLayout><ListsModification /></MainLayout>} />
+          <Route path="/maintenance-calendar" element={<MainLayout><MaintenanceCalendar /></MainLayout>} />
 
           {/* Reports */}
           <Route path="/reports/machinery-list" element={<MainLayout><MachineryListReport /></MainLayout>} />
@@ -81,6 +102,7 @@ const App = () => (
           <Route path="/dashboards/equipment-health" element={<MainLayout><EquipmentHealthDashboard /></MainLayout>} />
           <Route path="/dashboards/spare-parts" element={<MainLayout><SparePartsDashboard /></MainLayout>} />
           <Route path="/dashboards/workforce" element={<MainLayout><WorkforceDashboard /></MainLayout>} />
+          <Route path="/dashboards/custom" element={<MainLayout><CustomDashboard /></MainLayout>} />
 
           {/* Admin */}
           <Route path="/admin" element={<MainLayout><AdminDashboard /></MainLayout>} />
@@ -95,6 +117,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;

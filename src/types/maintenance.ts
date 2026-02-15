@@ -17,6 +17,7 @@ export interface Machine {
   authorizationGroup: string;
   maintenanceNeeded: boolean;
   maintenanceOnHold: boolean;
+  personInChargeID?: string | null;
   personInCharge: string;
   imageUrl?: string;
 }

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ClipboardList, FileBarChart, BarChart3, CircleUser, Shield, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 export default function LandingPage() {
     const { toast } = useToast();
@@ -45,6 +46,8 @@ export default function LandingPage() {
 
                     <div className="h-5 w-px bg-border mx-1" />
 
+                    <ThemeToggle className="text-muted-foreground hover:text-foreground hover:bg-muted" />
+
                     <Link
                         to="/admin"
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -77,7 +80,7 @@ export default function LandingPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full">
                     <Link
                         to="/forms"
-                        className="group bg-card border border-border rounded-lg p-6 transition-all duration-200 hover:shadow-md hover:border-primary/40"
+                        className="group bg-card border border-border rounded-lg p-6 transition-all duration-200 hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5"
                     >
                         <div className="flex flex-col items-center text-center space-y-3">
                             <div className="p-3 bg-primary/8 rounded-lg group-hover:bg-primary/12 transition-colors">
@@ -92,7 +95,7 @@ export default function LandingPage() {
 
                     <Link
                         to="/reports"
-                        className="group bg-card border border-border rounded-lg p-6 transition-all duration-200 hover:shadow-md hover:border-primary/40"
+                        className="group bg-card border border-border rounded-lg p-6 transition-all duration-200 hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5"
                     >
                         <div className="flex flex-col items-center text-center space-y-3">
                             <div className="p-3 bg-primary/8 rounded-lg group-hover:bg-primary/12 transition-colors">
@@ -107,7 +110,7 @@ export default function LandingPage() {
 
                     <Link
                         to="/dashboards"
-                        className="group bg-card border border-border rounded-lg p-6 transition-all duration-200 hover:shadow-md hover:border-primary/40"
+                        className="group bg-card border border-border rounded-lg p-6 transition-all duration-200 hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5"
                     >
                         <div className="flex flex-col items-center text-center space-y-3">
                             <div className="p-3 bg-primary/8 rounded-lg group-hover:bg-primary/12 transition-colors">

@@ -288,8 +288,57 @@ BEGIN
 END
 GO
 
+-- =============================================
+-- Generate Next FinalCode for a Machine
+-- Convention: {T}-{GROUP}-{NNNN}
+--   T = M (Machine) or T (Tooling)
+--   GROUP = EC4, EC5, EC6, EC7
+--   NNNN = 4-digit sequence per type+group
+-- =============================================
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[sp_GenerateNextFinalCode]') AND type in (N'P', N'PC'))
+    DROP PROCEDURE [dbo].[sp_GenerateNextFinalCode];
+GO
+
+CREATE PROCEDURE [dbo].[sp_GenerateNextFinalCode]
+    @Type NVARCHAR(50),
+    @MachineGroup NVARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @TypePrefix NVARCHAR(1);
+    DECLARE @NextSeq INT;
+    DECLARE @FinalCode NVARCHAR(50);
+
+    -- Map type to single-letter prefix
+    SET @TypePrefix = CASE @Type
+        WHEN 'MACHINE' THEN 'M'
+        WHEN 'TOOLING' THEN 'T'
+        ELSE NULL
+    END;
+
+    IF @TypePrefix IS NULL
+    BEGIN
+        RAISERROR('Invalid Type. Must be MACHINE or TOOLING.', 16, 1);
+        RETURN;
+    END
+
+    -- Get next sequence number for this type+group combination
+    SELECT @NextSeq = ISNULL(MAX(
+        TRY_CAST(RIGHT([FinalCode], 4) AS INT)
+    ), 0) + 1
+    FROM [dbo].[Machines]
+    WHERE [FinalCode] LIKE @TypePrefix + '-' + @MachineGroup + '-____';
+
+    -- Build the final code
+    SET @FinalCode = @TypePrefix + '-' + @MachineGroup + '-' + RIGHT('0000' + CAST(@NextSeq AS NVARCHAR(4)), 4);
+
+    SELECT @FinalCode AS FinalCode;
+END
+GO
+
 PRINT '=============================================';
 PRINT 'Stored Procedures created successfully!';
-PRINT 'Total Procedures: 12';
+PRINT 'Total Procedures: 13';
 PRINT '=============================================';
 GO

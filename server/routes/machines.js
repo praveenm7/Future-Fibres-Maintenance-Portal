@@ -6,26 +6,30 @@ const { uploadPhoto } = require('../config/upload');
 // Helper to map machine database record to frontend model
 const mapMachine = (record) => ({
     id: record.MachineID.toString(),
-    finalCode: record.FinalCode,
-    type: record.Type,
-    group: record.MachineGroup,
-    description: record.Description,
-    purchasingDate: record.PurchasingDate,
-    purchasingCost: record.PurchasingCost,
-    poNumber: record.PONumber,
-    area: record.Area,
-    manufacturer: record.Manufacturer,
-    model: record.Model,
-    serialNumber: record.SerialNumber,
-    manufacturerYear: record.ManufacturerYear,
-    power: record.Power,
-    permissionRequired: record.PermissionRequired,
-    authorizationGroup: record.AuthorizationGroup,
-    maintenanceNeeded: record.MaintenanceNeeded,
-    maintenanceOnHold: record.MaintenanceOnHold,
+    finalCode: record.FinalCode || '',
+    type: record.Type || '',
+    group: record.MachineGroup || '',
+    description: record.Description || '',
+    purchasingDate: record.PurchasingDate
+        ? (record.PurchasingDate instanceof Date
+            ? record.PurchasingDate.toISOString().split('T')[0]
+            : String(record.PurchasingDate))
+        : '',
+    purchasingCost: record.PurchasingCost != null ? String(record.PurchasingCost) : '',
+    poNumber: record.PONumber || '',
+    area: record.Area || '',
+    manufacturer: record.Manufacturer || '',
+    model: record.Model || '',
+    serialNumber: record.SerialNumber || '',
+    manufacturerYear: record.ManufacturerYear || '',
+    power: record.Power || '',
+    permissionRequired: !!record.PermissionRequired,
+    authorizationGroup: record.AuthorizationGroup || '',
+    maintenanceNeeded: !!record.MaintenanceNeeded,
+    maintenanceOnHold: !!record.MaintenanceOnHold,
     personInChargeID: record.PersonInChargeID ? record.PersonInChargeID.toString() : null,
-    personInCharge: record.PersonInChargeName,
-    imageUrl: record.ImageUrl,
+    personInCharge: record.PersonInChargeName || '',
+    imageUrl: record.ImageUrl || '',
     createdDate: record.CreatedDate,
     updatedDate: record.UpdatedDate
 });
@@ -63,106 +67,129 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// POST create new machine
+// POST create new machine (FinalCode generated server-side)
 router.post('/', async (req, res) => {
     try {
         const {
-            finalCode, type, machineGroup, description, purchasingDate,
+            type, description, purchasingDate,
             purchasingCost, poNumber, area, manufacturer, model,
             serialNumber, manufacturerYear, power, permissionRequired,
             authorizationGroup, maintenanceNeeded, maintenanceOnHold,
             personInChargeID, imageUrl
         } = req.body;
 
+        // Accept both 'group' (frontend) and 'machineGroup' (legacy) field names
+        const machineGroup = req.body.machineGroup || req.body.group;
+
         const pool = await poolPromise;
-        const result = await pool.request()
-            .input('FinalCode', sql.NVarChar(50), finalCode)
-            .input('Type', sql.NVarChar(50), type)
-            .input('MachineGroup', sql.NVarChar(50), machineGroup)
-            .input('Description', sql.NVarChar(255), description)
-            .input('PurchasingDate', sql.Date, purchasingDate)
-            .input('PurchasingCost', sql.Decimal(18, 2), purchasingCost)
-            .input('PONumber', sql.NVarChar(50), poNumber)
-            .input('Area', sql.NVarChar(100), area)
-            .input('Manufacturer', sql.NVarChar(100), manufacturer)
-            .input('Model', sql.NVarChar(100), model)
-            .input('SerialNumber', sql.NVarChar(100), serialNumber)
-            .input('ManufacturerYear', sql.NVarChar(50), manufacturerYear)
-            .input('Power', sql.NVarChar(50), power)
-            .input('PermissionRequired', sql.Bit, permissionRequired)
-            .input('AuthorizationGroup', sql.NVarChar(100), authorizationGroup)
-            .input('MaintenanceNeeded', sql.Bit, maintenanceNeeded)
-            .input('MaintenanceOnHold', sql.Bit, maintenanceOnHold)
-            .input('PersonInChargeID', sql.Int, personInChargeID)
-            .input('ImageUrl', sql.NVarChar(500), imageUrl)
-            .query(`
-        INSERT INTO Machines (
-          FinalCode, Type, MachineGroup, Description, PurchasingDate,
-          PurchasingCost, PONumber, Area, Manufacturer, Model,
-          SerialNumber, ManufacturerYear, Power, PermissionRequired,
-          AuthorizationGroup, MaintenanceNeeded, MaintenanceOnHold,
-          PersonInChargeID, ImageUrl
-        )
-        VALUES (
-          @FinalCode, @Type, @MachineGroup, @Description, @PurchasingDate,
-          @PurchasingCost, @PONumber, @Area, @Manufacturer, @Model,
-          @SerialNumber, @ManufacturerYear, @Power, @PermissionRequired,
-          @AuthorizationGroup, @MaintenanceNeeded, @MaintenanceOnHold,
-          @PersonInChargeID, @ImageUrl
-        );
-        SELECT SCOPE_IDENTITY() AS MachineID;
-      `);
+        const transaction = new sql.Transaction(pool);
+        await transaction.begin();
 
-        const newMachineId = result.recordset[0].MachineID;
+        try {
+            // Generate FinalCode server-side
+            const codeResult = await transaction.request()
+                .input('Type', sql.NVarChar(50), type)
+                .input('MachineGroup', sql.NVarChar(50), machineGroup)
+                .execute('sp_GenerateNextFinalCode');
 
-        // Fetch the newly created machine
-        const newMachine = await pool.request()
-            .input('MachineID', sql.Int, newMachineId)
-            .execute('sp_GetMachineById');
+            const generatedCode = codeResult.recordset[0].FinalCode;
 
-        res.status(201).json(mapMachine(newMachine.recordset[0]));
+            // Insert with the generated code
+            const result = await transaction.request()
+                .input('FinalCode', sql.NVarChar(50), generatedCode)
+                .input('Type', sql.NVarChar(50), type)
+                .input('MachineGroup', sql.NVarChar(50), machineGroup)
+                .input('Description', sql.NVarChar(255), description)
+                .input('PurchasingDate', sql.Date, purchasingDate || null)
+                .input('PurchasingCost', sql.Decimal(18, 2), purchasingCost || null)
+                .input('PONumber', sql.NVarChar(50), poNumber || null)
+                .input('Area', sql.NVarChar(100), area || null)
+                .input('Manufacturer', sql.NVarChar(100), manufacturer || null)
+                .input('Model', sql.NVarChar(100), model || null)
+                .input('SerialNumber', sql.NVarChar(100), serialNumber || null)
+                .input('ManufacturerYear', sql.NVarChar(50), manufacturerYear || null)
+                .input('Power', sql.NVarChar(50), power || null)
+                .input('PermissionRequired', sql.Bit, permissionRequired || false)
+                .input('AuthorizationGroup', sql.NVarChar(100), authorizationGroup || null)
+                .input('MaintenanceNeeded', sql.Bit, maintenanceNeeded || false)
+                .input('MaintenanceOnHold', sql.Bit, maintenanceOnHold || false)
+                .input('PersonInChargeID', sql.Int, personInChargeID || null)
+                .input('ImageUrl', sql.NVarChar(500), imageUrl || null)
+                .query(`
+            INSERT INTO Machines (
+              FinalCode, Type, MachineGroup, Description, PurchasingDate,
+              PurchasingCost, PONumber, Area, Manufacturer, Model,
+              SerialNumber, ManufacturerYear, Power, PermissionRequired,
+              AuthorizationGroup, MaintenanceNeeded, MaintenanceOnHold,
+              PersonInChargeID, ImageUrl
+            )
+            VALUES (
+              @FinalCode, @Type, @MachineGroup, @Description, @PurchasingDate,
+              @PurchasingCost, @PONumber, @Area, @Manufacturer, @Model,
+              @SerialNumber, @ManufacturerYear, @Power, @PermissionRequired,
+              @AuthorizationGroup, @MaintenanceNeeded, @MaintenanceOnHold,
+              @PersonInChargeID, @ImageUrl
+            );
+            SELECT SCOPE_IDENTITY() AS MachineID;
+          `);
+
+            await transaction.commit();
+
+            const newMachineId = result.recordset[0].MachineID;
+
+            // Fetch the newly created machine
+            const newMachine = await pool.request()
+                .input('MachineID', sql.Int, newMachineId)
+                .execute('sp_GetMachineById');
+
+            res.status(201).json(mapMachine(newMachine.recordset[0]));
+        } catch (innerErr) {
+            await transaction.rollback();
+            throw innerErr;
+        }
     } catch (err) {
         console.error('Error creating machine:', err);
         res.status(500).json({ error: err.message });
     }
 });
 
-// PUT update machine
+// PUT update machine (FinalCode is immutable — assigned at creation only)
 router.put('/:id', async (req, res) => {
     try {
         const {
-            finalCode, type, machineGroup, description, purchasingDate,
+            type, description, purchasingDate,
             purchasingCost, poNumber, area, manufacturer, model,
             serialNumber, manufacturerYear, power, permissionRequired,
             authorizationGroup, maintenanceNeeded, maintenanceOnHold,
             personInChargeID, imageUrl
         } = req.body;
 
+        // Accept both 'group' (frontend) and 'machineGroup' (legacy) field names
+        const machineGroup = req.body.machineGroup || req.body.group;
+
         const pool = await poolPromise;
         await pool.request()
             .input('MachineID', sql.Int, req.params.id)
-            .input('FinalCode', sql.NVarChar(50), finalCode)
             .input('Type', sql.NVarChar(50), type)
             .input('MachineGroup', sql.NVarChar(50), machineGroup)
             .input('Description', sql.NVarChar(255), description)
-            .input('PurchasingDate', sql.Date, purchasingDate)
-            .input('PurchasingCost', sql.Decimal(18, 2), purchasingCost)
-            .input('PONumber', sql.NVarChar(50), poNumber)
-            .input('Area', sql.NVarChar(100), area)
-            .input('Manufacturer', sql.NVarChar(100), manufacturer)
-            .input('Model', sql.NVarChar(100), model)
-            .input('SerialNumber', sql.NVarChar(100), serialNumber)
-            .input('ManufacturerYear', sql.NVarChar(50), manufacturerYear)
-            .input('Power', sql.NVarChar(50), power)
+            .input('PurchasingDate', sql.Date, purchasingDate || null)
+            .input('PurchasingCost', sql.Decimal(18, 2), purchasingCost || null)
+            .input('PONumber', sql.NVarChar(50), poNumber || null)
+            .input('Area', sql.NVarChar(100), area || null)
+            .input('Manufacturer', sql.NVarChar(100), manufacturer || null)
+            .input('Model', sql.NVarChar(100), model || null)
+            .input('SerialNumber', sql.NVarChar(100), serialNumber || null)
+            .input('ManufacturerYear', sql.NVarChar(50), manufacturerYear || null)
+            .input('Power', sql.NVarChar(50), power || null)
             .input('PermissionRequired', sql.Bit, permissionRequired)
-            .input('AuthorizationGroup', sql.NVarChar(100), authorizationGroup)
+            .input('AuthorizationGroup', sql.NVarChar(100), authorizationGroup || null)
             .input('MaintenanceNeeded', sql.Bit, maintenanceNeeded)
             .input('MaintenanceOnHold', sql.Bit, maintenanceOnHold)
-            .input('PersonInChargeID', sql.Int, personInChargeID)
-            .input('ImageUrl', sql.NVarChar(500), imageUrl)
+            .input('PersonInChargeID', sql.Int, personInChargeID || null)
+            .input('ImageUrl', sql.NVarChar(500), imageUrl || null)
             .query(`
         UPDATE Machines SET
-          FinalCode = @FinalCode,
           Type = @Type,
           MachineGroup = @MachineGroup,
           Description = @Description,

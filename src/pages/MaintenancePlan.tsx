@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { DataTable } from '@/components/ui/DataTable';
+import { BulkActionsBar } from '@/components/ui/BulkActionsBar';
 import { SelectField, InputField, CheckboxField } from '@/components/ui/FormField';
 import type { MaintenanceAction } from '@/types/maintenance';
-import { Plus, Pencil, Trash2, Save, X, Loader2, RotateCcw } from 'lucide-react';
+import { Plus, Pencil, Trash2, Save, X, Loader2 } from 'lucide-react';
 import { useMachines } from '@/hooks/useMachines';
 import { useMaintenanceActions } from '@/hooks/useMaintenanceActions';
 import { useListOptions } from '@/hooks/useListOptions';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { maintenanceActionFormSchema, type MaintenanceActionFormValues } from '@/lib/schemas/maintenanceActionSchema';
 import { toast } from 'sonner';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002/api';
@@ -18,15 +23,13 @@ const months = [
   'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
 ];
 
-const emptyAction: MaintenanceAction = {
-  id: '',
-  machineId: '',
+const defaultValues: MaintenanceActionFormValues = {
   action: '',
-  periodicity: 'BEFORE EACH USE',
-  timeNeeded: 5,
+  periodicity: '',
+  timeNeeded: '' as unknown as number,
   maintenanceInCharge: false,
-  status: 'IDEAL',
-  month: 'JANUARY'
+  status: '',
+  month: '',
 };
 
 export default function MaintenancePlan() {
@@ -56,7 +59,24 @@ export default function MaintenancePlan() {
 
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [mode, setMode] = useState<'new' | 'edit'>('new');
-  const [formData, setFormData] = useState(emptyAction);
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<string[]>([]);
+
+  const {
+    watch,
+    setValue,
+    handleSubmit,
+    reset,
+    formState: { errors, isDirty },
+  } = useForm<MaintenanceActionFormValues>({
+    resolver: zodResolver(maintenanceActionFormSchema),
+    defaultValues,
+  });
+
+  const formValues = watch();
+
+  // Unsaved changes warning
+  useUnsavedChanges(isDirty);
+
 
   const selectedMachine = machines.find(m => m.id === selectedMachineId);
 
@@ -66,15 +86,13 @@ export default function MaintenancePlan() {
     } else {
       setSelectedRowId(item.id);
       setMode('edit');
-      setFormData({
-        id: item.id,
-        machineId: item.machineId,
+      reset({
         action: item.action,
         periodicity: item.periodicity,
         timeNeeded: item.timeNeeded,
         maintenanceInCharge: item.maintenanceInCharge,
         status: item.status,
-        month: item.month || 'JANUARY'
+        month: item.month || 'JANUARY',
       });
     }
   };
@@ -82,15 +100,10 @@ export default function MaintenancePlan() {
   const resetForm = () => {
     setSelectedRowId(null);
     setMode('new');
-    setFormData(emptyAction);
+    reset(defaultValues);
   };
 
-  const handleSave = async () => {
-    if (!formData.action) {
-      toast.error("Action description is required");
-      return;
-    }
-
+  const onSubmit = async (data: MaintenanceActionFormValues) => {
     try {
       if (mode === 'new') {
         if (!selectedMachineId) {
@@ -98,19 +111,24 @@ export default function MaintenancePlan() {
           return;
         }
         await createMutation.mutateAsync({
-          ...formData,
+          id: '',
           machineId: selectedMachineId,
-          status: 'IDEAL'
+          ...data,
+          status: 'IDEAL' as any,
         });
-        setFormData(prev => ({ ...prev, action: '' }));
+        reset({ ...defaultValues, periodicity: data.periodicity, month: data.month });
       } else if (mode === 'edit' && selectedRowId) {
         await updateMutation.mutateAsync({
           id: selectedRowId,
-          data: formData
+          data: {
+            id: selectedRowId,
+            machineId: selectedMachineId,
+            ...data,
+          } as MaintenanceAction,
         });
         resetForm();
       }
-    } catch (error) {
+    } catch {
       // Handled by mutation toast
     }
   };
@@ -121,10 +139,24 @@ export default function MaintenancePlan() {
         try {
           await deleteMutation.mutateAsync(selectedRowId);
           resetForm();
-        } catch (error) {
+        } catch {
           // Handled by mutation toast
         }
       }
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (bulkSelectedIds.length === 0) return;
+    if (!confirm(`Delete ${bulkSelectedIds.length} maintenance action(s)?`)) return;
+    try {
+      for (const id of bulkSelectedIds) {
+        await deleteMutation.mutateAsync(id);
+      }
+      setBulkSelectedIds([]);
+      resetForm();
+    } catch {
+      // Handled by mutation toast
     }
   };
 
@@ -158,7 +190,7 @@ export default function MaintenancePlan() {
               <div className="bg-muted/40 px-4 py-2.5 text-sm font-medium border-r border-border">Machine Code</div>
               <select
                 value={selectedMachineId}
-                onChange={(e) => { setSelectedMachineId(e.target.value); resetForm(); }}
+                onChange={(e) => { setSelectedMachineId(e.target.value); resetForm(); setBulkSelectedIds([]); }}
                 className="flex-1 bg-transparent text-foreground text-sm px-4 py-2.5 font-medium focus:outline-none"
               >
                 {machines.map(m => (
@@ -178,13 +210,30 @@ export default function MaintenancePlan() {
               <p className="text-sm text-muted-foreground">Loading maintenance actions...</p>
             </div>
           ) : (
-            <DataTable
-              columns={columns}
-              data={machineActions}
-              keyExtractor={(item) => item.id}
-              onRowClick={handleRowClick}
-              selectedId={selectedRowId || undefined}
-            />
+            <div>
+              <DataTable
+                columns={columns}
+                data={machineActions}
+                keyExtractor={(item) => item.id}
+                onRowClick={handleRowClick}
+                selectedId={selectedRowId || undefined}
+                selectable
+                selectedIds={bulkSelectedIds}
+                onSelectionChange={setBulkSelectedIds}
+              />
+              <BulkActionsBar
+                selectedCount={bulkSelectedIds.length}
+                onClear={() => setBulkSelectedIds([])}
+                actions={[
+                  {
+                    label: 'Delete Selected',
+                    icon: <Trash2 className="h-3.5 w-3.5" />,
+                    onClick: handleBulkDelete,
+                    variant: 'destructive',
+                  },
+                ]}
+              />
+            </div>
           )}
 
           {/* Table Actions */}
@@ -203,40 +252,43 @@ export default function MaintenancePlan() {
           </div>
 
           {/* Action Form */}
-          <div className={`bg-card border rounded-lg overflow-hidden transition-colors duration-200 ${mode === 'edit' ? 'border-primary/50' : 'border-border'}`}>
+          <form onSubmit={handleSubmit(onSubmit)} className={`bg-card border rounded-lg overflow-hidden transition-colors duration-200 ${mode === 'edit' ? 'border-primary/50' : 'border-border'}`}>
             <div className={`section-header flex justify-between items-center ${mode === 'edit' ? 'bg-primary/5' : ''}`}>
               <span>{mode === 'edit' ? 'Edit Action' : 'Add New Action'}</span>
               {mode === 'edit' && (
-                <button onClick={resetForm} className="text-xs flex items-center gap-1 text-muted-foreground hover:text-destructive px-2 py-1 rounded transition-colors">
+                <button type="button" onClick={resetForm} className="text-xs flex items-center gap-1 text-muted-foreground hover:text-destructive px-2 py-1 rounded transition-colors">
                   <X className="h-3 w-3" /> Cancel
                 </button>
               )}
             </div>
             <div className="p-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <InputField id="action-input" label="Action" value={formData.action}
-                  onChange={(v) => setFormData(prev => ({ ...prev, action: v }))}
-                  placeholder="Enter action description..." disabled={createMutation.isPending || updateMutation.isPending} />
-                <SelectField label="Periodicity" value={formData.periodicity}
-                  onChange={(v) => setFormData(prev => ({ ...prev, periodicity: v as any }))}
+                <InputField id="action-input" label="Action" value={formValues.action}
+                  onChange={(v) => setValue('action', v, { shouldValidate: true, shouldDirty: true })}
+                  placeholder="Enter action description..." disabled={createMutation.isPending || updateMutation.isPending}
+                  required error={errors.action?.message} />
+                <SelectField label="Periodicity" value={formValues.periodicity}
+                  onChange={(v) => setValue('periodicity', v, { shouldDirty: true })}
                   options={periodicityOptions.map(p => ({ value: p.value, label: p.value }))}
-                  disabled={createMutation.isPending || updateMutation.isPending} />
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  required error={errors.periodicity?.message} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <InputField label="Time Needed (min)" value={String(formData.timeNeeded)}
-                  onChange={(v) => setFormData(prev => ({ ...prev, timeNeeded: parseInt(v) || 0 }))}
-                  type="number" min="0" disabled={createMutation.isPending || updateMutation.isPending} />
-                <CheckboxField label="Maintenance In Charge" checked={formData.maintenanceInCharge}
-                  onChange={(v) => setFormData(prev => ({ ...prev, maintenanceInCharge: v }))}
+                <InputField label="Time Needed (min)" value={String(formValues.timeNeeded)}
+                  onChange={(v) => setValue('timeNeeded', parseInt(v) || 0, { shouldValidate: true, shouldDirty: true })}
+                  type="number" min="0" disabled={createMutation.isPending || updateMutation.isPending}
+                  error={errors.timeNeeded?.message} />
+                <CheckboxField label="Maintenance In Charge" checked={formValues.maintenanceInCharge}
+                  onChange={(v) => setValue('maintenanceInCharge', v, { shouldDirty: true })}
                   disabled={createMutation.isPending || updateMutation.isPending} />
-                <SelectField label="Month" value={formData.month}
-                  onChange={(v) => setFormData(prev => ({ ...prev, month: v }))}
+                <SelectField label="Month" value={formValues.month}
+                  onChange={(v) => setValue('month', v, { shouldDirty: true })}
                   options={months.map(m => ({ value: m, label: m }))}
                   disabled={createMutation.isPending || updateMutation.isPending} />
               </div>
               <div className="pt-2">
                 <ActionButton variant={mode === 'edit' ? 'blue' : 'green'} className="min-w-[140px]"
-                  onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending}>
+                  type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
                   {createMutation.isPending || updateMutation.isPending ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : ( mode === 'edit' ? <Save className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" /> )}
@@ -244,7 +296,7 @@ export default function MaintenancePlan() {
                 </ActionButton>
               </div>
             </div>
-          </div>
+          </form>
         </div>
 
         {/* Right Sidebar */}

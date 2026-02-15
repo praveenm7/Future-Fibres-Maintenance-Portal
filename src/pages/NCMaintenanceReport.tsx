@@ -5,6 +5,7 @@ import { useNonConformities } from '@/hooks/useNonConformities';
 import { useMachines } from '@/hooks/useMachines';
 import { exportToExcel, formatDateForExport, getExportTimestamp } from '@/lib/exportExcel';
 import { printReport } from '@/lib/printReport';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import type { NonConformity } from '@/types/maintenance';
 import {
   Loader2, Search, X, AlertTriangle, Clock, Check,
@@ -22,28 +23,6 @@ function formatDate(dateStr?: string) {
   } catch {
     return dateStr;
   }
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const config: Record<string, { dot: string; text: string }> = {
-    'PENDING': { dot: 'bg-amber-400', text: 'text-amber-700 dark:text-amber-400' },
-    'IN PROGRESS': { dot: 'bg-blue-400', text: 'text-blue-700 dark:text-blue-400' },
-    'COMPLETED': { dot: 'bg-emerald-400', text: 'text-emerald-700 dark:text-emerald-400' },
-    'CANCELLED': { dot: 'bg-gray-400', text: 'text-gray-500' },
-  };
-  const c = config[status] || config['PENDING'];
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${c.text}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${c.dot}`}></span>
-      {status === 'IN PROGRESS' ? 'In Progress' : status.charAt(0) + status.slice(1).toLowerCase()}
-    </span>
-  );
-}
-
-function PriorityBadge({ priority }: { priority: number }) {
-  if (priority >= 3) return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400">High</span>;
-  if (priority === 2) return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">Medium</span>;
-  return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">Low</span>;
 }
 
 export default function NCMaintenanceReport() {
@@ -227,8 +206,8 @@ export default function NCMaintenanceReport() {
                       <td className="text-muted-foreground">{nc.maintenanceOperator || '-'}</td>
                       <td className="whitespace-nowrap text-muted-foreground">{formatDate(nc.creationDate)}</td>
                       <td className="whitespace-nowrap text-muted-foreground">{formatDate(nc.initiationDate)}</td>
-                      <td><StatusBadge status={nc.status} /></td>
-                      <td className="text-center"><PriorityBadge priority={nc.priority} /></td>
+                      <td><StatusBadge value={nc.status} /></td>
+                      <td className="text-center"><StatusBadge value={nc.priority} variant="priority" /></td>
                     </tr>
                   );
                 })
@@ -269,9 +248,9 @@ export default function NCMaintenanceReport() {
                     </button>
                   </div>
                   <div className="flex gap-3 mt-2.5">
-                    <StatusBadge status={selectedNC.status} />
+                    <StatusBadge value={selectedNC.status} />
                     <span className="text-xs text-muted-foreground/40">|</span>
-                    <PriorityBadge priority={selectedNC.priority} />
+                    <StatusBadge value={selectedNC.priority} variant="priority" />
                   </div>
                 </div>
 

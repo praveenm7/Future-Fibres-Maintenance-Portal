@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ReportToolbar } from '@/components/ui/ReportToolbar';
+import { DataImportDialog } from '@/components/ui/DataImportDialog';
 import { useMachines } from '@/hooks/useMachines';
 import { exportToExcel, getExportTimestamp } from '@/lib/exportExcel';
 import { printReport } from '@/lib/printReport';
@@ -15,11 +16,13 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002
 const SERVER_BASE = API_BASE_URL.replace('/api', '');
 
 export default function MachineryListReport() {
-  const { useGetMachines } = useMachines();
+  const { useGetMachines, useCreateMachine } = useMachines();
   const { data: machines = [], isLoading } = useGetMachines();
+  const createMutation = useCreateMachine();
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [areaFilter, setAreaFilter] = useState('');
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const detailsRef = useRef<HTMLDivElement>(null);
 
   const areas = useMemo(() => [...new Set(machines.map(m => m.area).filter(Boolean))].sort(), [machines]);
@@ -138,7 +141,7 @@ export default function MachineryListReport() {
           <option value="">All Areas</option>
           {areas.map(area => <option key={area} value={area}>{area}</option>)}
         </select>
-        <ReportToolbar onPrint={handlePrint} onExportExcel={handleExportExcel} className="ml-auto" />
+        <ReportToolbar onPrint={handlePrint} onExportExcel={handleExportExcel} onImport={() => setImportDialogOpen(true)} className="ml-auto" />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-6">
@@ -310,6 +313,52 @@ export default function MachineryListReport() {
           )}
         </div>
       </div>
+
+      <DataImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        title="Import Machines"
+        targetFields={[
+          { key: 'description', label: 'Description', required: true },
+          { key: 'type', label: 'Type' },
+          { key: 'group', label: 'Group' },
+          { key: 'area', label: 'Area' },
+          { key: 'manufacturer', label: 'Manufacturer' },
+          { key: 'model', label: 'Model' },
+          { key: 'serialNumber', label: 'Serial Number' },
+          { key: 'manufacturerYear', label: 'Year' },
+          { key: 'power', label: 'Power' },
+          { key: 'personInCharge', label: 'Person in Charge' },
+          { key: 'purchasingDate', label: 'Purchasing Date' },
+          { key: 'purchasingCost', label: 'Purchasing Cost' },
+          { key: 'poNumber', label: 'PO Number' },
+        ]}
+        onImport={async (rows) => {
+          for (const row of rows) {
+            await createMutation.mutateAsync({
+              id: '',
+              finalCode: '',
+              description: row.description || '',
+              type: row.type || 'MACHINE',
+              group: row.group || 'EC6',
+              area: row.area || 'IHM',
+              manufacturer: row.manufacturer || '',
+              model: row.model || '',
+              serialNumber: row.serialNumber || '',
+              manufacturerYear: row.manufacturerYear || '',
+              power: row.power || '',
+              personInCharge: row.personInCharge || '',
+              purchasingDate: row.purchasingDate || '',
+              purchasingCost: row.purchasingCost || '',
+              poNumber: row.poNumber || '',
+              permissionRequired: false,
+              authorizationGroup: '',
+              maintenanceNeeded: false,
+              maintenanceOnHold: false,
+            } as Machine);
+          }
+        }}
+      />
     </div>
   );
 }

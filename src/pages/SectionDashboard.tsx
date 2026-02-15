@@ -120,7 +120,7 @@ export default function SectionDashboard({ type }: SectionDashboardProps) {
                         <Link
                             key={item.path}
                             to={item.path}
-                            className="group flex flex-col bg-card border border-border rounded-lg overflow-hidden transition-all duration-200 hover:shadow-md hover:border-primary/30"
+                            className="group flex flex-col bg-card border border-border rounded-lg overflow-hidden transition-all duration-200 hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5"
                         >
                             <div className="p-5 flex-1">
                                 <div className="flex items-start justify-between mb-3">

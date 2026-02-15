@@ -44,19 +44,19 @@ INSERT INTO [dbo].[Machines]
      [ManufacturerYear], [Power], [PermissionRequired], [AuthorizationGroup], 
      [MaintenanceNeeded], [MaintenanceOnHold], [PersonInChargeID], [ImageUrl])
 VALUES 
-    (1, '01-02-0001', 'MACHINE', 'EC6', 'CNC 3 AXIS MILL', '2025-01-01', 
-     25000.00, 'PO001111', 'IHM', 'HAAS', 'TM-1P', '20/04/4780', 
-     '2008', '9600W', 1, 'HAAS', 
+    (1, 'M-EC6-0001', 'MACHINE', 'EC6', 'CNC 3 AXIS MILL', '2025-01-01',
+     25000.00, 'PO001111', 'IHM', 'HAAS', 'TM-1P', '20/04/4780',
+     '2008', '9600W', 1, 'HAAS',
      1, 0, 1, '/placeholder.svg'),
-    
-    (2, '01-01-0008', 'MACHINE', 'EC6', 'FRESADORA CNC HAAS', '2024-03-15', 
-     35000.00, 'PO001112', 'IHM', 'HAAS', 'TM-1P', '20/05/5890', 
-     '2020', '11000W', 1, 'MACHINING CENTER', 
+
+    (2, 'M-EC6-0002', 'MACHINE', 'EC6', 'FRESADORA CNC HAAS', '2024-03-15',
+     35000.00, 'PO001112', 'IHM', 'HAAS', 'TM-1P', '20/05/5890',
+     '2020', '11000W', 1, 'MACHINING CENTER',
      1, 0, 2, '/placeholder.svg'),
-    
-    (3, '01-03-0015', 'TOOLING', 'EC4', 'MAST CUTTING BENCH', '2023-06-20', 
-     8500.00, 'PO001200', 'PRODUCTION', 'CUSTOM', 'MCB-200', '23/06/1234', 
-     '2023', '2200W', 1, 'MAST CUTTING', 
+
+    (3, 'T-EC4-0001', 'TOOLING', 'EC4', 'MAST CUTTING BENCH', '2023-06-20',
+     8500.00, 'PO001200', 'PRODUCTION', 'CUSTOM', 'MCB-200', '23/06/1234',
+     '2023', '2200W', 1, 'MAST CUTTING',
      1, 0, 3, '/placeholder.svg');
 GO
 

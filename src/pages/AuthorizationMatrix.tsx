@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { InputField } from '@/components/ui/FormField';
@@ -8,6 +10,8 @@ import type { AuthorizationMatrix as AuthMatrixType } from '@/types/maintenance'
 import { Plus, Trash2, Pencil, Save, RotateCcw, Loader2 } from 'lucide-react';
 import { useAuthMatrix } from '@/hooks/useAuthMatrix';
 import { useListOptions } from '@/hooks/useListOptions';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { authMatrixFormSchema, type AuthMatrixFormValues } from '@/lib/schemas/authMatrixSchema';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -29,29 +33,37 @@ export default function AuthorizationMatrix() {
   const [mode, setMode] = useState<'new' | 'modify' | 'delete'>('new');
   const [selectedUserId, setSelectedUserId] = useState('');
 
-  const [formData, setFormData] = useState<AuthMatrixType>({
-    id: '',
+  const getDefaultValues = (): AuthMatrixFormValues => ({
     operatorName: '',
     email: '',
     department: '',
     updatedDate: new Date().toLocaleDateString('en-GB'),
-    authorizations: {}
+    authorizations: groupOptions.reduce((acc, group) => {
+      acc[group.value] = false;
+      return acc;
+    }, {} as Record<string, boolean>),
   });
+
+  const {
+    watch,
+    setValue,
+    handleSubmit,
+    reset,
+    formState: { errors, isDirty },
+  } = useForm<AuthMatrixFormValues>({
+    resolver: zodResolver(authMatrixFormSchema),
+    defaultValues: getDefaultValues(),
+  });
+
+  const formValues = watch();
+
+  // Unsaved changes warning
+  useUnsavedChanges(isDirty);
 
   useEffect(() => {
     if (mode === 'new') {
       setSelectedUserId('');
-      setFormData({
-        id: '',
-        operatorName: '',
-        email: '',
-        department: '',
-        updatedDate: new Date().toLocaleDateString('en-GB'),
-        authorizations: groupOptions.reduce((acc, group) => {
-          acc[group.value] = false;
-          return acc;
-        }, {} as Record<string, boolean>)
-      });
+      reset(getDefaultValues());
     }
   }, [mode, groupOptions]);
 
@@ -59,31 +71,33 @@ export default function AuthorizationMatrix() {
     const user = authorizationMatrices.find(u => u.id === id);
     if (user) {
       setSelectedUserId(id);
-      setFormData({ ...user });
+      reset({
+        operatorName: user.operatorName,
+        email: user.email || '',
+        department: user.department || '',
+        updatedDate: user.updatedDate,
+        authorizations: user.authorizations || {},
+      });
     }
   };
 
   const handleToggle = (group: string) => {
     if (mode === 'delete') return;
-
-    setFormData(prev => ({
-      ...prev,
-      authorizations: {
-        ...prev.authorizations,
-        [group]: !prev.authorizations?.[group]
-      }
-    }));
+    const current = formValues.authorizations?.[group] || false;
+    setValue(`authorizations.${group}`, !current, { shouldDirty: true });
   };
 
-  const handleSave = async () => {
-    if (!formData.operatorName) {
-      toast.error("Operator Name is required");
-      return;
-    }
-
+  const onSubmit = async (data: AuthMatrixFormValues) => {
     try {
       if (mode === 'new') {
-        const result = await createMutation.mutateAsync(formData);
+        const result = await createMutation.mutateAsync({
+          id: '',
+          operatorName: data.operatorName,
+          email: data.email,
+          department: data.department,
+          updatedDate: data.updatedDate,
+          authorizations: data.authorizations,
+        } as AuthMatrixType);
         toast.success("User added. You can now modify permissions.");
         setMode('modify');
         if (result?.id) {
@@ -92,21 +106,28 @@ export default function AuthorizationMatrix() {
       } else if (mode === 'modify' && selectedUserId) {
         await updateMutation.mutateAsync({
           id: selectedUserId,
-          data: formData
+          data: {
+            id: selectedUserId,
+            operatorName: data.operatorName,
+            email: data.email,
+            department: data.department,
+            updatedDate: data.updatedDate,
+            authorizations: data.authorizations,
+          } as AuthMatrixType,
         });
       }
-    } catch (error) {
+    } catch {
       // Handled by mutation toast
     }
   };
 
   const handleDelete = async () => {
     if (selectedUserId) {
-      if (confirm(`Delete authorizations for ${formData.operatorName}?`)) {
+      if (confirm(`Delete authorizations for ${formValues.operatorName}?`)) {
         try {
           await deleteMutation.mutateAsync(selectedUserId);
           setMode('new');
-        } catch (error) {
+        } catch {
           // Handled by mutation toast
         }
       }
@@ -141,7 +162,7 @@ export default function AuthorizationMatrix() {
         </TabsList>
       </Tabs>
 
-      <div className="space-y-6">
+      <form onSubmit={handleSubmit(mode === 'delete' ? () => handleDelete() : onSubmit)} className="space-y-6">
         {/* User Selection Dropdown (Modify/Delete) */}
         {mode !== 'new' && (
           <div className="border border-border rounded-lg p-4 bg-muted/10 animate-in fade-in slide-in-from-top-1">
@@ -173,18 +194,20 @@ export default function AuthorizationMatrix() {
           (mode !== 'new' && !selectedUserId) ? "opacity-50 pointer-events-none" : "opacity-100"
         )}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <InputField label="Operator" value={formData.operatorName}
-              onChange={(v) => setFormData(prev => ({ ...prev, operatorName: v }))}
+            <InputField label="Operator" value={formValues.operatorName}
+              onChange={(v) => setValue('operatorName', v, { shouldValidate: true, shouldDirty: true })}
               readOnly={mode !== 'new'}
+              disabled={mode === 'delete' || createMutation.isPending || updateMutation.isPending}
+              required error={errors.operatorName?.message} />
+            <InputField label="Email" value={formValues.email || ''}
+              onChange={(v) => setValue('email', v, { shouldValidate: true, shouldDirty: true })}
+              type="email" disabled={mode === 'delete' || createMutation.isPending || updateMutation.isPending}
+              error={errors.email?.message} />
+            <InputField label="Department" value={formValues.department || ''}
+              onChange={(v) => setValue('department', v, { shouldDirty: true })}
               disabled={mode === 'delete' || createMutation.isPending || updateMutation.isPending} />
-            <InputField label="Email" value={formData.email || ''}
-              onChange={(v) => setFormData(prev => ({ ...prev, email: v }))}
-              type="email" disabled={mode === 'delete' || createMutation.isPending || updateMutation.isPending} />
-            <InputField label="Department" value={formData.department || ''}
-              onChange={(v) => setFormData(prev => ({ ...prev, department: v }))}
-              disabled={mode === 'delete' || createMutation.isPending || updateMutation.isPending} />
-            <InputField label="Updated Date" value={formData.updatedDate}
-              onChange={(v) => setFormData(prev => ({ ...prev, updatedDate: v }))}
+            <InputField label="Updated Date" value={formValues.updatedDate}
+              onChange={(v) => setValue('updatedDate', v, { shouldDirty: true })}
               disabled={mode === 'delete' || createMutation.isPending || updateMutation.isPending} />
           </div>
 
@@ -202,7 +225,7 @@ export default function AuthorizationMatrix() {
                   >
                     <span className="text-sm font-medium truncate mr-3" title={group.value}>{group.value}</span>
                     <Switch
-                      checked={!!formData.authorizations?.[group.value]}
+                      checked={!!formValues.authorizations?.[group.value]}
                       onCheckedChange={() => handleToggle(group.value)}
                       disabled={mode === 'delete' || createMutation.isPending || updateMutation.isPending}
                     />
@@ -215,7 +238,7 @@ export default function AuthorizationMatrix() {
           {/* Action Buttons */}
           <div className="flex gap-4 mt-6">
             {mode === 'delete' ? (
-              <ActionButton variant="red" onClick={handleDelete}
+              <ActionButton variant="red" type="button" onClick={handleDelete}
                 disabled={!selectedUserId || deleteMutation.isPending}>
                 {deleteMutation.isPending ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -225,7 +248,7 @@ export default function AuthorizationMatrix() {
                 Confirm Delete
               </ActionButton>
             ) : (
-              <ActionButton variant="green" onClick={handleSave}
+              <ActionButton variant="green" type="submit"
                 disabled={(mode === 'modify' && !selectedUserId) || createMutation.isPending || updateMutation.isPending}>
                 {createMutation.isPending || updateMutation.isPending ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -236,13 +259,13 @@ export default function AuthorizationMatrix() {
               </ActionButton>
             )}
 
-            <ActionButton variant="red" onClick={() => { setMode('new'); setSelectedUserId(''); }}
+            <ActionButton variant="red" type="button" onClick={() => { setMode('new'); setSelectedUserId(''); }}
               disabled={createMutation.isPending || updateMutation.isPending || deleteMutation.isPending}>
               <RotateCcw className="h-4 w-4 mr-2" /> Reset
             </ActionButton>
           </div>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

@@ -187,4 +187,36 @@
   .dropdown-indicator {
     @apply h-4 w-4 opacity-50;
   }
+
+  /* Standardized page container */
+  .page-container {
+    @apply space-y-6;
+  }
+
+  /* Standardized card section */
+  .card-section {
+    @apply bg-card border border-border rounded-lg overflow-hidden;
+  }
+}
+
+/* Print styles */
+@media print {
+  aside,
+  .no-print {
+    display: none !important;
+  }
+
+  main {
+    margin-left: 0 !important;
+    padding: 1rem !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .bg-card {
+    box-shadow: none !important;
+  }
 }
