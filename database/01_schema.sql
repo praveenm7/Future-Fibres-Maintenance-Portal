@@ -260,6 +260,36 @@ CREATE NONCLUSTERED INDEX [IX_ListOptions_Type_Sort] ON [dbo].[ListOptions] ([Li
 GO
 
 -- =============================================
+-- Table: MachineDocuments
+-- Description: Uploaded documents and manuals for machines
+-- =============================================
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[MachineDocuments]') AND type in (N'U'))
+BEGIN
+    CREATE TABLE [dbo].[MachineDocuments] (
+        [DocumentID] INT IDENTITY(1,1) NOT NULL,
+        [MachineID] INT NOT NULL,
+        [FileName] NVARCHAR(255) NOT NULL,
+        [StoredName] NVARCHAR(255) NOT NULL,
+        [FilePath] NVARCHAR(500) NOT NULL,
+        [FileSize] INT NULL,
+        [MimeType] NVARCHAR(100) NULL,
+        [Category] NVARCHAR(50) NOT NULL DEFAULT 'DOCUMENT',
+        [UploadedDate] DATETIME2 NOT NULL DEFAULT GETDATE(),
+        CONSTRAINT [PK_MachineDocuments] PRIMARY KEY CLUSTERED ([DocumentID] ASC),
+        CONSTRAINT [FK_MachineDocuments_Machines] FOREIGN KEY ([MachineID])
+            REFERENCES [dbo].[Machines]([MachineID]) ON DELETE CASCADE,
+        CONSTRAINT [CK_MachineDocuments_Category] CHECK ([Category] IN ('DOCUMENT', 'MANUAL'))
+    );
+    PRINT 'Table MachineDocuments created successfully.';
+END
+GO
+
+-- Indexes for MachineDocuments table
+CREATE NONCLUSTERED INDEX [IX_MachineDocuments_MachineID] ON [dbo].[MachineDocuments] ([MachineID] ASC);
+CREATE NONCLUSTERED INDEX [IX_MachineDocuments_Category] ON [dbo].[MachineDocuments] ([Category] ASC);
+GO
+
+-- =============================================
 -- Triggers for automatic UpdatedDate
 -- =============================================
 
@@ -374,7 +404,7 @@ GO
 PRINT '=============================================';
 PRINT 'Database schema created successfully!';
 PRINT 'Database: FutureFibresMaintenance';
-PRINT 'Tables: 8';
+PRINT 'Tables: 9';
 PRINT 'Triggers: 6';
 PRINT '=============================================';
 GO

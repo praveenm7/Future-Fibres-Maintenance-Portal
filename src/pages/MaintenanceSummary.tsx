@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { ReportToolbar } from '@/components/ui/ReportToolbar';
 import { useDashboard } from '@/hooks/useDashboard';
 import { useMachines } from '@/hooks/useMachines';
+import { exportToExcel, getExportTimestamp } from '@/lib/exportExcel';
 import { Loader2 } from 'lucide-react';
 
 const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
@@ -55,14 +57,36 @@ export default function MaintenanceSummary() {
           <option value="YEARLY">YEARLY</option>
         </select>
         {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+        <ReportToolbar
+          onExportExcel={() => {
+            const weekHeaders = Array.from({ length: 48 }, (_, i) => `W${i + 1}`);
+            exportToExcel({
+              filename: `Maintenance_Summary_${periodicity}_${getExportTimestamp()}`,
+              sheets: [{
+                name: 'Maintenance Summary',
+                headers: ['Machine Code', 'Description', 'Area', 'Efficiency %', ...weekHeaders],
+                rows: [
+                  ...displayData.map(({ machine, efficiency, weeklyData }) => [
+                    machine.finalCode, machine.description, machine.area, efficiency,
+                    ...weeklyData
+                  ]),
+                  [],
+                  ['Legend:', '0 = Not Completed', '1 = Completed', '2 = Partial/Mandatory']
+                ],
+                columnWidths: [15, 25, 12, 12, ...new Array(48).fill(5)],
+              }],
+            });
+          }}
+          className="ml-auto"
+        />
       </div>
 
-      <div className="overflow-x-auto border border-border rounded">
+      <div className="relative isolate overflow-x-auto border border-border rounded-lg">
         <table className="data-table text-xs">
           <thead>
             <tr>
-              <th className="sticky left-0 bg-table-header z-10">MACHINE CODE</th>
-              <th className="sticky left-[100px] bg-table-header z-10">DESCRIPTION</th>
+              <th className="sticky left-0 !bg-muted z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">MACHINE CODE</th>
+              <th className="sticky left-[100px] !bg-muted z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">DESCRIPTION</th>
               <th>AREA</th>
               <th>EFFICIENCY</th>
               {months.map((month) => (
@@ -80,10 +104,10 @@ export default function MaintenanceSummary() {
                 </td>
               </tr>
             ) : (
-              displayData.map(({ machine, efficiency, weeklyData }) => (
+              displayData.map(({ machine, efficiency, weeklyData }, index) => (
                 <tr key={machine.id}>
-                  <td className="sticky left-0 bg-card z-10 font-medium">{machine.finalCode}</td>
-                  <td className="sticky left-[100px] bg-card z-10">{machine.description}</td>
+                  <td className={`sticky left-0 z-20 font-medium shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] ${index % 2 === 1 ? '!bg-muted' : '!bg-card'}`}>{machine.finalCode}</td>
+                  <td className={`sticky left-[100px] z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] ${index % 2 === 1 ? '!bg-muted' : '!bg-card'}`}>{machine.description}</td>
                   <td>{machine.area}</td>
                   <td className={`font-bold ${efficiency >= 80 ? 'text-success' :
                       efficiency >= 60 ? 'text-warning' :

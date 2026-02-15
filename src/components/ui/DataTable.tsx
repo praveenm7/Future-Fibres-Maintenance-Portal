@@ -24,10 +24,10 @@ export function DataTable<T>({
   keyExtractor
 }: DataTableProps<T>) {
   return (
-    <div className="overflow-x-auto border border-border rounded-lg overflow-hidden">
+    <div className="relative isolate overflow-x-auto border border-border rounded-lg">
       <table className="w-full caption-bottom text-sm">
         <thead>
-          <tr className="bg-muted/50 border-b border-border">
+          <tr className="bg-muted border-b border-border">
             {columns.map((col) => (
               <th
                 key={col.key}

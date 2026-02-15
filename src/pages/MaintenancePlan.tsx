@@ -10,6 +10,9 @@ import { useMaintenanceActions } from '@/hooks/useMaintenanceActions';
 import { useListOptions } from '@/hooks/useListOptions';
 import { toast } from 'sonner';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002/api';
+const SERVER_BASE = API_BASE_URL.replace('/api', '');
+
 const months = [
   'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
   'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
@@ -40,7 +43,7 @@ export default function MaintenancePlan() {
   const [selectedMachineId, setSelectedMachineId] = useState('');
 
   const { data: machineActions = [], isLoading: loadingActions } = useGetActions(selectedMachineId);
-  const { data: periodicityOptions = [] } = useGetListOptions('Periodicities');
+  const { data: periodicityOptions = [] } = useGetListOptions('PERIODICITY');
   const createMutation = useCreateAction();
   const updateMutation = useUpdateAction();
   const deleteMutation = useDeleteAction();
@@ -251,7 +254,7 @@ export default function MaintenancePlan() {
             <div className="p-4">
               <div className="aspect-square bg-muted/30 rounded-md flex items-center justify-center border border-dashed border-border">
                 {selectedMachine?.imageUrl ? (
-                  <img src={selectedMachine.imageUrl} alt="Machine" className="max-w-full max-h-full object-contain" />
+                  <img src={selectedMachine.imageUrl.startsWith('http') ? selectedMachine.imageUrl : `${SERVER_BASE}${selectedMachine.imageUrl}`} alt="Machine" className="max-w-full max-h-full object-contain" />
                 ) : (
                   <span className="text-muted-foreground text-sm">No image</span>
                 )}

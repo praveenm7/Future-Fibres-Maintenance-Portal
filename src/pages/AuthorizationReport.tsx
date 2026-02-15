@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { ReportToolbar } from '@/components/ui/ReportToolbar';
 import { useAuthMatrix } from '@/hooks/useAuthMatrix';
 import { useListOptions } from '@/hooks/useListOptions';
+import { exportToExcel, getExportTimestamp } from '@/lib/exportExcel';
+import { printReport } from '@/lib/printReport';
 import { Loader2 } from 'lucide-react';
 
 export default function AuthorizationReport() {
@@ -9,7 +12,7 @@ export default function AuthorizationReport() {
   const { useGetListOptions } = useListOptions();
 
   const { data: authMatrices = [], isLoading: loadingMatrices } = useGetMatrices();
-  const { data: authGroups = [], isLoading: loadingGroups } = useGetListOptions('Authorization Groups');
+  const { data: authGroups = [], isLoading: loadingGroups } = useGetListOptions('AUTHORIZATION_GROUP');
 
   // Map database list options to simple strings
   const authorizationGroups = authGroups.map(g => g.value);
@@ -27,15 +30,48 @@ export default function AuthorizationReport() {
     );
   }
 
+  const handlePrint = () => {
+    const tableHtml = `<table>
+      <thead><tr>
+        <th>Operator</th><th>Email</th><th>Department</th>
+        ${authorizationGroups.map(g => `<th>${g}</th>`).join('')}
+      </tr></thead>
+      <tbody>
+      ${authMatrices.map(user => `<tr>
+        <td>${user.operatorName}</td><td>${user.email || '-'}</td><td>${user.department || '-'}</td>
+        ${authorizationGroups.map(g => `<td style="text-align:center;font-weight:bold">${user.authorizations?.[g] ? 'Y' : 'N'}</td>`).join('')}
+      </tr>`).join('')}
+      </tbody></table>`;
+    printReport({ title: 'Authorization Matrix', htmlContent: tableHtml });
+  };
+
+  const handleExportExcel = () => {
+    exportToExcel({
+      filename: `Authorization_Matrix_${getExportTimestamp()}`,
+      sheets: [{
+        name: 'Authorization Matrix',
+        headers: ['Operator', 'Email', 'Department', ...authorizationGroups],
+        rows: authMatrices.map(user => [
+          user.operatorName, user.email || '', user.department || '',
+          ...authorizationGroups.map(g => user.authorizations?.[g] ? 'Y' : 'N')
+        ]),
+      }],
+    });
+  };
+
   return (
     <div>
       <PageHeader title="Authorization Matrix" />
 
-      <div className="overflow-x-auto">
+      <div className="flex justify-end mb-4">
+        <ReportToolbar onPrint={handlePrint} onExportExcel={handleExportExcel} />
+      </div>
+
+      <div className="relative isolate overflow-x-auto border border-border rounded-lg">
         <table className="data-table text-xs">
           <thead>
             <tr>
-              <th className="sticky left-0 bg-table-header z-10">OPERATOR</th>
+              <th className="sticky left-0 !bg-muted z-20 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">OPERATOR</th>
               <th>EMAIL</th>
               <th>DEPARTMENT</th>
               {authorizationGroups.map((group) => (
@@ -48,18 +84,18 @@ export default function AuthorizationReport() {
           <tbody>
             {authMatrices.length === 0 ? (
               <tr>
-                <td colSpan={authorizationGroups.length + 1} className="text-center p-4 text-muted-foreground">
+                <td colSpan={authorizationGroups.length + 3} className="text-center p-4 text-muted-foreground">
                   No authorization data found.
                 </td>
               </tr>
             ) : (
-              authMatrices.map((user) => (
+              authMatrices.map((user, index) => (
                 <tr
                   key={user.id}
                   onClick={() => setSelectedUser(user.operatorName)}
-                  className={`cursor-pointer ${selectedUser === user.operatorName ? 'bg-accent/30' : ''}`}
+                  className={`cursor-pointer ${selectedUser === user.operatorName ? 'bg-accent' : ''}`}
                 >
-                  <td className="sticky left-0 bg-card z-10 font-medium">{user.operatorName}</td>
+                  <td className={`sticky left-0 z-20 font-medium shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] ${selectedUser === user.operatorName ? '!bg-accent' : index % 2 === 1 ? '!bg-muted' : '!bg-card'}`}>{user.operatorName}</td>
                   <td>{user.email || '-'}</td>
                   <td>{user.department || '-'}</td>
                   {authorizationGroups.map((group) => (

@@ -169,7 +169,7 @@
   }
 
   .data-table th {
-    @apply h-10 px-4 text-left align-middle text-xs font-medium uppercase tracking-wider text-muted-foreground bg-muted/50 border-b;
+    @apply h-10 px-4 text-left align-middle text-xs font-medium uppercase tracking-wider text-muted-foreground bg-muted border-b;
   }
 
   .data-table td {

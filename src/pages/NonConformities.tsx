@@ -11,6 +11,9 @@ import { useListOptions } from '@/hooks/useListOptions';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002/api';
+const SERVER_BASE = API_BASE_URL.replace('/api', '');
+
 const emptyNC: NonConformity = {
   id: '',
   ncCode: '',
@@ -43,8 +46,8 @@ export default function NonConformities() {
   const [selectedNCId, setSelectedNCId] = useState('');
 
   const { data: nonConformities = [], isLoading: loadingNCs } = useGetNCs(selectedMachineId);
-  const { data: statusOptions = [] } = useGetListOptions('Statuses');
-  const { data: priorityOptions = [] } = useGetListOptions('Priorities');
+  const { data: statusOptions = [] } = useGetListOptions('NC_STATUS');
+  const { data: priorityOptions = [] } = useGetListOptions('NC_PRIORITY');
   const createMutation = useCreateNC();
   const updateMutation = useUpdateNC();
   const deleteMutation = useDeleteNC();
@@ -340,7 +343,7 @@ export default function NonConformities() {
             <div className="p-4">
               <div className="aspect-square bg-muted/30 rounded-md flex items-center justify-center border border-dashed border-border">
                 {selectedMachine?.imageUrl ? (
-                  <img src={selectedMachine.imageUrl} alt="Machine" className="max-w-full max-h-full object-contain" />
+                  <img src={selectedMachine.imageUrl.startsWith('http') ? selectedMachine.imageUrl : `${SERVER_BASE}${selectedMachine.imageUrl}`} alt="Machine" className="max-w-full max-h-full object-contain" />
                 ) : (
                   <span className="text-muted-foreground text-sm">No image</span>
                 )}

@@ -78,3 +78,15 @@ export interface ListOption {
   listType: string;
   value: string;
 }
+
+export interface MachineDocument {
+  id: string;
+  machineId: string;
+  fileName: string;
+  storedName: string;
+  filePath: string;
+  fileSize: number;
+  mimeType: string;
+  category: 'DOCUMENT' | 'MANUAL';
+  uploadedDate: string;
+}

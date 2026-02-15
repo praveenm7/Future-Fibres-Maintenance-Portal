@@ -5,11 +5,17 @@ import { ActionButton } from '@/components/ui/ActionButton';
 import { FormField, SelectField, InputField, CheckboxField } from '@/components/ui/FormField';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Machine } from '@/types/maintenance';
-import { Eye, Upload, Printer, FileText, BookOpen, Save, Trash, Plus, RotateCcw, Loader2 } from 'lucide-react';
+import { Eye, Upload, Printer, FileText, BookOpen, Save, Trash, Plus, RotateCcw, Loader2, X } from 'lucide-react';
 import { useMachines } from '@/hooks/useMachines';
 import { useListOptions } from '@/hooks/useListOptions';
+import { useMachineDocuments } from '@/hooks/useMachineDocuments';
+import { FileUploadDialog } from '@/components/machines/FileUploadDialog';
+import { PrintLabelDialog } from '@/components/machines/PrintLabelDialog';
+import { DocumentsList } from '@/components/machines/DocumentsList';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+
+const SERVER_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002/api').replace('/api', '');
 
 const emptyMachine: Machine = {
   id: '',
@@ -46,16 +52,34 @@ export default function MachineManagement() {
   const { useGetListOptions } = useListOptions();
 
   const { data: machines = [], isLoading: loadingMachines, isError } = useGetMachines();
-  const { data: typeOptions = [] } = useGetListOptions('Machine Types');
-  const { data: groupOptions = [] } = useGetListOptions('Machine Groups');
-  const { data: areaOptions = [] } = useGetListOptions('Areas');
+  const { data: typeOptions = [] } = useGetListOptions('MACHINE_TYPE');
+  const { data: groupOptions = [] } = useGetListOptions('MACHINE_GROUP');
+  const { data: areaOptions = [] } = useGetListOptions('AREA');
   const createMachineMutation = useCreateMachine();
   const updateMachineMutation = useUpdateMachine();
   const deleteMachineMutation = useDeleteMachine();
 
+  const { useGetDocuments, useUploadPhoto, useUploadDocument, useDeleteDocument } = useMachineDocuments();
+
   const [mode, setMode] = useState<Mode>('new');
   const [selectedMachineId, setSelectedMachineId] = useState<string>('');
   const [formData, setFormData] = useState<Machine>(emptyMachine);
+
+  // Dialog state
+  const [photoDialogOpen, setPhotoDialogOpen] = useState(false);
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [docDialogOpen, setDocDialogOpen] = useState(false);
+  const [docCategory, setDocCategory] = useState<'DOCUMENT' | 'MANUAL'>('DOCUMENT');
+
+  // Pending files for New mode (uploaded before machine is saved)
+  const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
+  const [pendingDocs, setPendingDocs] = useState<{ file: File; category: 'DOCUMENT' | 'MANUAL' }[]>([]);
+
+  // Document hooks
+  const uploadPhotoMutation = useUploadPhoto();
+  const uploadDocMutation = useUploadDocument();
+  const deleteDocMutation = useDeleteDocument();
+  const { data: documents = [] } = useGetDocuments(selectedMachineId);
 
   // When mode changes to modify or delete, auto-select first machine if available
   useEffect(() => {
@@ -81,6 +105,8 @@ export default function MachineManagement() {
     if (newMode === 'new') {
       setSelectedMachineId('');
       setFormData({ ...emptyMachine });
+      setPendingPhoto(null);
+      setPendingDocs([]);
     }
   };
 
@@ -108,7 +134,28 @@ export default function MachineManagement() {
           ...formData,
           finalCode: generateFinalCode(),
         };
-        await createMachineMutation.mutateAsync(newMachine);
+        const created = await createMachineMutation.mutateAsync(newMachine);
+
+        // Upload pending photo if any
+        if (pendingPhoto && created && (created as Machine).id) {
+          try {
+            await uploadPhotoMutation.mutateAsync({ machineId: (created as Machine).id, file: pendingPhoto });
+          } catch { /* photo upload failure is non-critical */ }
+        }
+
+        // Upload pending documents if any
+        for (const doc of pendingDocs) {
+          try {
+            const fd = new FormData();
+            fd.append('file', doc.file);
+            fd.append('machineId', (created as Machine).id);
+            fd.append('category', doc.category);
+            await uploadDocMutation.mutateAsync(fd);
+          } catch { /* doc upload failure is non-critical */ }
+        }
+
+        setPendingPhoto(null);
+        setPendingDocs([]);
         setFormData({ ...emptyMachine }); // Reset after add
       } else if (mode === 'modify') {
         await updateMachineMutation.mutateAsync({
@@ -224,13 +271,32 @@ export default function MachineManagement() {
           <div className="bg-card rounded-lg border border-border overflow-hidden">
             <div className="section-header">Machine Picture</div>
             <div className="p-4">
-              <div className="aspect-video bg-muted/30 rounded-md flex items-center justify-center border border-dashed border-border">
+              <div className="relative aspect-video bg-muted/30 rounded-md flex items-center justify-center border border-dashed border-border">
                 {formData.imageUrl ? (
-                  <img
-                    src={formData.imageUrl}
-                    alt="Machine"
-                    className="max-w-full max-h-full object-contain rounded-md"
-                  />
+                  <>
+                    <img
+                      src={formData.imageUrl.startsWith('http') || formData.imageUrl.startsWith('blob:') ? formData.imageUrl : `${SERVER_BASE}${formData.imageUrl}`}
+                      alt="Machine"
+                      className="max-w-full max-h-full object-contain rounded-md"
+                    />
+                    {mode !== 'delete' && (
+                      <button
+                        onClick={() => {
+                          if (confirm('Remove this photo?')) {
+                            if (pendingPhoto) {
+                              URL.revokeObjectURL(formData.imageUrl!);
+                              setPendingPhoto(null);
+                            }
+                            setFormData(prev => ({ ...prev, imageUrl: '' }));
+                          }
+                        }}
+                        className="absolute top-1 right-1 bg-destructive/80 hover:bg-destructive text-white rounded-full p-0.5"
+                        title="Remove photo"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </>
                 ) : (
                   <span className="text-muted-foreground text-sm">No image available</span>
                 )}
@@ -240,23 +306,140 @@ export default function MachineManagement() {
 
           {/* Utility Buttons */}
           <div className="grid grid-cols-2 gap-2">
-            <ActionButton variant="blue" className="justify-center gap-2">
+            <ActionButton
+              variant="blue"
+              className="justify-center gap-2"
+              onClick={() => setPhotoDialogOpen(true)}
+              disabled={mode === 'delete'}
+            >
               <Upload className="h-4 w-4" />
               Upload Photo
             </ActionButton>
-            <ActionButton variant="blue" className="justify-center gap-2">
+            <ActionButton
+              variant="blue"
+              className="justify-center gap-2"
+              onClick={() => setPrintDialogOpen(true)}
+              disabled={mode === 'delete'}
+            >
               <Printer className="h-4 w-4" />
               Print Label
             </ActionButton>
-            <ActionButton variant="blue" className="justify-center gap-2">
+            <ActionButton
+              variant="blue"
+              className="justify-center gap-2"
+              onClick={() => { setDocCategory('DOCUMENT'); setDocDialogOpen(true); }}
+              disabled={mode === 'delete'}
+            >
               <FileText className="h-4 w-4" />
               Upload Doc
             </ActionButton>
-            <ActionButton variant="blue" className="justify-center gap-2">
+            <ActionButton
+              variant="blue"
+              className="justify-center gap-2"
+              onClick={() => { setDocCategory('MANUAL'); setDocDialogOpen(true); }}
+              disabled={mode === 'delete'}
+            >
               <BookOpen className="h-4 w-4" />
               Upload Manual
             </ActionButton>
           </div>
+
+          {/* Pending docs in New mode */}
+          {mode === 'new' && pendingDocs.length > 0 && (
+            <div className="bg-card rounded-lg border border-border overflow-hidden">
+              <div className="section-header">Pending Uploads</div>
+              <div className="p-2 space-y-1 text-sm">
+                {pendingDocs.map((doc, i) => (
+                  <div key={i} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50 group">
+                    {doc.category === 'MANUAL'
+                      ? <BookOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                      : <FileText className="h-4 w-4 text-muted-foreground shrink-0" />}
+                    <span className="truncate flex-1">{doc.file.name}</span>
+                    <span className="text-[10px] text-muted-foreground shrink-0 uppercase">
+                      {doc.category === 'MANUAL' ? 'Manual' : 'Doc'}
+                    </span>
+                    <button
+                      onClick={() => setPendingDocs(prev => prev.filter((_, idx) => idx !== i))}
+                      className="text-destructive/60 hover:text-destructive shrink-0"
+                      title="Remove"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <p className="text-xs text-muted-foreground italic px-1.5 pt-1">
+                  These will be uploaded when you save the machine.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Documents List */}
+          {selectedMachineId && mode !== 'new' && (
+            <DocumentsList
+              documents={documents}
+              onDelete={(id) => deleteDocMutation.mutate(id)}
+            />
+          )}
+
+          {/* Dialogs */}
+          <FileUploadDialog
+            open={photoDialogOpen}
+            onOpenChange={setPhotoDialogOpen}
+            title="Upload Machine Photo"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            isUploading={uploadPhotoMutation.isPending}
+            onUpload={(file) => {
+              if (mode === 'new') {
+                // Store locally — will be uploaded when machine is saved
+                setPendingPhoto(file);
+                const blobUrl = URL.createObjectURL(file);
+                setFormData(prev => ({ ...prev, imageUrl: blobUrl }));
+                setPhotoDialogOpen(false);
+                toast.success('Photo will be uploaded when machine is saved');
+              } else {
+                uploadPhotoMutation.mutate(
+                  { machineId: selectedMachineId, file },
+                  {
+                    onSuccess: (data) => {
+                      setFormData(prev => ({ ...prev, imageUrl: data.imageUrl }));
+                      setPhotoDialogOpen(false);
+                    },
+                  }
+                );
+              }
+            }}
+          />
+
+          <FileUploadDialog
+            open={docDialogOpen}
+            onOpenChange={setDocDialogOpen}
+            title={docCategory === 'MANUAL' ? 'Upload Manual' : 'Upload Document'}
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.txt"
+            isUploading={uploadDocMutation.isPending}
+            onUpload={(file) => {
+              if (mode === 'new') {
+                // Store locally — will be uploaded when machine is saved
+                setPendingDocs(prev => [...prev, { file, category: docCategory }]);
+                setDocDialogOpen(false);
+                toast.success(`${docCategory === 'MANUAL' ? 'Manual' : 'Document'} will be uploaded when machine is saved`);
+              } else {
+                const formDataUpload = new FormData();
+                formDataUpload.append('file', file);
+                formDataUpload.append('machineId', selectedMachineId);
+                formDataUpload.append('category', docCategory);
+                uploadDocMutation.mutate(formDataUpload, {
+                  onSuccess: () => setDocDialogOpen(false),
+                });
+              }
+            }}
+          />
+
+          <PrintLabelDialog
+            open={printDialogOpen}
+            onOpenChange={setPrintDialogOpen}
+            machine={{ ...formData, finalCode: formData.finalCode || generateFinalCode() }}
+          />
         </div>
 
         {/* Middle Column - Main Form */}

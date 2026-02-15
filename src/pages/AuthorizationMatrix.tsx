@@ -21,7 +21,7 @@ export default function AuthorizationMatrix() {
   const { useGetListOptions } = useListOptions();
 
   const { data: authorizationMatrices = [], isLoading: loadingMatrices } = useGetMatrices();
-  const { data: groupOptions = [] } = useGetListOptions('Authorization Groups');
+  const { data: groupOptions = [] } = useGetListOptions('AUTHORIZATION_GROUP');
   const createMutation = useCreateMatrix();
   const updateMutation = useUpdateMatrix();
   const deleteMutation = useDeleteMatrix();

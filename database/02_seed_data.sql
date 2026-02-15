@@ -262,6 +262,20 @@ VALUES
     (52, 'AUTHORIZATION_GROUP', 'RD TESTBEDS', 31, 1),
     (53, 'AUTHORIZATION_GROUP', 'SERVICE TESTBEDS', 32, 1),
     (54, 'AUTHORIZATION_GROUP', 'HAAS', 33, 1);
+
+-- NC Priorities (1-10)
+INSERT INTO [dbo].[ListOptions] ([ListOptionID], [ListType], [OptionValue], [SortOrder], [IsActive])
+VALUES
+    (55, 'NC_PRIORITY', '1', 1, 1),
+    (56, 'NC_PRIORITY', '2', 2, 1),
+    (57, 'NC_PRIORITY', '3', 3, 1),
+    (58, 'NC_PRIORITY', '4', 4, 1),
+    (59, 'NC_PRIORITY', '5', 5, 1),
+    (60, 'NC_PRIORITY', '6', 6, 1),
+    (61, 'NC_PRIORITY', '7', 7, 1),
+    (62, 'NC_PRIORITY', '8', 8, 1),
+    (63, 'NC_PRIORITY', '9', 9, 1),
+    (64, 'NC_PRIORITY', '10', 10, 1);
 GO
 
 SET IDENTITY_INSERT [dbo].[ListOptions] OFF;

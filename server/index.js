@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const { sql, poolPromise } = require('./config/database');
@@ -16,6 +17,7 @@ const dashboardRouter = require('./routes/dashboard');
 const authMatrixRouter = require('./routes/authMatrix');
 const adminRouter = require('./routes/admin');
 const dashboardsRouter = require('./routes/dashboards');
+const documentsRouter = require('./routes/documents');
 const requestLogger = require('./middleware/requestLogger');
 
 const app = express();
@@ -28,6 +30,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Request logging middleware (console)
 app.use((req, res, next) => {
@@ -50,6 +53,7 @@ app.use('/api/dashboard', dashboardRouter);
 app.use('/api/auth-matrix', authMatrixRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/dashboards', dashboardsRouter);
+app.use('/api/documents', documentsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

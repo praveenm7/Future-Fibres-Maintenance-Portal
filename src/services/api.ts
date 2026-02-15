@@ -42,6 +42,18 @@ export const api = {
         return response.json();
     },
 
+    async upload<T>(endpoint: string, formData: FormData): Promise<T> {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            method: 'POST',
+            body: formData,
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || `API Error: ${response.statusText}`);
+        }
+        return response.json();
+    },
+
     async delete<T>(endpoint: string): Promise<T> {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'DELETE',

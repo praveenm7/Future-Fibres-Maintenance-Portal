@@ -15,12 +15,12 @@ const mapListOption = (record) => ({
 router.get('/', async (req, res) => {
     try {
         const pool = await poolPromise;
-        const { type } = req.query;
+        const { listType } = req.query;
 
         let result;
-        if (type) {
+        if (listType) {
             result = await pool.request()
-                .input('ListType', sql.NVarChar(50), type)
+                .input('ListType', sql.NVarChar(50), listType)
                 .execute('sp_GetListOptionsByType');
         } else {
             result = await pool.request()
@@ -51,12 +51,12 @@ router.get('/types', async (req, res) => {
 // POST create new list option
 router.post('/', async (req, res) => {
     try {
-        const { listType, optionValue, sortOrder, isActive } = req.body;
+        const { listType, optionValue, value, sortOrder, isActive } = req.body;
 
         const pool = await poolPromise;
         const result = await pool.request()
             .input('ListType', sql.NVarChar(50), listType)
-            .input('OptionValue', sql.NVarChar(100), optionValue)
+            .input('OptionValue', sql.NVarChar(100), optionValue || value)
             .input('SortOrder', sql.Int, sortOrder || 0)
             .input('IsActive', sql.Bit, isActive !== undefined ? isActive : true)
             .query(`
@@ -81,13 +81,13 @@ router.post('/', async (req, res) => {
 // PUT update list option
 router.put('/:id', async (req, res) => {
     try {
-        const { listType, optionValue, sortOrder, isActive } = req.body;
+        const { listType, optionValue, value, sortOrder, isActive } = req.body;
 
         const pool = await poolPromise;
         await pool.request()
             .input('ListOptionID', sql.Int, req.params.id)
             .input('ListType', sql.NVarChar(50), listType)
-            .input('OptionValue', sql.NVarChar(100), optionValue)
+            .input('OptionValue', sql.NVarChar(100), optionValue || value)
             .input('SortOrder', sql.Int, sortOrder)
             .input('IsActive', sql.Bit, isActive)
             .query(`

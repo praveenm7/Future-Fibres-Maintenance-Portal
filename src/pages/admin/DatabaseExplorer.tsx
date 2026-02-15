@@ -220,7 +220,7 @@ export default function DatabaseExplorer() {
                                             </div>
                                         ) : (
                                             <>
-                                                <div className="overflow-x-auto">
+                                                <div className="relative isolate overflow-x-auto">
                                                     <Table>
                                                         <TableHeader>
                                                             <TableRow>

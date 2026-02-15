@@ -9,10 +9,14 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const LIST_TYPES = [
-  'Authorization Groups',
-  'Areas',
-  'Machine Groups',
-  'Machine Types',
+  { value: 'MACHINE_TYPE', label: 'Machine Types' },
+  { value: 'MACHINE_GROUP', label: 'Machine Groups' },
+  { value: 'AREA', label: 'Areas' },
+  { value: 'PERIODICITY', label: 'Periodicities' },
+  { value: 'NC_STATUS', label: 'NC Statuses' },
+  { value: 'NC_CATEGORY', label: 'NC Categories' },
+  { value: 'NC_PRIORITY', label: 'NC Priorities' },
+  { value: 'AUTHORIZATION_GROUP', label: 'Authorization Groups' },
 ];
 
 export default function ListsModification() {
@@ -23,7 +27,7 @@ export default function ListsModification() {
     useDeleteListOption
   } = useListOptions();
 
-  const [selectedListType, setSelectedListType] = useState(LIST_TYPES[0]);
+  const [selectedListType, setSelectedListType] = useState(LIST_TYPES[0].value);
   const { data: dynamicListOptions = [], isLoading: loadingOptions } = useGetListOptions(selectedListType);
   const createMutation = useCreateListOption();
   const updateMutation = useUpdateListOption();
@@ -123,16 +127,16 @@ export default function ListsModification() {
             <div className="max-h-96 overflow-y-auto">
               {LIST_TYPES.map((type) => (
                 <button
-                  key={type}
-                  onClick={() => { setSelectedListType(type); resetForm(); }}
+                  key={type.value}
+                  onClick={() => { setSelectedListType(type.value); resetForm(); }}
                   className={cn(
                     'w-full px-4 py-3 text-left text-sm border-b border-border transition-colors font-medium',
-                    selectedListType === type
+                    selectedListType === type.value
                       ? 'bg-primary text-primary-foreground'
                       : 'hover:bg-muted/50'
                   )}
                 >
-                  {type}
+                  {type.label}
                 </button>
               ))}
             </div>
@@ -142,7 +146,7 @@ export default function ListsModification() {
         {/* List Content */}
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center gap-3">
-            <h2 className="text-lg font-medium text-foreground">Editing: {selectedListType}</h2>
+            <h2 className="text-lg font-medium text-foreground">Editing: {LIST_TYPES.find(t => t.value === selectedListType)?.label ?? selectedListType}</h2>
           </div>
 
           {loadingOptions ? (
