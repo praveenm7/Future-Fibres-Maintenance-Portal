@@ -50,6 +50,10 @@
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
 
+    /* Admin - Dark Slate */
+    --admin: 215 25% 27%;
+    --admin-foreground: 210 40% 98%;
+
     /* Form styling */
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
@@ -99,6 +103,10 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
+    /* Admin - Dark Slate (dark mode) */
+    --admin: 215 25% 40%;
+    --admin-foreground: 210 40% 98%;
+
     --border: 217 33% 17%;
     --input: 217 33% 17%;
     --ring: 224.3 76.3% 48%;
@@ -141,31 +149,19 @@
 
 @layer components {
   .page-header {
-    @apply text-2xl font-bold tracking-tight mb-6 text-primary;
+    @apply text-2xl font-semibold tracking-tight text-foreground;
   }
 
   .section-header {
-    @apply bg-muted text-foreground px-4 py-3 text-sm font-semibold uppercase tracking-wide border-b border-border;
+    @apply bg-muted/40 text-foreground px-4 py-2.5 text-sm font-semibold border-b border-border;
   }
 
   .form-label {
-    @apply block text-sm font-medium text-foreground mb-1.5;
+    @apply block text-sm font-medium text-muted-foreground mb-1.5;
   }
 
   .form-input {
-    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
-  }
-
-  .action-button-red {
-    @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-destructive text-destructive-foreground hover:bg-destructive/90 h-10 px-4 py-2;
-  }
-
-  .action-button-green {
-    @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-success text-success-foreground hover:bg-success/90 h-10 px-4 py-2;
-  }
-
-  .action-button-blue {
-    @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2;
+    @apply flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .data-table {
@@ -173,23 +169,19 @@
   }
 
   .data-table th {
-    @apply h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 border-b;
+    @apply h-10 px-4 text-left align-middle text-xs font-medium uppercase tracking-wider text-muted-foreground bg-muted/50 border-b;
   }
 
   .data-table td {
-    @apply p-4 align-middle [&:has([role=checkbox])]:pr-0 border-b;
+    @apply px-4 py-3 align-middle border-b;
   }
 
-  .data-table tr:hover {
-    @apply bg-muted/50;
+  .data-table tbody tr:hover {
+    @apply bg-muted/40;
   }
 
-  .menu-button-forms {
-    @apply inline-flex items-center justify-start whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-auto px-4 py-3 w-full shadow-sm;
-  }
-
-  .menu-button-reports {
-    @apply inline-flex items-center justify-start whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-auto px-4 py-3 w-full shadow-sm;
+  .menu-button-admin {
+    @apply bg-[hsl(var(--admin))] text-[hsl(var(--admin-foreground))] px-4 py-3 font-bold rounded-sm;
   }
 
   .dropdown-indicator {

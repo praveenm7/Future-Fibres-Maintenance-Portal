@@ -6,8 +6,8 @@ import { InputField } from '@/components/ui/FormField';
 import { Plus, Pencil, Trash2, Save, X, Loader2 } from 'lucide-react';
 import { useListOptions } from '@/hooks/useListOptions';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
-// Define the available list types
 const LIST_TYPES = [
   'Authorization Groups',
   'Areas',
@@ -108,32 +108,29 @@ export default function ListsModification() {
 
   const columns = [
     { key: 'value', header: 'VALUE' },
-    { key: 'isStatic', header: 'SOURCE', render: (item: any) => item.isStatic ? <span className="opacity-50">System</span> : <span className="text-primary font-bold">User</span> }
+    { key: 'isStatic', header: 'SOURCE', render: (item: any) => item.isStatic ? <span className="text-muted-foreground">System</span> : <span className="text-primary font-medium">User</span> }
   ];
 
   return (
     <div>
-      <PageHeader title="07-LISTS MODIFICATION" />
+      <PageHeader title="Lists Management" />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* List Selection */}
-        <div className="space-y-4">
-          <div className="border border-primary rounded overflow-hidden shadow-sm">
-            <div className="section-header">Select the List</div>
-            <div className="max-h-96 overflow-y-auto bg-card">
+        <div className="space-y-6">
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <div className="section-header">Select List</div>
+            <div className="max-h-96 overflow-y-auto">
               {LIST_TYPES.map((type) => (
                 <button
                   key={type}
-                  onClick={() => {
-                    setSelectedListType(type);
-                    resetForm();
-                  }}
-                  className={`
-                    w-full px-4 py-3 text-left text-sm border-b border-border transition-colors font-medium
-                    ${selectedListType === type
+                  onClick={() => { setSelectedListType(type); resetForm(); }}
+                  className={cn(
+                    'w-full px-4 py-3 text-left text-sm border-b border-border transition-colors font-medium',
+                    selectedListType === type
                       ? 'bg-primary text-primary-foreground'
-                      : 'hover:bg-muted'}
-                  `}
+                      : 'hover:bg-muted/50'
+                  )}
                 >
                   {type}
                 </button>
@@ -143,13 +140,13 @@ export default function ListsModification() {
         </div>
 
         {/* List Content */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="section-header inline-block px-6 py-2 rounded-full mb-2">
-            Editing: {selectedListType}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-medium text-foreground">Editing: {selectedListType}</h2>
           </div>
 
           {loadingOptions ? (
-            <div className="flex flex-col items-center justify-center p-12 bg-card border border-border rounded">
+            <div className="flex flex-col items-center justify-center p-12 bg-card border border-border rounded-lg">
               <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
               <p className="text-sm text-muted-foreground">Loading list items...</p>
             </div>
@@ -165,54 +162,32 @@ export default function ListsModification() {
 
           {/* Actions */}
           <div className="flex gap-2">
-            <ActionButton
-              variant="green"
-              className="flex items-center gap-2"
-              onClick={() => {
-                resetForm();
-                setMode('new');
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              ADD ITEM
+            <ActionButton variant="green" className="gap-2" onClick={() => { resetForm(); setMode('new'); }}>
+              <Plus className="h-4 w-4" /> Add Item
             </ActionButton>
-            <ActionButton
-              variant="blue"
-              className="flex items-center gap-2"
-              disabled={!selectedRowId || updateMutation.isPending}
-            >
-              <Pencil className="h-4 w-4" />
-              {selectedRowId ? 'EDIT ITEM' : 'SELECT TO EDIT'}
+            <ActionButton variant="blue" className="gap-2" disabled={!selectedRowId || updateMutation.isPending}>
+              <Pencil className="h-4 w-4" /> {selectedRowId ? 'Edit Item' : 'Select to Edit'}
             </ActionButton>
-            <ActionButton
-              variant="red"
-              className="flex items-center gap-2"
-              disabled={!selectedRowId || deleteMutation.isPending}
-              onClick={handleDelete}
-            >
-              {deleteMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-              {selectedRowId ? 'DELETE ITEM' : 'SELECT TO DELETE'}
+            <ActionButton variant="red" className="gap-2" disabled={!selectedRowId || deleteMutation.isPending} onClick={handleDelete}>
+              {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              {selectedRowId ? 'Delete Item' : 'Select to Delete'}
             </ActionButton>
           </div>
 
           {/* Add/Edit Item Form */}
           {(mode === 'new' || mode === 'edit') && (
-            <div className={`border rounded-lg overflow-hidden shadow-sm animate-in fade-in slide-in-from-top-2 ${mode === 'edit' ? 'border-blue-200' : 'border-green-200'}`}>
-              <div className={`section-header flex justify-between items-center ${mode === 'edit' ? 'bg-blue-100 dark:bg-blue-900/20' : 'bg-green-100 dark:bg-green-900/20'}`}>
+            <div className={`bg-card border rounded-lg overflow-hidden animate-in fade-in slide-in-from-top-2 transition-colors duration-200 ${mode === 'edit' ? 'border-primary/50' : 'border-border'}`}>
+              <div className={`section-header flex justify-between items-center ${mode === 'edit' ? 'bg-primary/5' : ''}`}>
                 <span>{mode === 'edit' ? 'Edit Item' : 'Add New Item'}</span>
-                <button onClick={resetForm}>
-                  <X className="h-4 w-4 hover:text-red-500" />
+                <button onClick={resetForm} className="text-muted-foreground hover:text-destructive transition-colors">
+                  <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="p-4 bg-card">
+              <div className="p-4">
                 <div className="flex gap-4 items-end">
                   <div className="flex-1">
                     <InputField
-                      label="VALUE"
+                      label="Value"
                       value={newValue}
                       onChange={setNewValue}
                       placeholder="Enter value..."
@@ -230,8 +205,9 @@ export default function ListsModification() {
                     {createMutation.isPending || updateMutation.isPending ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
-                      mode === 'edit' ? 'UPDATE' : 'ADD'
+                      mode === 'edit' ? <Save className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />
                     )}
+                    {mode === 'edit' ? 'Update' : 'Add'}
                   </ActionButton>
                 </div>
               </div>

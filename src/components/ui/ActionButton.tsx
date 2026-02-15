@@ -13,14 +13,14 @@ interface ActionButtonProps {
 const variantClasses = {
   red: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
   green: 'bg-success text-success-foreground hover:bg-success/90',
-  blue: 'bg-info text-info-foreground hover:bg-info/90',
-  yellow: 'bg-accent text-accent-foreground hover:bg-accent/90',
+  blue: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  yellow: 'bg-warning text-warning-foreground hover:bg-warning/90',
 };
 
-export function ActionButton({ 
-  children, 
-  variant = 'red', 
-  onClick, 
+export function ActionButton({
+  children,
+  variant = 'red',
+  onClick,
   className = '',
   disabled = false,
   type = 'button'
@@ -31,8 +31,9 @@ export function ActionButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'px-4 py-2 font-bold text-sm uppercase tracking-wide transition-all',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+        'disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none',
         variantClasses[variant],
         className
       )}

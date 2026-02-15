@@ -14,7 +14,7 @@ import {
     Shield,
     ArrowRight
 } from 'lucide-react';
-import { cn } from '@/lib/utils'; // Assuming you have a utils file for cn
+import { cn } from '@/lib/utils';
 
 interface SectionDashboardProps {
     type: 'forms' | 'reports';
@@ -23,44 +23,44 @@ interface SectionDashboardProps {
 const formItems = [
     {
         path: '/machines',
-        label: '01-MACHINE MANAGEMENT',
-        description: 'ADD/MODIFY A NEW MACHINE ON THE LIST',
+        label: 'Machine Management',
+        description: 'Add, modify or delete machines from the list',
         icon: Settings
     },
     {
         path: '/maintenance-plan',
-        label: '02-MAINTENANCE PLAN',
-        description: 'SETUP THE MAINTENANCE PLAN FOR A MACHINE',
+        label: 'Maintenance Plan',
+        description: 'Set up the maintenance plan for a machine',
         icon: Wrench
     },
     {
         path: '/non-conformities',
-        label: '03-MAINTENANCE NC\'S',
-        description: 'MANAGE MAINTENANCE NO CONFORMITIES',
+        label: 'Non-Conformities',
+        description: 'Manage maintenance non-conformities',
         icon: AlertTriangle
     },
     {
         path: '/nc-comments',
-        label: '04-NC\'S COMMENTS',
-        description: 'MANAGE COMMENTS FOR EACH NC',
+        label: 'NC Comments',
+        description: 'Manage comments for each non-conformity',
         icon: MessageSquare
     },
     {
         path: '/spare-parts',
-        label: '05-SPARE PARTS',
-        description: 'MANAGE SPARE PARTS FOR EACH MACHINE',
+        label: 'Spare Parts',
+        description: 'Manage spare parts for each machine',
         icon: Package
     },
     {
         path: '/authorization-matrix',
-        label: '06-AUTHORIZATION MATRIX',
-        description: 'MANAGE AUTHORIZATION TOOLING FOR PERSONAL',
+        label: 'Authorization Matrix',
+        description: 'Manage tooling authorization for personnel',
         icon: Users
     },
     {
         path: '/lists',
-        label: '07-LISTS MODIFICATION',
-        description: 'MANAGE LISTS',
+        label: 'Lists Management',
+        description: 'Configure system lists and options',
         icon: List
     },
 ];
@@ -68,71 +68,69 @@ const formItems = [
 const reportItems = [
     {
         path: '/reports/machinery-list',
-        label: '01-TOOLING & MACHINERY LIST',
-        description: 'SHOW THE MAIN LIST OF TOOLING & MACHINERY',
+        label: 'Tooling & Machinery List',
+        description: 'View the complete list of tooling and machinery',
         icon: LayoutDashboard
     },
     {
         path: '/reports/nc-maintenance',
-        label: '02-NC\'S MAINTENANCE',
-        description: 'SHOW THE MAIN LIST OF MAINTENANCE NC\'S',
+        label: 'NC Maintenance',
+        description: 'View the list of maintenance non-conformities',
         icon: ClipboardList
     },
     {
         path: '/reports/maintenance-summary',
-        label: '03-MAINTENANCE SUMMARY',
-        description: 'SHOW THE SUMMARY OF THE MAINTENANCE PLAN',
+        label: 'Maintenance Summary',
+        description: 'View the summary of the maintenance plan',
         icon: BarChart3
     },
     {
         path: '/reports/maintenance-plan',
-        label: '04-MAINTENANCE PLAN',
-        description: 'SHOW FOR A SPECIFIC MACHINE THE MAINTENANCE PLAN',
+        label: 'Maintenance Plan',
+        description: 'View the maintenance plan for a specific machine',
         icon: FileText
     },
     {
         path: '/reports/authorization',
-        label: '05-AUTHORIZATION MATRIX',
-        description: 'SHOW AUTHORIZATION MACHINE LIST FOR A SPECIFIC USER',
+        label: 'Authorization Matrix',
+        description: 'View authorization list for a specific user',
         icon: Shield
     },
 ];
 
 export default function SectionDashboard({ type }: SectionDashboardProps) {
     const items = type === 'forms' ? formItems : reportItems;
-    const title = type === 'forms' ? 'FORMS' : 'REPORTS';
-    const themeColor = type === 'forms' ? 'text-primary border-primary/20 bg-primary/5' : 'text-info border-info/20 bg-info/5';
-    const iconColor = type === 'forms' ? 'text-primary' : 'text-info';
+    const title = type === 'forms' ? 'Forms' : 'Reports';
 
     return (
-        <div className="max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="max-w-5xl mx-auto animate-in fade-in duration-300">
             <div className="mb-8">
-                <h1 className={cn("text-3xl font-bold tracking-tight uppercase", type === 'forms' ? 'text-primary' : 'text-info')}>
-                    {title} DASHBOARD
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                    {title}
                 </h1>
-                <p className="text-muted-foreground mt-2">
+                <p className="text-muted-foreground mt-1 text-sm">
                     Select an option below to proceed.
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {items.map((item) => {
                     const Icon = item.icon;
                     return (
                         <Link
                             key={item.path}
                             to={item.path}
-                            className="group relative flex flex-col bg-card border border-border rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                            className="group flex flex-col bg-card border border-border rounded-lg overflow-hidden transition-all duration-200 hover:shadow-md hover:border-primary/30"
                         >
-                            <div className={cn("p-6 flex-1", themeColor)}>
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className={cn("p-2 rounded-lg bg-background shadow-sm", iconColor)}>
-                                        <Icon className="h-6 w-6" />
+                            <div className="p-5 flex-1">
+                                <div className="flex items-start justify-between mb-3">
+                                    <div className="p-2 rounded-md bg-muted/50 text-primary">
+                                        <Icon className="h-5 w-5" />
                                     </div>
-                                    <ArrowRight className={cn("h-5 w-5 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300", iconColor)} />
+                                    <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
                                 </div>
-                                <h3 className="font-bold text-lg mb-2 text-foreground">{item.label}</h3>
-                                <p className="text-sm text-muted-foreground">{item.description}</p>
+                                <h3 className="font-medium text-sm mb-1 text-foreground">{item.label}</h3>
+                                <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
                             </div>
                         </Link>
                     );

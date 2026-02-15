@@ -5,14 +5,14 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, subtitle }: PageHeaderProps) {
   return (
-    <div className="mb-6">
-      <div className="page-header inline-block rounded-sm">
+    <div className="mb-8">
+      <h1 className="text-2xl font-semibold tracking-tight text-foreground">
         {title}
-      </div>
+      </h1>
       {subtitle && (
-        <div className="bg-destructive/80 text-destructive-foreground px-6 py-2 text-base font-semibold uppercase inline-block ml-0 -ml-1">
+        <p className="mt-1 text-sm text-muted-foreground">
           {subtitle}
-        </div>
+        </p>
       )}
     </div>
   );

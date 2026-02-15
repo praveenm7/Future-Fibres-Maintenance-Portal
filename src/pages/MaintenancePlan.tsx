@@ -22,7 +22,7 @@ const emptyAction: MaintenanceAction = {
   periodicity: 'BEFORE EACH USE',
   timeNeeded: 5,
   maintenanceInCharge: false,
-  status: 'IDEAL', // Default status
+  status: 'IDEAL',
   month: 'JANUARY'
 };
 
@@ -36,7 +36,6 @@ export default function MaintenancePlan() {
   } = useMaintenanceActions();
   const { useGetListOptions } = useListOptions();
 
-  // Data Fetching
   const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
   const [selectedMachineId, setSelectedMachineId] = useState('');
 
@@ -52,19 +51,14 @@ export default function MaintenancePlan() {
     }
   }, [machines]);
 
-  // Use string ID for row selection
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   const [mode, setMode] = useState<'new' | 'edit'>('new');
-
-  // Form State
   const [formData, setFormData] = useState(emptyAction);
 
   const selectedMachine = machines.find(m => m.id === selectedMachineId);
 
-  // When row selected, populate form
   const handleRowClick = (item: MaintenanceAction) => {
     if (selectedRowId === item.id) {
-      // Deselect
       resetForm();
     } else {
       setSelectedRowId(item.id);
@@ -141,58 +135,42 @@ export default function MaintenancePlan() {
   }
 
   const columns = [
-    {
-      key: 'action',
-      header: 'ACTION',
-      className: 'max-w-[300px]'
-    },
+    { key: 'action', header: 'ACTION', className: 'max-w-[300px]' },
     { key: 'periodicity', header: 'PERIODICITY' },
-    {
-      key: 'timeNeeded',
-      header: 'TIME',
-      render: (item: MaintenanceAction) => `${item.timeNeeded} min`
-    },
-    {
-      key: 'maintenanceInCharge',
-      header: 'MAINT. NEEDED',
-      render: (item: MaintenanceAction) => item.maintenanceInCharge ? 'Y' : 'N'
-    },
+    { key: 'timeNeeded', header: 'TIME', render: (item: MaintenanceAction) => `${item.timeNeeded} min` },
+    { key: 'maintenanceInCharge', header: 'MAINT. NEEDED', render: (item: MaintenanceAction) => item.maintenanceInCharge ? 'Y' : 'N' },
     { key: 'status', header: 'STATUS' },
     { key: 'month', header: 'MONTH', render: (item: MaintenanceAction) => item.month || '-' },
   ];
 
   return (
     <div>
-      <PageHeader title="02-MAINTENANCE PLAN" />
+      <PageHeader title="Maintenance Plan" />
 
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        {/* Main Content */}
         <div className="xl:col-span-3 space-y-6">
           {/* Machine Selection */}
-          <div className="flex items-center gap-4 border border-primary rounded overflow-hidden shadow-sm">
-            <div className="bg-muted px-4 py-2 font-medium border-r border-border">MACHINE CODE</div>
-            <select
-              value={selectedMachineId}
-              onChange={(e) => {
-                setSelectedMachineId(e.target.value);
-                resetForm();
-              }}
-              className="flex-1 bg-card text-foreground px-4 py-2 font-bold focus:outline-none"
-            >
-              {machines.map(m => (
-                <option key={m.id} value={m.id}>
-                  {m.finalCode}
-                </option>
-              ))}
-            </select>
-            <div className="bg-accent/50 px-4 py-2 italic border-l border-border truncate max-w-[200px]">
-              {selectedMachine?.description}
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
+            <div className="flex items-center">
+              <div className="bg-muted/40 px-4 py-2.5 text-sm font-medium border-r border-border">Machine Code</div>
+              <select
+                value={selectedMachineId}
+                onChange={(e) => { setSelectedMachineId(e.target.value); resetForm(); }}
+                className="flex-1 bg-transparent text-foreground text-sm px-4 py-2.5 font-medium focus:outline-none"
+              >
+                {machines.map(m => (
+                  <option key={m.id} value={m.id}>{m.finalCode}</option>
+                ))}
+              </select>
+              <div className="px-4 py-2.5 text-sm text-muted-foreground border-l border-border truncate max-w-[200px]">
+                {selectedMachine?.description}
+              </div>
             </div>
           </div>
 
           {/* Actions Table */}
           {loadingActions ? (
-            <div className="flex flex-col items-center justify-center p-12 bg-card border border-border rounded">
+            <div className="flex flex-col items-center justify-center p-12 bg-card border border-border rounded-lg">
               <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
               <p className="text-sm text-muted-foreground">Loading maintenance actions...</p>
             </div>
@@ -208,135 +186,72 @@ export default function MaintenancePlan() {
 
           {/* Table Actions */}
           <div className="flex gap-2">
-            <ActionButton
-              variant="green"
-              className="flex items-center gap-2"
-              onClick={resetForm}
-              disabled={mode === 'new' && !selectedRowId}
-            >
-              <Plus className="h-4 w-4" />
-              ADD NEW LINE
+            <ActionButton variant="green" className="gap-2" onClick={resetForm} disabled={mode === 'new' && !selectedRowId}>
+              <Plus className="h-4 w-4" /> Add New
             </ActionButton>
-
-            <ActionButton
-              variant="blue"
-              className="flex items-center gap-2"
-              disabled={!selectedRowId || updateMutation.isPending}
-              onClick={() => {
-                const input = document.getElementById('action-input');
-                if (input) input.focus();
-              }}
-            >
-              <Pencil className="h-4 w-4" />
-              {selectedRowId ? 'EDIT SELECTED' : 'SELECT A LINE TO EDIT'}
+            <ActionButton variant="blue" className="gap-2" disabled={!selectedRowId || updateMutation.isPending}
+              onClick={() => { const input = document.getElementById('action-input'); if (input) input.focus(); }}>
+              <Pencil className="h-4 w-4" /> {selectedRowId ? 'Edit Selected' : 'Select to Edit'}
             </ActionButton>
-
-            <ActionButton
-              variant="red"
-              className="flex-1 flex items-center justify-center gap-2 max-w-[200px]"
-              disabled={!selectedRowId || deleteMutation.isPending}
-              onClick={handleDelete}
-            >
-              {deleteMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-              {selectedRowId ? 'DELETE SELECTED' : 'DELETE LINE'}
+            <ActionButton variant="red" className="gap-2" disabled={!selectedRowId || deleteMutation.isPending} onClick={handleDelete}>
+              {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              {selectedRowId ? 'Delete Selected' : 'Delete'}
             </ActionButton>
           </div>
 
           {/* Action Form */}
-          <div className={`border rounded-lg overflow-hidden shadow-sm transition-colors duration-300 ${mode === 'edit' ? 'border-blue-500 ring-1 ring-blue-500' : 'border-primary'}`}>
-            <div className={`section-header flex justify-between items-center ${mode === 'edit' ? 'bg-blue-100 dark:bg-blue-900/20' : ''}`}>
+          <div className={`bg-card border rounded-lg overflow-hidden transition-colors duration-200 ${mode === 'edit' ? 'border-primary/50' : 'border-border'}`}>
+            <div className={`section-header flex justify-between items-center ${mode === 'edit' ? 'bg-primary/5' : ''}`}>
               <span>{mode === 'edit' ? 'Edit Action' : 'Add New Action'}</span>
               {mode === 'edit' && (
-                <button onClick={resetForm} className="text-xs flex items-center gap-1 hover:text-red-500 px-2 py-1 rounded">
-                  <X className="h-3 w-3" /> Cancel Edit
+                <button onClick={resetForm} className="text-xs flex items-center gap-1 text-muted-foreground hover:text-destructive px-2 py-1 rounded transition-colors">
+                  <X className="h-3 w-3" /> Cancel
                 </button>
               )}
             </div>
-
-            <div className="p-4 bg-card space-y-4">
-              <p className="text-sm text-muted-foreground italic">
-                {mode === 'edit'
-                  ? 'Modify the details below and click UPDATE LINE.'
-                  : 'Write the action description, and fulfill the rest of options. Then, click on ADD LINE.'}
-              </p>
-
+            <div className="p-4 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <InputField
-                  id="action-input"
-                  label="ACTION"
-                  value={formData.action}
+                <InputField id="action-input" label="Action" value={formData.action}
                   onChange={(v) => setFormData(prev => ({ ...prev, action: v }))}
-                  placeholder="Enter action description..."
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                />
-                <SelectField
-                  label="PERIODICITY"
-                  value={formData.periodicity}
+                  placeholder="Enter action description..." disabled={createMutation.isPending || updateMutation.isPending} />
+                <SelectField label="Periodicity" value={formData.periodicity}
                   onChange={(v) => setFormData(prev => ({ ...prev, periodicity: v as any }))}
                   options={periodicityOptions.map(p => ({ value: p.value, label: p.value }))}
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                />
+                  disabled={createMutation.isPending || updateMutation.isPending} />
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <InputField
-                  label="TIME NEEDED (MIN)"
-                  value={String(formData.timeNeeded)}
+                <InputField label="Time Needed (min)" value={String(formData.timeNeeded)}
                   onChange={(v) => setFormData(prev => ({ ...prev, timeNeeded: parseInt(v) || 0 }))}
-                  type="number"
-                  min="0"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                />
-                <CheckboxField
-                  label="MAINT. IN CHARGE"
-                  checked={formData.maintenanceInCharge}
+                  type="number" min="0" disabled={createMutation.isPending || updateMutation.isPending} />
+                <CheckboxField label="Maintenance In Charge" checked={formData.maintenanceInCharge}
                   onChange={(v) => setFormData(prev => ({ ...prev, maintenanceInCharge: v }))}
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                />
-                <SelectField
-                  label="MONTH"
-                  value={formData.month}
+                  disabled={createMutation.isPending || updateMutation.isPending} />
+                <SelectField label="Month" value={formData.month}
                   onChange={(v) => setFormData(prev => ({ ...prev, month: v }))}
                   options={months.map(m => ({ value: m, label: m }))}
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                />
+                  disabled={createMutation.isPending || updateMutation.isPending} />
               </div>
-
               <div className="pt-2">
-                <ActionButton
-                  variant={mode === 'edit' ? 'blue' : 'green'}
-                  className="w-full md:w-auto min-w-[150px]"
-                  onClick={handleSave}
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                >
+                <ActionButton variant={mode === 'edit' ? 'blue' : 'green'} className="min-w-[140px]"
+                  onClick={handleSave} disabled={createMutation.isPending || updateMutation.isPending}>
                   {createMutation.isPending || updateMutation.isPending ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    mode === 'edit' ? <Save className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />
-                  )}
-                  {mode === 'edit' ? 'UPDATE LINE' : 'ADD LINE'}
+                  ) : ( mode === 'edit' ? <Save className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" /> )}
+                  {mode === 'edit' ? 'Update' : 'Add Line'}
                 </ActionButton>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right Sidebar - Machine Info */}
-        <div className="space-y-4">
-          <div className="border border-primary rounded overflow-hidden shadow-sm bg-card">
+        {/* Right Sidebar */}
+        <div className="space-y-6">
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="section-header">Machine Picture</div>
             <div className="p-4">
-              <div className="aspect-square bg-muted/50 rounded flex items-center justify-center border-2 border-dashed border-border">
+              <div className="aspect-square bg-muted/30 rounded-md flex items-center justify-center border border-dashed border-border">
                 {selectedMachine?.imageUrl ? (
-                  <img
-                    src={selectedMachine.imageUrl}
-                    alt="Machine"
-                    className="max-w-full max-h-full object-contain"
-                  />
+                  <img src={selectedMachine.imageUrl} alt="Machine" className="max-w-full max-h-full object-contain" />
                 ) : (
                   <span className="text-muted-foreground text-sm">No image</span>
                 )}
@@ -344,25 +259,19 @@ export default function MaintenancePlan() {
             </div>
           </div>
 
-          <div className="text-sm text-muted-foreground italic p-3 bg-card border border-border rounded shadow-sm">
-            <p className="font-medium mb-2 text-primary">Instructions:</p>
-            <p>Manage maintenance actions. Create, edit or delete them.</p>
-            <p className="mt-2">Select a row in the table to <strong>Edit</strong> or <strong>Delete</strong> it.</p>
-          </div>
-
-          <div className="border border-primary rounded overflow-hidden shadow-sm bg-card">
+          <div className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="section-header">Machine Info</div>
             <div className="p-3 space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Code:</span>
+                <span className="text-muted-foreground">Code</span>
                 <span className="font-medium">{selectedMachine?.finalCode || '-'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Area:</span>
+                <span className="text-muted-foreground">Area</span>
                 <span className="font-medium">{selectedMachine?.area || '-'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">In Charge:</span>
+                <span className="text-muted-foreground">In Charge</span>
                 <span className="font-medium">{selectedMachine?.personInCharge || '-'}</span>
               </div>
             </div>

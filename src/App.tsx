@@ -25,6 +25,21 @@ import MaintenanceSummary from "./pages/MaintenanceSummary";
 import MaintenancePlanReport from "./pages/MaintenancePlanReport";
 import AuthorizationReport from "./pages/AuthorizationReport";
 
+// Dashboard Pages
+import DashboardsIndex from "./pages/dashboards/DashboardsIndex";
+import OverviewDashboard from "./pages/dashboards/OverviewDashboard";
+import NCAnalyticsDashboard from "./pages/dashboards/NCAnalyticsDashboard";
+import EquipmentHealthDashboard from "./pages/dashboards/EquipmentHealthDashboard";
+import SparePartsDashboard from "./pages/dashboards/SparePartsDashboard";
+import WorkforceDashboard from "./pages/dashboards/WorkforceDashboard";
+
+// Admin Pages
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import DatabaseExplorer from "./pages/admin/DatabaseExplorer";
+import UserManagement from "./pages/admin/UserManagement";
+import SystemMonitoring from "./pages/admin/SystemMonitoring";
+import ActivityLogs from "./pages/admin/ActivityLogs";
+
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +73,21 @@ const App = () => (
           <Route path="/reports/maintenance-summary" element={<MainLayout><MaintenanceSummary /></MainLayout>} />
           <Route path="/reports/maintenance-plan" element={<MainLayout><MaintenancePlanReport /></MainLayout>} />
           <Route path="/reports/authorization" element={<MainLayout><AuthorizationReport /></MainLayout>} />
+
+          {/* Dashboards */}
+          <Route path="/dashboards" element={<MainLayout><DashboardsIndex /></MainLayout>} />
+          <Route path="/dashboards/overview" element={<MainLayout><OverviewDashboard /></MainLayout>} />
+          <Route path="/dashboards/nc-analytics" element={<MainLayout><NCAnalyticsDashboard /></MainLayout>} />
+          <Route path="/dashboards/equipment-health" element={<MainLayout><EquipmentHealthDashboard /></MainLayout>} />
+          <Route path="/dashboards/spare-parts" element={<MainLayout><SparePartsDashboard /></MainLayout>} />
+          <Route path="/dashboards/workforce" element={<MainLayout><WorkforceDashboard /></MainLayout>} />
+
+          {/* Admin */}
+          <Route path="/admin" element={<MainLayout><AdminDashboard /></MainLayout>} />
+          <Route path="/admin/database" element={<MainLayout><DatabaseExplorer /></MainLayout>} />
+          <Route path="/admin/users" element={<MainLayout><UserManagement /></MainLayout>} />
+          <Route path="/admin/monitoring" element={<MainLayout><SystemMonitoring /></MainLayout>} />
+          <Route path="/admin/logs" element={<MainLayout><ActivityLogs /></MainLayout>} />
 
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />

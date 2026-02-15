@@ -1,5 +1,13 @@
 import { ReactNode } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface FormFieldProps {
   label: string;
@@ -9,13 +17,11 @@ interface FormFieldProps {
 
 export function FormField({ label, children, className = '' }: FormFieldProps) {
   return (
-    <div className={`flex border border-border ${className}`}>
-      <div className="form-label min-w-[180px] flex items-center">
+    <div className={cn('space-y-1.5', className)}>
+      <label className="text-sm font-medium text-muted-foreground">
         {label}
-      </div>
-      <div className="flex-1 form-input">
-        {children}
-      </div>
+      </label>
+      <div>{children}</div>
     </div>
   );
 }
@@ -31,25 +37,22 @@ interface SelectFieldProps {
 
 export function SelectField({ label, value, onChange, options, className = '', disabled = false }: SelectFieldProps) {
   return (
-    <div className={`flex border border-border ${className} ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
-      <div className="form-label min-w-[180px] flex items-center">
+    <div className={cn('space-y-1.5', className)}>
+      <label className="text-sm font-medium text-muted-foreground">
         {label}
-      </div>
-      <div className="flex-1 form-input flex items-center gap-2">
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          disabled={disabled}
-          className="flex-1 bg-transparent border-none focus:outline-none cursor-pointer disabled:cursor-not-allowed"
-        >
+      </label>
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
+        <SelectTrigger className="h-9 w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
           {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
+            <SelectItem key={opt.value} value={opt.value}>
               {opt.label}
-            </option>
+            </SelectItem>
           ))}
-        </select>
-        <ChevronDown className="h-4 w-4 text-primary" />
-      </div>
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -80,23 +83,27 @@ export function InputField({
   min
 }: InputFieldProps) {
   return (
-    <div className={`flex border border-border ${className} ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
-      <div className="form-label min-w-[180px] flex items-center">
+    <div className={cn('space-y-1.5', className)}>
+      <label className="text-sm font-medium text-muted-foreground">
         {label}
-      </div>
-      <div className="flex-1 form-input">
-        <input
-          id={id}
-          min={min}
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          readOnly={readOnly}
-          disabled={disabled}
-          className="w-full bg-transparent border-none focus:outline-none disabled:cursor-not-allowed"
-        />
-      </div>
+      </label>
+      <input
+        id={id}
+        min={min}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        readOnly={readOnly}
+        disabled={disabled}
+        className={cn(
+          'flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm transition-colors',
+          'placeholder:text-muted-foreground',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1',
+          'disabled:cursor-not-allowed disabled:opacity-50',
+          'read-only:bg-muted/50 read-only:focus-visible:ring-0'
+        )}
+      />
     </div>
   );
 }
@@ -111,19 +118,22 @@ interface CheckboxFieldProps {
 
 export function CheckboxField({ label, checked, onChange, className = '', disabled = false }: CheckboxFieldProps) {
   return (
-    <div className={`flex border border-border ${className} ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
-      <div className="form-label min-w-[180px] flex items-center">
+    <div className={cn('space-y-1.5', className)}>
+      <label className="text-sm font-medium text-muted-foreground">
         {label}
-      </div>
-      <div className="flex-1 form-input flex items-center gap-2">
-        <span className="font-medium">{checked ? 'YES' : 'NO'}</span>
-        <input
-          type="checkbox"
+      </label>
+      <div className="flex items-center gap-3 h-9">
+        <Switch
           checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
+          onCheckedChange={onChange}
           disabled={disabled}
-          className="h-5 w-5 accent-primary cursor-pointer disabled:cursor-not-allowed"
         />
+        <span className={cn(
+          'text-sm font-medium',
+          checked ? 'text-primary' : 'text-muted-foreground'
+        )}>
+          {checked ? 'Yes' : 'No'}
+        </span>
       </div>
     </div>
   );

@@ -29,7 +29,7 @@ export default function AuthorizationReport() {
 
   return (
     <div>
-      <PageHeader title="05-AUTHORIZATION MATRIX" />
+      <PageHeader title="Authorization Matrix" />
 
       <div className="overflow-x-auto">
         <table className="data-table text-xs">
@@ -79,7 +79,7 @@ export default function AuthorizationReport() {
       </div>
 
       {selectedUserData && (
-        <div className="mt-6 border border-primary rounded overflow-hidden max-w-2xl">
+        <div className="mt-6 border border-border rounded-lg overflow-hidden max-w-2xl">
           <div className="section-header">
             Authorizations for {selectedUserData.operatorName}
           </div>

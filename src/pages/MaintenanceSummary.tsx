@@ -41,7 +41,7 @@ export default function MaintenanceSummary() {
 
   return (
     <div>
-      <PageHeader title="03-MAINTENANCE SUMMARY" />
+      <PageHeader title="Maintenance Summary" />
 
       <div className="mb-4 flex gap-4 items-center">
         <label className="text-sm font-medium">Periodicity:</label>

@@ -55,7 +55,7 @@ export default function NCMaintenanceReport() {
 
   return (
     <div>
-      <PageHeader title="02-NC'S MAINTENANCE" />
+      <PageHeader title="NC Maintenance" />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Main Table */}
@@ -73,7 +73,7 @@ export default function NCMaintenanceReport() {
         <div className="space-y-4">
           {selectedNC && (
             <>
-              <div className="border border-primary rounded overflow-hidden">
+              <div className="border border-border rounded-lg overflow-hidden">
                 <div className="section-header">NC Details</div>
                 <div className="p-3 bg-card space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -95,7 +95,7 @@ export default function NCMaintenanceReport() {
                 </div>
               </div>
 
-              <div className="border border-primary rounded overflow-hidden">
+              <div className="border border-border rounded-lg overflow-hidden">
                 <div className="section-header">Maintenance Comments</div>
                 <div className="p-2 bg-card">
                   {loadingComments ? (

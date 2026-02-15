@@ -82,11 +82,11 @@ export default function MaintenancePlanReport() {
 
   return (
     <div>
-      <PageHeader title="04-MAINTENANCE PLAN" />
+      <PageHeader title="Maintenance Plan" />
 
       <div className="space-y-6">
         {/* Machine Selection */}
-        <div className="flex items-center gap-4 border border-primary rounded overflow-hidden">
+        <div className="flex items-center gap-4 border border-border rounded-lg overflow-hidden">
           <div className="bg-muted px-4 py-2 font-medium">MACHINE CODE</div>
           <select
             value={selectedMachineId}
@@ -111,7 +111,7 @@ export default function MaintenancePlanReport() {
           {/* Main Content */}
           <div className="xl:col-span-2 space-y-6">
             {/* Maintenance Actions */}
-            <div className="border border-primary rounded overflow-hidden">
+            <div className="border border-border rounded-lg overflow-hidden">
               <div className="section-header">MAINTENANCE ACTIONS</div>
               <DataTable
                 columns={actionColumns}
@@ -121,7 +121,7 @@ export default function MaintenancePlanReport() {
             </div>
 
             {/* Spare Parts */}
-            <div className="border border-primary rounded overflow-hidden">
+            <div className="border border-border rounded-lg overflow-hidden">
               <div className="section-header">SPARE PARTS</div>
               <DataTable
                 columns={partColumns}
@@ -131,7 +131,7 @@ export default function MaintenancePlanReport() {
             </div>
 
             {/* Non-Conformities */}
-            <div className="border border-primary rounded overflow-hidden">
+            <div className="border border-border rounded-lg overflow-hidden">
               <div className="section-header">MAINTENANCE NC's</div>
               <DataTable
                 columns={ncColumns}
@@ -143,7 +143,7 @@ export default function MaintenancePlanReport() {
 
           {/* Machine Info Sidebar */}
           <div className="space-y-4">
-            <div className="border border-primary rounded overflow-hidden">
+            <div className="border border-border rounded-lg overflow-hidden">
               <div className="section-header">Machine Picture</div>
               <div className="p-4 bg-card">
                 <div className="aspect-square bg-muted rounded flex items-center justify-center border border-border">
@@ -160,7 +160,7 @@ export default function MaintenancePlanReport() {
               </div>
             </div>
 
-            <div className="border border-primary rounded overflow-hidden">
+            <div className="border border-border rounded-lg overflow-hidden">
               <div className="section-header">Machine Info</div>
               <div className="p-3 bg-card space-y-2 text-sm">
                 <div className="flex justify-between">

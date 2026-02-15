@@ -54,7 +54,7 @@ export default function MachineryListReport() {
 
   return (
     <div>
-      <PageHeader title="01-TOOLING & MACHINERY LIST" />
+      <PageHeader title="Tooling & Machinery List" />
 
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* Main Table */}
@@ -84,7 +84,7 @@ export default function MachineryListReport() {
           </ActionButton>
 
           {selectedMachine && (
-            <div className="border border-primary rounded overflow-hidden">
+            <div className="border border-border rounded-lg overflow-hidden">
               <div className="section-header">Machine Details</div>
               <div className="p-3 bg-card space-y-2 text-sm">
                 <div className="flex justify-between">
@@ -140,7 +140,7 @@ export default function MachineryListReport() {
           )}
 
           {selectedMachine && (
-            <div className="border border-primary rounded overflow-hidden">
+            <div className="border border-border rounded-lg overflow-hidden">
               <div className="section-header">Machine Picture</div>
               <div className="p-3 bg-card">
                 <div className="aspect-video bg-muted rounded flex items-center justify-center border border-border">
