@@ -124,7 +124,7 @@ export default function ListsModification() {
         <div className="space-y-6">
           <div className="bg-card border border-border rounded-lg overflow-hidden">
             <div className="section-header">Select List</div>
-            <div className="max-h-96 overflow-y-auto">
+            <div>
               {LIST_TYPES.map((type) => (
                 <button
                   key={type.value}
@@ -180,7 +180,7 @@ export default function ListsModification() {
 
           {/* Add/Edit Item Form */}
           {(mode === 'new' || mode === 'edit') && (
-            <div className={`bg-card border rounded-lg overflow-hidden animate-in fade-in slide-in-from-top-2 transition-colors duration-200 ${mode === 'edit' ? 'border-primary/50' : 'border-border'}`}>
+            <div className={`bg-card border rounded-lg overflow-hidden transition-colors duration-200 ${mode === 'edit' ? 'border-primary/50' : 'border-border'}`}>
               <div className={`section-header flex justify-between items-center ${mode === 'edit' ? 'bg-primary/5' : ''}`}>
                 <span>{mode === 'edit' ? 'Edit Item' : 'Add New Item'}</span>
                 <button onClick={resetForm} className="text-muted-foreground hover:text-destructive transition-colors">

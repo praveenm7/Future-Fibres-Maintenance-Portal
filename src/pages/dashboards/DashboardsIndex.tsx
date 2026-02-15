@@ -7,6 +7,7 @@ import {
     Users,
     ArrowRight,
 } from 'lucide-react';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 const dashboardItems = [
     {
@@ -43,15 +44,11 @@ const dashboardItems = [
 
 export default function DashboardsIndex() {
     return (
-        <div className="max-w-5xl mx-auto animate-in fade-in duration-300">
-            <div className="mb-8">
-                <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                    Dashboards
-                </h1>
-                <p className="text-muted-foreground mt-1 text-sm">
-                    Select a dashboard to view analytics and KPIs.
-                </p>
-            </div>
+        <div className="animate-in fade-in duration-300">
+            <PageHeader
+                title="Dashboards"
+                subtitle="Select a dashboard to view analytics and KPIs."
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {dashboardItems.map((item) => {

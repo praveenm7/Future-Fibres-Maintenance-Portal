@@ -49,7 +49,7 @@ export default function AdminDashboard() {
     const { data: health } = useSystemHealth();
 
     return (
-        <div className="max-w-5xl mx-auto">
+        <div>
             {/* Header */}
             <div className="page-header mb-8 inline-block">
                 ADMINISTRATION PANEL

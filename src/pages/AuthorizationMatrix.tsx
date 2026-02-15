@@ -165,7 +165,7 @@ export default function AuthorizationMatrix() {
       <form onSubmit={handleSubmit(mode === 'delete' ? () => handleDelete() : onSubmit)} className="space-y-6">
         {/* User Selection Dropdown (Modify/Delete) */}
         {mode !== 'new' && (
-          <div className="border border-border rounded-lg p-4 bg-muted/10 animate-in fade-in slide-in-from-top-1">
+          <div className="border border-border rounded-lg p-4 bg-muted/10">
             <label className="block text-sm font-medium mb-2 text-muted-foreground">Select Operator</label>
             <div className="relative">
               <select

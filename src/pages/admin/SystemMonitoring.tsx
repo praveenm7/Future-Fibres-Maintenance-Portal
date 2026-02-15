@@ -72,7 +72,7 @@ export default function SystemMonitoring() {
     };
 
     return (
-        <div className="max-w-5xl mx-auto space-y-6">
+        <div className="space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="page-header inline-block">
                     SYSTEM MONITORING
@@ -363,7 +363,7 @@ export default function SystemMonitoring() {
                                                 {expandedError === error.id && error.stackTrace && (
                                                     <TableRow key={`${error.id}-stack`}>
                                                         <TableCell colSpan={6}>
-                                                            <pre className="text-xs bg-muted p-3 rounded overflow-x-auto max-h-48 whitespace-pre-wrap">
+                                                            <pre className="text-xs bg-muted p-3 rounded overflow-y-auto max-h-64 whitespace-pre-wrap">
                                                                 {error.stackTrace}
                                                             </pre>
                                                         </TableCell>

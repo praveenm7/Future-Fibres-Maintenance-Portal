@@ -434,7 +434,7 @@ export default function DatabaseExplorer() {
 
             {/* Edit Dialog */}
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Edit Row — {selectedTable}</DialogTitle>
                         <DialogDescription>

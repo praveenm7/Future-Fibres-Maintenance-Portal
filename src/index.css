@@ -132,6 +132,10 @@
     @apply border-border;
   }
 
+  html, body, #root {
+    @apply h-full overflow-hidden;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, sans-serif;
@@ -148,6 +152,10 @@
 }
 
 @layer components {
+  .content-max-width {
+    @apply max-w-[1600px] mx-auto w-full;
+  }
+
   .page-header {
     @apply text-2xl font-semibold tracking-tight text-foreground;
   }
@@ -201,6 +209,11 @@
 
 /* Print styles */
 @media print {
+  html, body, #root {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
   aside,
   .no-print {
     display: none !important;
@@ -209,6 +222,8 @@
   main {
     margin-left: 0 !important;
     padding: 1rem !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   body {

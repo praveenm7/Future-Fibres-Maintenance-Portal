@@ -203,7 +203,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="h-screen bg-background flex overflow-hidden">
       {/* Sidebar Navigation - hidden on mobile */}
       <aside
         className={cn(
@@ -409,23 +409,34 @@ export default function MainLayout({ children }: MainLayoutProps) {
       {/* Main Content */}
       <main
         className={cn(
-          "flex-1 p-4 md:p-6 lg:p-10 overflow-y-auto h-screen transition-all duration-300 ease-in-out bg-background/50 pb-20 md:pb-6 lg:pb-10",
+          "flex-1 flex flex-col min-h-0 transition-[margin-left] duration-300 ease-in-out",
           isSidebarOpen ? "md:ml-64" : "md:ml-16"
         )}
       >
         {!isOnline && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg bg-amber-500/15 border border-amber-500/30 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-400 animate-in slide-in-from-top-2 duration-300">
-            <WifiOff className="h-4 w-4 shrink-0" />
-            <span>You are offline. Showing cached data.</span>
+          <div className="flex-shrink-0 px-4 md:px-6 lg:px-10 pt-3">
+            <div className="flex items-center gap-2 rounded-lg bg-amber-500/15 border border-amber-500/30 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-400">
+              <WifiOff className="h-4 w-4 shrink-0" />
+              <span>You are offline. Showing cached data.</span>
+            </div>
           </div>
         )}
-        <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
-          {children}
-        </div>
-        <div className="py-4 text-center mt-8">
-          <p className="text-xs text-muted-foreground/50">
-            Powered by North Technology Group Data Team
-          </p>
+
+        {/* Page header renders here via portal — outside the scroll container */}
+        <div id="page-header-slot" className="flex-shrink-0" />
+
+        {/* Scrollable content area — no horizontal padding so scrollbar stays at right edge */}
+        <div className="flex-1 overflow-y-auto min-h-0 bg-background/50">
+          <div className="px-4 md:px-6 lg:px-8 pt-6 pb-20 md:pb-6 lg:pb-10 flex flex-col min-h-full">
+            <div className="content-max-width flex-1 flex flex-col">
+              {children}
+            </div>
+            <div className="py-4 text-center mt-8">
+              <p className="text-xs text-muted-foreground/50">
+                Powered by North Technology Group Data Team
+              </p>
+            </div>
+          </div>
         </div>
       </main>
 

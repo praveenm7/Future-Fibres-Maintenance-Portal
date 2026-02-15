@@ -98,7 +98,7 @@ export default function Dashboard() {
   const { data: stats, isLoading: loadingStats } = useGetStats();
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div>
       {/* Header */}
       <div className="page-header mb-8 inline-block">
         MAINTENANCE DATABASE: MENU

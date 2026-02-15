@@ -31,7 +31,7 @@ export default function UserManagement() {
     const viewerCount = users?.filter(u => u.role === 'VIEWER').length ?? 0;
 
     return (
-        <div className="max-w-5xl mx-auto">
+        <div>
             <div className="page-header mb-8 inline-block">
                 USER MANAGEMENT
             </div>

@@ -29,7 +29,7 @@ export interface MaintenanceAction {
   periodicity: 'BEFORE EACH USE' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
   timeNeeded: number;
   maintenanceInCharge: boolean;
-  status: 'IDEAL' | 'MANDATO RY';
+  status: 'IDEAL' | 'MANDATORY';
   month?: string;
 }
 

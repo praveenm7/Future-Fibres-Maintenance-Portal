@@ -176,6 +176,9 @@ export function DataTable<T>({
       <div className="md:hidden text-xs text-muted-foreground/60 px-3 py-1.5 border-b border-border bg-muted/30 text-center">
         Swipe to see more &rarr;
       </div>
+      {/* Note: When stickyHeader is enabled, this creates a nested scroll container.
+         If the page is already scrollable via MainLayout, consider using a dynamic
+         max-height or removing the constraint to avoid double scrollbars. */}
       <div className={cn(
         "overflow-x-auto -webkit-overflow-scrolling-touch",
         stickyHeader && "max-h-[600px] overflow-y-auto"

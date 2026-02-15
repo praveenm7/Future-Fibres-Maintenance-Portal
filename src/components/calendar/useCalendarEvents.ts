@@ -1,0 +1,183 @@
+import { useMemo } from 'react';
+import {
+  eachDayOfInterval,
+  startOfMonth,
+  startOfYear,
+  differenceInDays,
+  getMonth,
+} from 'date-fns';
+import { useMachines } from '@/hooks/useMachines';
+import { useMaintenanceActions } from '@/hooks/useMaintenanceActions';
+import { MaintenanceAction, Machine } from '@/types/maintenance';
+import {
+  CalendarEvent,
+  ViewMode,
+  getVisibleDateRange,
+  getDateKey,
+  getMonthIndex,
+} from './calendarUtils';
+
+function generateOccurrences(
+  action: MaintenanceAction,
+  rangeStart: Date,
+  rangeEnd: Date
+): Date[] {
+  const dates: Date[] = [];
+
+  switch (action.periodicity) {
+    case 'BEFORE EACH USE': {
+      return eachDayOfInterval({ start: rangeStart, end: rangeEnd });
+    }
+
+    case 'WEEKLY': {
+      // Use a stable anchor: the start of the year, then step by 7 days
+      const anchor = startOfYear(rangeStart);
+      const daysDiff = differenceInDays(rangeStart, anchor);
+      const offsetToNextOccurrence = (7 - (daysDiff % 7)) % 7;
+      let current = new Date(rangeStart);
+      current.setDate(current.getDate() + offsetToNextOccurrence);
+      while (current <= rangeEnd) {
+        dates.push(new Date(current));
+        current = new Date(current);
+        current.setDate(current.getDate() + 7);
+      }
+      return dates;
+    }
+
+    case 'MONTHLY': {
+      // First day of each month in range
+      let current = startOfMonth(rangeStart);
+      if (current < rangeStart) {
+        current = new Date(current);
+        current.setMonth(current.getMonth() + 1);
+        current = startOfMonth(current);
+      }
+      while (current <= rangeEnd) {
+        dates.push(new Date(current));
+        current = new Date(current);
+        current.setMonth(current.getMonth() + 1);
+        current = startOfMonth(current);
+      }
+      return dates;
+    }
+
+    case 'QUARTERLY': {
+      // Quarter start months: Jan(0), Apr(3), Jul(6), Oct(9)
+      const quarterMonths = [0, 3, 6, 9];
+      let year = rangeStart.getFullYear();
+      const endYear = rangeEnd.getFullYear();
+      while (year <= endYear) {
+        for (const m of quarterMonths) {
+          const date = new Date(year, m, 1);
+          if (date >= rangeStart && date <= rangeEnd) {
+            dates.push(date);
+          }
+        }
+        year++;
+      }
+      return dates;
+    }
+
+    case 'YEARLY': {
+      // Respect the action.month field if present
+      const targetMonth = action.month
+        ? getMonthIndex(action.month)
+        : 0; // Default to January
+
+      if (targetMonth === -1) return dates;
+
+      let year = rangeStart.getFullYear();
+      const endYear = rangeEnd.getFullYear();
+      while (year <= endYear) {
+        const date = new Date(year, targetMonth, 1);
+        if (date >= rangeStart && date <= rangeEnd) {
+          dates.push(date);
+        }
+        year++;
+      }
+      return dates;
+    }
+
+    default:
+      return dates;
+  }
+}
+
+interface UseCalendarEventsReturn {
+  events: CalendarEvent[];
+  eventsByDate: Record<string, CalendarEvent[]>;
+  daysWithEvents: Date[];
+  isLoading: boolean;
+  machines: Machine[];
+  totalActions: number;
+  totalMachines: number;
+}
+
+export function useCalendarEvents(
+  currentDate: Date,
+  viewMode: ViewMode
+): UseCalendarEventsReturn {
+  const { useGetMachines } = useMachines();
+  const { useGetActions } = useMaintenanceActions();
+
+  const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
+  const { data: allActions = [], isLoading: loadingActions } = useGetActions();
+
+  const { start, end } = useMemo(
+    () => getVisibleDateRange(currentDate, viewMode),
+    [currentDate, viewMode]
+  );
+
+  const events = useMemo(() => {
+    if (!machines.length || !allActions.length) return [];
+
+    const machineMap = new Map<string, Machine>();
+    for (const m of machines) {
+      machineMap.set(m.id, m);
+    }
+
+    const result: CalendarEvent[] = [];
+
+    for (const action of allActions) {
+      const machine = machineMap.get(action.machineId);
+      if (!machine) continue;
+
+      const occurrences = generateOccurrences(action, start, end);
+      for (const date of occurrences) {
+        const dateKey = getDateKey(date);
+        result.push({
+          id: `${action.id}-${dateKey}`,
+          action,
+          machine,
+          date,
+          dateKey,
+        });
+      }
+    }
+
+    return result;
+  }, [machines, allActions, start, end]);
+
+  const eventsByDate = useMemo(() => {
+    const map: Record<string, CalendarEvent[]> = {};
+    for (const event of events) {
+      if (!map[event.dateKey]) map[event.dateKey] = [];
+      map[event.dateKey].push(event);
+    }
+    return map;
+  }, [events]);
+
+  const daysWithEvents = useMemo(() => {
+    return Object.keys(eventsByDate).map((d) => new Date(d + 'T00:00:00'));
+  }, [eventsByDate]);
+
+  return {
+    events,
+    eventsByDate,
+    daysWithEvents,
+    isLoading: loadingMachines || loadingActions,
+    machines,
+    totalActions: allActions.length,
+    totalMachines: machines.length,
+  };
+}

@@ -230,7 +230,7 @@ export default function NonConformities() {
           {/* NC Selection Dropdown */}
           {(mode !== 'new') && (
             <div className={cn(
-              "border rounded-lg p-4 animate-in fade-in slide-in-from-top-2",
+              "border rounded-lg p-4",
               mode === 'delete' ? "bg-destructive/5 border-destructive/20" : "bg-muted/20 border-border"
             )}>
               <label className="block text-sm font-medium mb-2 text-muted-foreground">

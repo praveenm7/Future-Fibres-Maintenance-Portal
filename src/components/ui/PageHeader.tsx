@@ -1,5 +1,7 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Home } from 'lucide-react';
+import { useState, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { Home } from 'lucide-react';
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -12,7 +14,6 @@ import {
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
-  showBack?: boolean;
 }
 
 const ROUTE_MAP: Record<string, { label: string; section?: string }> = {
@@ -56,57 +57,52 @@ const SECTION_PATHS: Record<string, string> = {
   'Administration': '/admin',
 };
 
-export function PageHeader({ title, subtitle, showBack = true }: PageHeaderProps) {
+export function PageHeader({ title, subtitle }: PageHeaderProps) {
   const location = useLocation();
-  const navigate = useNavigate();
   const routeInfo = ROUTE_MAP[location.pathname];
 
-  // Don't show back on top-level section pages
-  const isTopLevel = ['/', '/forms', '/reports', '/dashboards'].includes(location.pathname);
+  // Portal into the layout header slot (outside scroll container)
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
 
-  return (
-    <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border/50 -mx-6 lg:-mx-10 px-6 lg:px-10 py-4 mb-6">
-      {/* Breadcrumbs */}
-      {routeInfo && (
-        <Breadcrumb className="mb-2">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to="/" className="flex items-center gap-1">
-                  <Home className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Home</span>
-                </Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            {routeInfo.section && (
-              <>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbLink asChild>
-                    <Link to={SECTION_PATHS[routeInfo.section] || '/'}>{routeInfo.section}</Link>
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-              </>
-            )}
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{routeInfo.label}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-      )}
+  useLayoutEffect(() => {
+    const el = document.getElementById('page-header-slot');
+    if (el) setPortalTarget(el);
+  }, []);
 
-      {/* Title Row */}
-      <div className="flex items-center gap-3">
-        {showBack && !isTopLevel && (
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-            title="Go back"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
+  const headerContent = (
+    <div className="bg-background border-b border-border/50 px-4 md:px-6 lg:px-10 py-4">
+      <div className="content-max-width">
+        {/* Breadcrumbs */}
+        {routeInfo && (
+          <Breadcrumb className="mb-2">
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/" className="flex items-center gap-1">
+                    <Home className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Home</span>
+                  </Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              {routeInfo.section && (
+                <>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>
+                      <Link to={SECTION_PATHS[routeInfo.section] || '/'}>{routeInfo.section}</Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                </>
+              )}
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>{routeInfo.label}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
         )}
+
+        {/* Title Row */}
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             {title}
@@ -120,4 +116,12 @@ export function PageHeader({ title, subtitle, showBack = true }: PageHeaderProps
       </div>
     </div>
   );
+
+  // Render into the layout's header slot (outside scroll container) when available
+  if (portalTarget) {
+    return createPortal(headerContent, portalTarget);
+  }
+
+  // Fallback: render inline (e.g., if layout hasn't mounted yet)
+  return headerContent;
 }

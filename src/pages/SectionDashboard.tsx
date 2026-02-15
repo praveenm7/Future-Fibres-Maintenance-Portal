@@ -15,6 +15,7 @@ import {
     ArrowRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PageHeader } from '@/components/ui/PageHeader';
 
 interface SectionDashboardProps {
     type: 'forms' | 'reports';
@@ -103,15 +104,11 @@ export default function SectionDashboard({ type }: SectionDashboardProps) {
     const title = type === 'forms' ? 'Forms' : 'Reports';
 
     return (
-        <div className="max-w-5xl mx-auto animate-in fade-in duration-300">
-            <div className="mb-8">
-                <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                    {title}
-                </h1>
-                <p className="text-muted-foreground mt-1 text-sm">
-                    Select an option below to proceed.
-                </p>
-            </div>
+        <div className="animate-in fade-in duration-300">
+            <PageHeader
+                title={title}
+                subtitle="Select an option below to proceed."
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {items.map((item) => {
