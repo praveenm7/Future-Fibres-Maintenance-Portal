@@ -34,7 +34,6 @@ import NCAnalyticsDashboard from "./pages/dashboards/NCAnalyticsDashboard";
 import EquipmentHealthDashboard from "./pages/dashboards/EquipmentHealthDashboard";
 import SparePartsDashboard from "./pages/dashboards/SparePartsDashboard";
 import WorkforceDashboard from "./pages/dashboards/WorkforceDashboard";
-import CustomDashboard from "./pages/dashboards/CustomDashboard";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -102,7 +101,6 @@ const App = () => (
           <Route path="/dashboards/equipment-health" element={<MainLayout><EquipmentHealthDashboard /></MainLayout>} />
           <Route path="/dashboards/spare-parts" element={<MainLayout><SparePartsDashboard /></MainLayout>} />
           <Route path="/dashboards/workforce" element={<MainLayout><WorkforceDashboard /></MainLayout>} />
-          <Route path="/dashboards/custom" element={<MainLayout><CustomDashboard /></MainLayout>} />
 
           {/* Admin */}
           <Route path="/admin" element={<MainLayout><AdminDashboard /></MainLayout>} />

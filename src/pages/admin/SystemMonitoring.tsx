@@ -89,6 +89,7 @@ export default function SystemMonitoring() {
                             <SelectItem value="24">Last 24 hours</SelectItem>
                             <SelectItem value="72">Last 3 days</SelectItem>
                             <SelectItem value="168">Last 7 days</SelectItem>
+                            <SelectItem value="720">Last 30 days</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -115,6 +116,9 @@ export default function SystemMonitoring() {
                                             dataKey="hour"
                                             tickFormatter={(val) => {
                                                 const d = new Date(val);
+                                                if (timeRange > 168) {
+                                                    return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+                                                }
                                                 return `${d.getHours().toString().padStart(2, '0')}:00`;
                                             }}
                                             tick={{ fontSize: 11 }}
@@ -148,6 +152,9 @@ export default function SystemMonitoring() {
                                             dataKey="hour"
                                             tickFormatter={(val) => {
                                                 const d = new Date(val);
+                                                if (timeRange > 168) {
+                                                    return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`;
+                                                }
                                                 return `${d.getHours().toString().padStart(2, '0')}:00`;
                                             }}
                                             tick={{ fontSize: 11 }}

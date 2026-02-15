@@ -371,7 +371,7 @@ router.get('/metrics/overview', async (req, res) => {
 router.get('/metrics/api-activity', async (req, res) => {
     try {
         const pool = await poolPromise;
-        const hours = Math.min(168, Math.max(1, parseInt(req.query.hours) || 24));
+        const hours = Math.min(720, Math.max(1, parseInt(req.query.hours) || 24));
 
         const result = await pool.request()
             .input('Hours', sql.Int, hours)
@@ -403,23 +403,30 @@ router.get('/metrics/api-activity', async (req, res) => {
     }
 });
 
-// GET /metrics/api-timeline — Request counts per hour for charts
+// GET /metrics/api-timeline — Request counts per hour (or per day for large ranges) for charts
 router.get('/metrics/api-timeline', async (req, res) => {
     try {
         const pool = await poolPromise;
-        const hours = Math.min(168, Math.max(1, parseInt(req.query.hours) || 24));
+        const hours = Math.min(720, Math.max(1, parseInt(req.query.hours) || 24));
+
+        // Use daily granularity for ranges > 7 days to avoid too many data points
+        const useDailyGranularity = hours > 168;
+
+        const groupExpr = useDailyGranularity
+            ? 'DATEADD(DAY, DATEDIFF(DAY, 0, CreatedDate), 0)'
+            : 'DATEADD(HOUR, DATEDIFF(HOUR, 0, CreatedDate), 0)';
 
         const result = await pool.request()
             .input('Hours', sql.Int, hours)
             .query(`
                 SELECT
-                    DATEADD(HOUR, DATEDIFF(HOUR, 0, CreatedDate), 0) AS hour,
+                    ${groupExpr} AS hour,
                     COUNT(*) AS requestCount,
                     AVG(ResponseTimeMs) AS avgResponseTime,
                     SUM(CASE WHEN StatusCode >= 400 THEN 1 ELSE 0 END) AS errorCount
                 FROM ApiRequestLogs
                 WHERE CreatedDate >= DATEADD(HOUR, -@Hours, GETDATE())
-                GROUP BY DATEADD(HOUR, DATEDIFF(HOUR, 0, CreatedDate), 0)
+                GROUP BY ${groupExpr}
                 ORDER BY hour
             `);
 

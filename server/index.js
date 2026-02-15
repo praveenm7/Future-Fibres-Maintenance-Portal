@@ -139,6 +139,24 @@ app.listen(PORT, () => {
     console.log('='.repeat(50));
 });
 
+// Auto-cleanup: delete logs older than 60 days
+async function cleanupOldLogs() {
+    try {
+        const pool = await poolPromise;
+        await pool.request().query(`
+            DELETE FROM ApiRequestLogs WHERE CreatedDate < DATEADD(DAY, -60, GETDATE());
+            DELETE FROM ErrorLogs WHERE CreatedDate < DATEADD(DAY, -60, GETDATE());
+        `);
+        console.log('[Cleanup] Old logs (>60 days) deleted');
+    } catch (err) {
+        console.error('[Cleanup] Failed:', err.message);
+    }
+}
+
+// Run cleanup on startup and every 24 hours
+cleanupOldLogs();
+setInterval(cleanupOldLogs, 24 * 60 * 60 * 1000);
+
 // Graceful shutdown
 process.on('SIGTERM', async () => {
     console.log('SIGTERM signal received: closing HTTP server');

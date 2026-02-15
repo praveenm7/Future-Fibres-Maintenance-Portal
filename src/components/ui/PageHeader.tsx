@@ -37,7 +37,6 @@ const ROUTE_MAP: Record<string, { label: string; section?: string }> = {
   '/dashboards/equipment-health': { label: 'Equipment Health', section: 'Dashboards' },
   '/dashboards/spare-parts': { label: 'Spare Parts', section: 'Dashboards' },
   '/dashboards/workforce': { label: 'Workforce', section: 'Dashboards' },
-  '/dashboards/custom': { label: 'Custom Dashboard', section: 'Dashboards' },
   // Admin
   '/admin': { label: 'Admin Dashboard', section: 'Administration' },
   '/admin/database': { label: 'Database Explorer', section: 'Administration' },

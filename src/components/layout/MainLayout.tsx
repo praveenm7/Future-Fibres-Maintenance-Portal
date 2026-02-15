@@ -26,7 +26,6 @@ import {
   X,
   Calendar,
   LucideIcon,
-  LayoutGrid,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
@@ -88,7 +87,6 @@ const sections: NavSection[] = [
       { path: '/dashboards/equipment-health', label: 'Equipment Health', icon: Wrench },
       { path: '/dashboards/spare-parts', label: 'Spare Parts', icon: Package },
       { path: '/dashboards/workforce', label: 'Workforce', icon: Users },
-      { path: '/dashboards/custom', label: 'Custom Dashboard', icon: LayoutGrid },
     ],
   },
   {
@@ -423,6 +421,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
         )}
         <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
           {children}
+        </div>
+        <div className="py-4 text-center mt-8">
+          <p className="text-xs text-muted-foreground/50">
+            Powered by North Technology Group Data Team
+          </p>
         </div>
       </main>
 
