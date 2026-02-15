@@ -37,8 +37,8 @@ function requestLogger(req, res, next) {
                     .input('RequestBody', sql.NVarChar(sql.MAX), requestBody)
                     .input('IpAddress', sql.NVarChar(50), ipAddress)
                     .query(`
-                        INSERT INTO ApiRequestLogs (Method, Path, StatusCode, ResponseTimeMs, RequestBody, IpAddress)
-                        VALUES (@Method, @Path, @StatusCode, @ResponseTimeMs, @RequestBody, @IpAddress)
+                        INSERT INTO ApiRequestLogs (Method, Path, StatusCode, ResponseTimeMs, RequestBody, IpAddress, CreatedDate)
+                        VALUES (@Method, @Path, @StatusCode, @ResponseTimeMs, @RequestBody, @IpAddress, GETUTCDATE())
                     `);
             } catch (err) {
                 // Don't crash the server if logging fails

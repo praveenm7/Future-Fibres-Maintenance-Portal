@@ -95,7 +95,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 {/* API Traffic Chart */}
                 <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
-                    <div className="section-header">API Traffic (Last 24h)</div>
+                    <div className="section-header">API Traffic (Last 24h) — {Intl.DateTimeFormat().resolvedOptions().timeZone}</div>
                     <div className="p-4">
                         {timeline && timeline.length > 0 ? (
                             <ResponsiveContainer width="100%" height={200}>

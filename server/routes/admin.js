@@ -348,8 +348,8 @@ router.get('/metrics/overview', async (req, res) => {
                 (SELECT COUNT(*) FROM NonConformities) AS totalNCs,
                 (SELECT COUNT(*) FROM MaintenanceActions) AS totalActions,
                 (SELECT COUNT(*) FROM SpareParts) AS totalSpareParts,
-                (SELECT COUNT(*) FROM ApiRequestLogs WHERE CreatedDate >= CAST(GETDATE() AS DATE)) AS requestsToday,
-                (SELECT COUNT(*) FROM ErrorLogs WHERE CreatedDate >= CAST(GETDATE() AS DATE)) AS errorsToday
+                (SELECT COUNT(*) FROM ApiRequestLogs WHERE CreatedDate >= CAST(GETUTCDATE() AS DATE)) AS requestsToday,
+                (SELECT COUNT(*) FROM ErrorLogs WHERE CreatedDate >= CAST(GETUTCDATE() AS DATE)) AS errorsToday
         `);
 
         const stats = result.recordset[0];
@@ -384,7 +384,7 @@ router.get('/metrics/api-activity', async (req, res) => {
                     MAX(ResponseTimeMs) AS maxResponseTime,
                     MIN(ResponseTimeMs) AS minResponseTime
                 FROM ApiRequestLogs
-                WHERE CreatedDate >= DATEADD(HOUR, -@Hours, GETDATE())
+                WHERE CreatedDate >= DATEADD(HOUR, -@Hours, GETUTCDATE())
                 GROUP BY Method, Path
                 ORDER BY requestCount DESC
             `);
@@ -425,7 +425,7 @@ router.get('/metrics/api-timeline', async (req, res) => {
                     AVG(ResponseTimeMs) AS avgResponseTime,
                     SUM(CASE WHEN StatusCode >= 400 THEN 1 ELSE 0 END) AS errorCount
                 FROM ApiRequestLogs
-                WHERE CreatedDate >= DATEADD(HOUR, -@Hours, GETDATE())
+                WHERE CreatedDate >= DATEADD(HOUR, -@Hours, GETUTCDATE())
                 GROUP BY ${groupExpr}
                 ORDER BY hour
             `);
@@ -468,7 +468,8 @@ router.get('/metrics/system-health', async (req, res) => {
                 uptimeFormatted: formatUptime(Date.now() - serverStartTime),
                 nodeVersion: process.version,
                 platform: process.platform,
-                pid: process.pid
+                pid: process.pid,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
             },
             memory: {
                 rss: memUsage.rss,

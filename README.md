@@ -1,17 +1,19 @@
 # Future Fibres Maintenance Portal
 
-A comprehensive web-based maintenance management system for tracking, managing, and reporting on industrial machinery maintenance operations. This portal provides a centralized platform for managing maintenance activities, non-conformities, spare parts inventory, and authorization matrices for manufacturing equipment.
+A comprehensive web-based maintenance management system for tracking, managing, and reporting on industrial machinery maintenance operations. This portal provides a centralized platform for managing maintenance activities, non-conformities, spare parts inventory, authorization matrices, interactive dashboards, and a full administration panel.
 
 ## Overview
 
 The Future Fibres Maintenance Portal is designed for manufacturing facilities to streamline their maintenance operations. It enables maintenance teams, operators, and managers to:
 
-- Track and manage machinery inventory with detailed specifications
-- Schedule and monitor preventive maintenance activities
+- Track and manage machinery inventory with detailed specifications and document uploads
+- Schedule and monitor preventive maintenance activities via plans and a visual calendar
 - Document and resolve non-conformities (NCs) and equipment failures
 - Maintain spare parts inventory and supplier information
 - Control access permissions through authorization matrices
 - Generate comprehensive reports for analysis and compliance
+- Visualize operational data through interactive dashboards
+- Administer the system via a dedicated admin panel with database explorer, user management, and monitoring
 
 ## Features
 
@@ -24,6 +26,7 @@ The Future Fibres Maintenance Portal is designed for manufacturing facilities to
 - Power specifications and area assignments
 - Purchasing information (date, cost, PO number)
 - Maintenance status tracking and personnel assignment
+- Photo upload and document management per machine
 
 **Maintenance Plan**
 - Schedule preventive maintenance actions for each machine
@@ -48,7 +51,6 @@ The Future Fibres Maintenance Portal is designed for manufacturing facilities to
 - Inventory management for machine components
 - Reference tracking and quantity management
 - Supplier links and machine associations
-- Cost tracking
 
 **Authorization Matrix**
 - Role-based access control for machinery
@@ -61,22 +63,43 @@ The Future Fibres Maintenance Portal is designed for manufacturing facilities to
 - Manage machine types, groups, and areas
 - Centralized configuration management
 
+**Maintenance Calendar**
+- Visual calendar view of scheduled maintenance activities
+- Monthly, weekly, and daily views
+- Quick overview of upcoming maintenance tasks
+
 ### Reports (Analytics & Visualization)
 
-- **Machinery & Tooling List Report** - Complete inventory view with filtering
+- **Machinery & Tooling List Report** - Complete inventory view with filtering and Excel export
 - **NC Maintenance Report** - Non-conformity tracking and analysis
 - **Maintenance Summary** - Visual analytics with charts (powered by Recharts)
 - **Maintenance Plan Report** - Machine-specific maintenance schedules
 - **Authorization Matrix Report** - User permissions overview
 
+### Dashboards (Interactive Analytics)
+
+- **Overview Dashboard** - High-level KPIs and operational summary
+- **NC Analytics Dashboard** - Non-conformity trends, patterns, and deep analysis
+- **Equipment Health Dashboard** - Machine status, maintenance compliance, and health metrics
+- **Spare Parts Dashboard** - Inventory levels, usage trends, and reorder insights
+- **Workforce Dashboard** - Operator workload, task distribution, and productivity
+
+### Administration
+
+- **Admin Dashboard** - System overview with API traffic charts and quick-access navigation
+- **Database Explorer** - Browse tables, view schemas, edit and delete records directly
+- **User Management** - Manage operators and assign roles (Admin, User, Viewer)
+- **System Monitoring** - API activity charts, system health gauges, response time tracking, error logs
+- **Activity Logs** - Full API request history with filtering and pagination
+
 ## Tech Stack
 
 ### Frontend
-- **Framework:** React 18.3 with TypeScript
+- **Framework:** React 18.3 with TypeScript 5.8
 - **Build Tool:** Vite 5.4
 - **Routing:** React Router DOM 6.30
 - **State Management:** TanStack React Query 5.83
-- **UI Components:** shadcn-ui (Radix UI primitives)
+- **UI Components:** shadcn-ui (Radix UI primitives) — 70+ components
 - **Styling:** Tailwind CSS 3.4
 - **Forms:** React Hook Form 7.61 with Zod validation
 - **Charts:** Recharts 2.15
@@ -84,12 +107,14 @@ The Future Fibres Maintenance Portal is designed for manufacturing facilities to
 - **Notifications:** Sonner (toast notifications)
 - **Date Handling:** date-fns 3.6
 - **Theming:** Next Themes 0.3 (dark mode support)
+- **Excel Export:** xlsx 0.18
+- **QR Code:** qrcode.react & html5-qrcode
 
 ### Backend
 - **Runtime:** Node.js with Express 4.18
 - **Database:** SQL Server (MSSQL 10.0)
-- **Alternative:** Supabase integration available
-- **API:** RESTful JSON API
+- **File Uploads:** Multer 2.0
+- **API:** RESTful JSON API with request logging
 - **Development:** Nodemon for hot reload
 
 ## Prerequisites
@@ -103,7 +128,6 @@ The Future Fibres Maintenance Portal is designed for manufacturing facilities to
 ### 1. Clone & Install Frontend Dependencies
 
 ```bash
-cd "d:\Maintenance Dashboard App\Future-Fibres-Maintenance-Portal"
 npm install
 ```
 
@@ -111,10 +135,13 @@ npm install
 
 Execute the SQL scripts in the following order using SSMS or sqlcmd:
 
-1. `database/00_create_database.sql` - Create the database
+1. `database/00_create_database.sql` - Create the database and app user
 2. `database/01_schema.sql` - Create tables and schema
 3. `database/02_seed_data.sql` - Load sample data
 4. `database/03_stored_procedures.sql` - Create stored procedures
+5. `database/04_admin_schema.sql` - Create admin tables (ApiRequestLogs, ErrorLogs)
+6. `database/05_dashboard_stored_procedures.sql` - Dashboard analytics procedures
+7. `database/06_migrate_finalcodes.sql` - Final code migration
 
 **Database Name:** `FutureFibresMaintenance`
 
@@ -127,6 +154,9 @@ Execute the SQL scripts in the following order using SSMS or sqlcmd:
 - SpareParts
 - AuthorizationMatrix
 - ListOptions
+- MachineDocuments
+- ApiRequestLogs
+- ErrorLogs
 
 ### 3. Backend Setup
 
@@ -154,16 +184,6 @@ Create a `.env.local` file in the root directory:
 
 ```env
 VITE_API_BASE_URL=http://localhost:3002/api
-```
-
-**Optional - Supabase Integration:**
-
-If you want to use Supabase, create a `.env` file with:
-
-```env
-VITE_SUPABASE_PROJECT_ID=your_project_id
-VITE_SUPABASE_PUBLISHABLE_KEY=your_publishable_key
-VITE_SUPABASE_URL=https://your_project_id.supabase.co
 ```
 
 ## Running the Application
@@ -220,37 +240,46 @@ npm run dev          # Run with auto-reload (development)
 ```
 Future-Fibres-Maintenance-Portal/
 ├── src/
-│   ├── pages/              # 15+ page components (Forms + Reports)
+│   ├── pages/                 # 29 page components
 │   │   ├── LandingPage.tsx
+│   │   ├── SectionDashboard.tsx
 │   │   ├── MachineManagement.tsx
 │   │   ├── MaintenancePlan.tsx
 │   │   ├── NonConformities.tsx
+│   │   ├── NCComments.tsx
 │   │   ├── SpareParts.tsx
-│   │   └── ... (reports and other pages)
-│   ├── components/         # Reusable UI components
-│   │   ├── ui/            # 50+ shadcn-ui components
-│   │   └── layout/        # MainLayout with sidebar navigation
-│   ├── hooks/             # Custom React hooks for data fetching
-│   ├── services/          # API client and integrations
-│   ├── types/             # TypeScript interfaces
-│   ├── integrations/      # Supabase client and types
-│   └── lib/               # Utility functions
+│   │   ├── AuthorizationMatrix.tsx
+│   │   ├── ListsModification.tsx
+│   │   ├── MaintenanceCalendar.tsx
+│   │   ├── MachineryListReport.tsx
+│   │   ├── NCMaintenanceReport.tsx
+│   │   ├── MaintenanceSummary.tsx
+│   │   ├── MaintenancePlanReport.tsx
+│   │   ├── AuthorizationReport.tsx
+│   │   ├── dashboards/       # 6 dashboard pages
+│   │   └── admin/            # 5 admin pages
+│   ├── components/            # Reusable UI components
+│   │   ├── ui/               # 70+ shadcn-ui components
+│   │   └── layout/           # MainLayout, BottomNav, sidebar
+│   ├── hooks/                 # 15 custom React hooks
+│   ├── services/              # API client
+│   ├── types/                 # TypeScript interfaces (3 files)
+│   └── lib/                   # Utility functions and Zod schemas
 ├── server/
-│   ├── routes/            # 9 API route modules
-│   ├── config/            # Database configuration
-│   └── index.js           # Express server entry point
-├── database/              # SQL scripts for setup
-│   ├── 00_create_database.sql
-│   ├── 01_schema.sql
-│   ├── 02_seed_data.sql
-│   └── 03_stored_procedures.sql
-└── public/                # Static assets
+│   ├── routes/                # 12 API route modules
+│   ├── middleware/            # Request logger middleware
+│   ├── config/                # Database configuration
+│   ├── uploads/               # Machine document uploads
+│   └── index.js               # Express server entry point
+├── database/                  # 7 SQL setup scripts
+└── public/                    # Static assets
 ```
 
 ## API Endpoints
 
-The backend provides a RESTful API with the following main routes:
+The backend provides a RESTful API with the following routes:
 
+### Core Data
 - `GET/POST/PUT/DELETE /api/machines` - Machinery CRUD operations
 - `GET/POST/PUT/DELETE /api/maintenance-actions` - Maintenance plan management
 - `GET/POST/PUT/DELETE /api/non-conformities` - NC management
@@ -259,7 +288,19 @@ The backend provides a RESTful API with the following main routes:
 - `GET /api/operators` - Operator data
 - `GET/POST/PUT/DELETE /api/list-options` - Configuration values
 - `GET/POST/PUT/DELETE /api/auth-matrix` - Authorization matrix
+- `GET/POST/DELETE /api/documents` - Machine document uploads
+
+### Analytics
 - `GET /api/dashboard` - Dashboard statistics
+- `GET /api/dashboards/*` - Dashboard analytics (overview, NC, equipment, spare parts, workforce)
+
+### Administration
+- `GET /api/admin/db/*` - Database explorer (tables, schema, data, CRUD)
+- `GET /api/admin/metrics/*` - System metrics (overview, API activity, timeline, health, errors)
+- `GET /api/admin/users` - User management
+- `PUT /api/admin/users/:id/role` - Role assignment
+
+### System
 - `GET /api/health` - Server health check
 
 ## Database Features
@@ -269,17 +310,24 @@ The backend provides a RESTful API with the following main routes:
 - `sp_GetDashboardStats` - Dashboard aggregations
 - `sp_GetMaintenanceReport` - Maintenance filtering by periodicity
 - `sp_CreateNonConformity` - NC creation with auto-ID generation
+- `sp_GetOverviewDashboard` - Overview dashboard analytics
+- `sp_GetNCAnalyticsDashboard` - NC trends and analysis
+- `sp_GetEquipmentHealthDashboard` - Equipment health metrics
+- `sp_GetSparePartsDashboard` - Spare parts analytics
+- `sp_GetWorkforceDashboard` - Workforce metrics
 
 ### Data Models
 
-All TypeScript interfaces are defined in `/src/types/maintenance.ts`:
-- Machine (16 properties)
-- MaintenanceAction
-- NonConformity
-- NCComment
-- SparePart
-- AuthorizationMatrix
-- ListOption
+TypeScript interfaces are defined across 3 files in `/src/types/`:
+
+**maintenance.ts** - Core domain types:
+- Machine, MaintenanceAction, NonConformity, NCComment, SparePart, AuthorizationMatrix, ListOption, MachineDocument
+
+**admin.ts** - Admin panel types:
+- ApiActivityStat, ApiTimelineEntry, SystemHealth, ErrorLog, AdminOverview
+
+**dashboards.ts** - Dashboard analytics types:
+- OverviewDashboard, NCAnalytics, EquipmentHealth, SparePartsDashboard, WorkforceDashboard
 
 ## Development Workflow
 
@@ -295,13 +343,16 @@ All TypeScript interfaces are defined in `/src/types/maintenance.ts`:
 
 - **Modern React Architecture:** Hooks-based, functional components
 - **Type Safety:** Full TypeScript coverage with strict mode
-- **Responsive Design:** Mobile-first approach with Tailwind CSS
+- **Responsive Design:** Mobile-first approach with Tailwind CSS and mobile bottom navigation
+- **Dark Mode:** Theme switching with next-themes
+- **Offline Support:** Online/offline detection with cached data fallback
+- **Request Logging:** All API requests logged to database with auto-cleanup (60-day retention)
+- **Unsaved Changes Protection:** Warns users before navigating away from unsaved forms
+- **Sidebar Navigation:** Collapsible sidebar with search, section grouping, and badge counts
 - **Data Tables:** Reusable DataTable component with selection and filtering
 - **Toast Notifications:** User feedback on all operations
-- **Error Handling:** Comprehensive error handling with user-friendly messages
-- **Loading States:** Spinner indicators for async operations
-- **Form Validation:** Client-side validation with immediate feedback
-- **Dark Mode Support:** Theme switching with next-themes
+- **Excel Export:** Export reports and data to .xlsx files
+- **Document Management:** Upload and manage machine documents and manuals
 - **Auto-Generated IDs:** Final codes for machines and NCs
 - **Status Workflows:** Structured lifecycles for NCs and maintenance
 
@@ -318,12 +369,12 @@ All TypeScript interfaces are defined in `/src/types/maintenance.ts`:
 - Frontend default: 8080 (change in `vite.config.ts`)
 
 ### Database Setup
-- Ensure scripts are run in order (00, 01, 02, 03)
+- Ensure scripts are run in order (00 through 06)
 - Use SSMS for easier script execution and error visibility
 - Verify database user has appropriate permissions
 
-For additional help, refer to the database setup documentation in the `database/` folder.
+For additional help, refer to the setup documentation in the `database/` folder.
 
 ## License
 
-Copyright © 2024 Future Fibres. All rights reserved.
+Copyright © 2025 Future Fibres — North Technology Group - Data Team. All rights reserved.

@@ -92,6 +92,7 @@ export default function SystemMonitoring() {
                             <SelectItem value="720">Last 30 days</SelectItem>
                         </SelectContent>
                     </Select>
+                    <span className="text-xs text-muted-foreground">({Intl.DateTimeFormat().resolvedOptions().timeZone})</span>
                 </div>
             </div>
 

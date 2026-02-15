@@ -102,8 +102,8 @@ app.use((err, req, res, next) => {
                 .input('StackTrace', sql.NVarChar(sql.MAX), err.stack || null)
                 .input('StatusCode', sql.Int, statusCode)
                 .query(`
-                    INSERT INTO ErrorLogs (Path, Method, ErrorMessage, StackTrace, StatusCode)
-                    VALUES (@Path, @Method, @ErrorMessage, @StackTrace, @StatusCode)
+                    INSERT INTO ErrorLogs (Path, Method, ErrorMessage, StackTrace, StatusCode, CreatedDate)
+                    VALUES (@Path, @Method, @ErrorMessage, @StackTrace, @StatusCode, GETUTCDATE())
                 `);
         } catch (logErr) {
             console.error('Error logging to database:', logErr.message);
@@ -139,13 +139,61 @@ app.listen(PORT, () => {
     console.log('='.repeat(50));
 });
 
+// One-time migration: shift existing log timestamps from server-local to UTC
+async function migrateLogsToUTC() {
+    try {
+        const pool = await poolPromise;
+
+        // Create migrations tracking table if it doesn't exist
+        await pool.request().query(`
+            IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = '_Migrations' AND schema_id = SCHEMA_ID('dbo'))
+            CREATE TABLE dbo._Migrations (
+                Name NVARCHAR(200) PRIMARY KEY,
+                ExecutedDate DATETIME DEFAULT GETUTCDATE()
+            )
+        `);
+
+        // Check if this migration has already run
+        const check = await pool.request()
+            .input('Name', sql.NVarChar(200), 'ConvertLogsToUTC')
+            .query('SELECT 1 FROM dbo._Migrations WHERE Name = @Name');
+
+        if (check.recordset.length > 0) return; // Already migrated
+
+        // Get server's UTC offset in minutes
+        const offsetResult = await pool.request().query(
+            'SELECT DATEPART(TZOFFSET, SYSDATETIMEOFFSET()) AS offsetMinutes'
+        );
+        const offsetMinutes = offsetResult.recordset[0].offsetMinutes;
+
+        if (offsetMinutes !== 0) {
+            await pool.request()
+                .input('Offset', sql.Int, offsetMinutes)
+                .query(`
+                    UPDATE ApiRequestLogs SET CreatedDate = DATEADD(MINUTE, -@Offset, CreatedDate);
+                    UPDATE ErrorLogs SET CreatedDate = DATEADD(MINUTE, -@Offset, CreatedDate);
+                `);
+            console.log(`[Migration] Shifted log timestamps by -${offsetMinutes} minutes to UTC`);
+        } else {
+            console.log('[Migration] Server is already in UTC, no shift needed');
+        }
+
+        // Mark migration as complete
+        await pool.request()
+            .input('Name', sql.NVarChar(200), 'ConvertLogsToUTC')
+            .query('INSERT INTO dbo._Migrations (Name) VALUES (@Name)');
+    } catch (err) {
+        console.error('[Migration] Failed:', err.message);
+    }
+}
+
 // Auto-cleanup: delete logs older than 60 days
 async function cleanupOldLogs() {
     try {
         const pool = await poolPromise;
         await pool.request().query(`
-            DELETE FROM ApiRequestLogs WHERE CreatedDate < DATEADD(DAY, -60, GETDATE());
-            DELETE FROM ErrorLogs WHERE CreatedDate < DATEADD(DAY, -60, GETDATE());
+            DELETE FROM ApiRequestLogs WHERE CreatedDate < DATEADD(DAY, -60, GETUTCDATE());
+            DELETE FROM ErrorLogs WHERE CreatedDate < DATEADD(DAY, -60, GETUTCDATE());
         `);
         console.log('[Cleanup] Old logs (>60 days) deleted');
     } catch (err) {
@@ -153,7 +201,8 @@ async function cleanupOldLogs() {
     }
 }
 
-// Run cleanup on startup and every 24 hours
+// Run migrations and cleanup on startup
+migrateLogsToUTC();
 cleanupOldLogs();
 setInterval(cleanupOldLogs, 24 * 60 * 60 * 1000);
 
