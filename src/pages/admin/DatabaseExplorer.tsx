@@ -8,7 +8,6 @@ import {
     Trash2,
     Table2,
     Key,
-    Eye,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -54,8 +53,8 @@ export default function DatabaseExplorer() {
     const [searchInput, setSearchInput] = useState('');
     const [editDialogOpen, setEditDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [editingRow, setEditingRow] = useState<Record<string, any> | null>(null);
-    const [editFormData, setEditFormData] = useState<Record<string, any>>({});
+    const [editingRow, setEditingRow] = useState<Record<string, unknown> | null>(null);
+    const [editFormData, setEditFormData] = useState<Record<string, unknown>>({});
 
     const { data: tables, isLoading: loadingTables } = useDbTables();
     const { data: schema } = useDbTableSchema(selectedTable);
@@ -75,7 +74,7 @@ export default function DatabaseExplorer() {
         setPage(1);
     };
 
-    const handleEditRow = (row: Record<string, any>) => {
+    const handleEditRow = (row: Record<string, unknown>) => {
         setEditingRow(row);
         setEditFormData({ ...row });
         setEditDialogOpen(true);
@@ -88,7 +87,7 @@ export default function DatabaseExplorer() {
 
         const rowId = editingRow[pkColumn.name];
         // Only send changed, non-identity fields
-        const changes: Record<string, any> = {};
+        const changes: Record<string, unknown> = {};
         for (const [key, value] of Object.entries(editFormData)) {
             const col = schema.columns.find(c => c.name === key);
             if (!col || col.isPrimaryKey || col.isIdentity) continue;
@@ -120,7 +119,7 @@ export default function DatabaseExplorer() {
         );
     };
 
-    const formatCellValue = (value: any): string => {
+    const formatCellValue = (value: unknown): string => {
         if (value === null || value === undefined) return 'NULL';
         if (typeof value === 'boolean') return value ? 'true' : 'false';
         if (value instanceof Date) return value.toLocaleString();

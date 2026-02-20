@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import {
-    Activity,
     Server,
     HardDrive,
     Cpu,
     Database,
-    Clock,
     AlertTriangle,
     ChevronDown,
     ChevronUp,
+    type LucideIcon,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -51,7 +50,7 @@ export default function SystemMonitoring() {
     const { data: errors } = useErrorLogs(errorPage);
 
     const HealthGauge = ({ label, value, max, unit, icon: Icon }: {
-        label: string; value: number; max: number; unit: string; icon: any;
+        label: string; value: number; max: number; unit: string; icon: LucideIcon;
     }) => {
         const percent = Math.min(100, Math.round((value / max) * 100));
         const color = percent > 90 ? 'bg-destructive' : percent > 70 ? 'bg-warning' : 'bg-primary';

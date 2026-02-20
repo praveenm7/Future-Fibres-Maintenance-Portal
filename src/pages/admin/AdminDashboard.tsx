@@ -1,9 +1,6 @@
 import { Link } from 'react-router-dom';
 import {
-    Users,
     Database,
-    Activity,
-    AlertTriangle,
     Clock,
     Server,
     HardDrive,

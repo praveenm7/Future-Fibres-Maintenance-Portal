@@ -69,6 +69,7 @@ export function QRScanner({ open, onOpenChange, onScan }: QRScannerProps) {
       clearTimeout(timer);
       stopScanner();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const stopScanner = async () => {

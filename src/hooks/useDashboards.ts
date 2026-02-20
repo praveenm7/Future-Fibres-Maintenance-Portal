@@ -30,7 +30,7 @@ export const useDashboards = () => {
 
     const useNCAnalytics = (filters?: DashboardFilters) => {
         return useQuery({
-            queryKey: ['dashboards', 'nc-analytics', filters],
+            queryKey: ['dashboards', 'nc-analytics', filters?.area, filters?.machineType],
             queryFn: () => api.get<NCAnalyticsDashboardData>(
                 `/dashboards/nc-analytics${buildFilterParams(filters)}`
             ),
@@ -40,7 +40,7 @@ export const useDashboards = () => {
 
     const useEquipmentHealth = (filters?: DashboardFilters) => {
         return useQuery({
-            queryKey: ['dashboards', 'equipment-health', filters],
+            queryKey: ['dashboards', 'equipment-health', filters?.area, filters?.machineType],
             queryFn: () => api.get<EquipmentHealthDashboardData>(
                 `/dashboards/equipment-health${buildFilterParams(filters)}`
             ),
@@ -50,7 +50,7 @@ export const useDashboards = () => {
 
     const useSparePartsAnalytics = (filters?: DashboardFilters) => {
         return useQuery({
-            queryKey: ['dashboards', 'spare-parts', filters],
+            queryKey: ['dashboards', 'spare-parts', filters?.area, filters?.machineType],
             queryFn: () => api.get<SparePartsDashboardData>(
                 `/dashboards/spare-parts${buildFilterParams(filters)}`
             ),
@@ -60,7 +60,7 @@ export const useDashboards = () => {
 
     const useExecutionSummary = (filters?: DashboardFilters) => {
         return useQuery({
-            queryKey: ['dashboards', 'execution-summary', filters],
+            queryKey: ['dashboards', 'execution-summary', filters?.area, filters?.machineType],
             queryFn: () => api.get<ExecutionSummaryData>(
                 `/dashboards/execution-summary${buildFilterParams(filters)}`
             ),

@@ -108,6 +108,7 @@ export default function MachineManagement() {
     if ((mode === 'modify' || mode === 'delete') && machines.length > 0 && !selectedMachineId) {
       handleSelectMachine(machines[0].id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, machines]);
 
   const handleSelectMachine = (machineId: string) => {

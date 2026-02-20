@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
+const { validate, schemas } = require('../middleware/validate');
 
 // Helper to map auth matrix database record to frontend model
 const mapAuthMatrix = (record) => ({
@@ -40,7 +41,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST/PUT authorization
-router.post('/', async (req, res) => {
+router.post('/', validate(schemas.createAuthMatrix), async (req, res) => {
     try {
         const { operatorName, email, department, authorizations, updatedDate, defaultShiftId } = req.body;
         let { operatorId } = req.body;
@@ -132,7 +133,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update by ID
-router.put('/:id', async (req, res) => {
+router.put('/:id', validate(schemas.updateAuthMatrix), async (req, res) => {
     try {
         const { authorizations, updatedDate, email, department, defaultShiftId } = req.body;
         const pool = await poolPromise;

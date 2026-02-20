@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
+const { validate, schemas } = require('../middleware/validate');
 
 // Helper to map NC comment database record to frontend model
 const mapNCComment = (record) => ({
@@ -42,7 +43,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST create new NC comment
-router.post('/', async (req, res) => {
+router.post('/', validate(schemas.createNCComment), async (req, res) => {
     try {
         const { ncId, commentDate, comment, operatorId } = req.body;
 

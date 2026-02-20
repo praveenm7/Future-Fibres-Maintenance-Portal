@@ -7,7 +7,9 @@ import { DataTable } from '@/components/ui/DataTable';
 import { BulkActionsBar } from '@/components/ui/BulkActionsBar';
 import { InputField } from '@/components/ui/FormField';
 import type { SparePart } from '@/types/maintenance';
-import { Plus, Pencil, Trash2, ExternalLink, Save, X, Loader2, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, ExternalLink, Save, X, Loader2, Upload, Package } from 'lucide-react';
+import { QueryError } from '@/components/ui/QueryError';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { Button } from '@/components/ui/button';
 import { DataImportDialog } from '@/components/ui/DataImportDialog';
 import { useMachines } from '@/hooks/useMachines';
@@ -19,7 +21,7 @@ import { toast } from 'sonner';
 const defaultValues: SparePartFormValues = {
   description: '',
   reference: '',
-  quantity: '' as unknown as number,
+  quantity: 0,
   link: '',
 };
 
@@ -32,10 +34,10 @@ export default function SpareParts() {
     useDeletePart
   } = useSpareParts();
 
-  const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
+  const { data: machines = [], isLoading: loadingMachines, isError: errorMachines, refetch: refetchMachines } = useGetMachines();
   const [selectedMachineId, setSelectedMachineId] = useState('');
 
-  const { data: machineParts = [], isLoading: loadingParts } = useGetParts(selectedMachineId);
+  const { data: machineParts = [], isLoading: loadingParts, isError: errorParts, refetch: refetchParts } = useGetParts(selectedMachineId);
   const createMutation = useCreatePart();
   const updateMutation = useUpdatePart();
   const deleteMutation = useDeletePart();
@@ -44,6 +46,7 @@ export default function SpareParts() {
     if (machines.length > 0 && !selectedMachineId) {
       setSelectedMachineId(machines[0].id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [machines]);
 
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
@@ -145,6 +148,8 @@ export default function SpareParts() {
     );
   }
 
+  if (errorMachines) return <QueryError onRetry={refetchMachines} />;
+
   const columns = [
     { key: 'description', header: 'DESCRIPTION' },
     { key: 'reference', header: 'REFERENCE' },
@@ -197,6 +202,14 @@ export default function SpareParts() {
             <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
             <p className="text-sm text-muted-foreground">Loading spare parts...</p>
           </div>
+        ) : errorParts ? (
+          <QueryError onRetry={refetchParts} />
+        ) : machineParts.length === 0 ? (
+          <EmptyState
+            icon={Package}
+            title="No spare parts"
+            description="No spare parts have been registered for this machine yet."
+          />
         ) : (
           <div>
             <DataTable

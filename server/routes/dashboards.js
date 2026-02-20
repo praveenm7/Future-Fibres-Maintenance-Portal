@@ -220,7 +220,33 @@ router.get('/workforce', async (req, res) => {
                 operatorName: r.OperatorName,
                 totalAssigned: r.TotalAssigned,
                 completed: r.Completed
-            }))
+            })),
+            operatorEfficiency: (result.recordsets[5] || []).map(r => ({
+                operatorName: r.OperatorName,
+                avgEstimated: r.AvgEstimated,
+                avgActual: r.AvgActual,
+                taskCount: r.TaskCount,
+            })),
+            operatorCompletionRates: (result.recordsets[6] || []).map(r => ({
+                operatorName: r.OperatorName,
+                totalTasks: r.TotalTasks,
+                completed: r.Completed,
+                skipped: r.Skipped,
+                completionRate: r.CompletionRate,
+            })),
+            shiftCoverage: (result.recordsets[7] || []).map(r => ({
+                operatorName: r.OperatorName,
+                department: r.Department,
+                shiftName: r.ShiftName,
+                startTime: r.StartTime,
+                endTime: r.EndTime,
+            })),
+            completionTrend: (result.recordsets[8] || []).map(r => ({
+                month: r.Month,
+                completed: r.Completed,
+                skipped: r.Skipped,
+                total: r.Total,
+            })),
         });
     } catch (err) {
         console.error('Error fetching workforce analytics:', err);

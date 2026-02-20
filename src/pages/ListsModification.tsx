@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { DataTable } from '@/components/ui/DataTable';
@@ -7,6 +7,7 @@ import { Plus, Pencil, Trash2, Save, X, Loader2 } from 'lucide-react';
 import { useListOptions } from '@/hooks/useListOptions';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import type { ListOption } from '@/types/maintenance';
 
 const LIST_TYPES = [
   { value: 'MACHINE_TYPE', label: 'Machine Types' },
@@ -18,6 +19,10 @@ const LIST_TYPES = [
   { value: 'NC_PRIORITY', label: 'NC Priorities' },
   { value: 'AUTHORIZATION_GROUP', label: 'Authorization Groups' },
 ];
+
+interface ListItem extends ListOption {
+  isStatic: boolean;
+}
 
 export default function ListsModification() {
   const {
@@ -37,7 +42,7 @@ export default function ListsModification() {
   const [mode, setMode] = useState<'view' | 'new' | 'edit'>('view');
   const [newValue, setNewValue] = useState('');
 
-  const staticItems: any[] = [];
+  const staticItems: ListItem[] = [];
 
   const dynamicItems = dynamicListOptions.map(opt => ({
     ...opt,
@@ -52,7 +57,7 @@ export default function ListsModification() {
     setNewValue('');
   };
 
-  const handleRowClick = (item: any) => {
+  const handleRowClick = (item: ListItem) => {
     setSelectedRowId(item.id);
     setMode('edit');
     setNewValue(item.value);
@@ -88,7 +93,7 @@ export default function ListsModification() {
         });
         resetForm();
       }
-    } catch (error) {
+    } catch {
       // Handled by mutation toast
     }
   };
@@ -103,7 +108,7 @@ export default function ListsModification() {
         try {
           await deleteMutation.mutateAsync(selectedRowId);
           resetForm();
-        } catch (error) {
+        } catch {
           // Handled by mutation toast
         }
       }
@@ -112,7 +117,7 @@ export default function ListsModification() {
 
   const columns = [
     { key: 'value', header: 'VALUE' },
-    { key: 'isStatic', header: 'SOURCE', render: (item: any) => item.isStatic ? <span className="text-muted-foreground">System</span> : <span className="text-primary font-medium">User</span> }
+    { key: 'isStatic', header: 'SOURCE', render: (item: ListItem) => item.isStatic ? <span className="text-muted-foreground">System</span> : <span className="text-primary font-medium">User</span> }
   ];
 
   return (

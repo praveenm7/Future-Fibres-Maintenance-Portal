@@ -8,6 +8,7 @@ import { BulkActionsBar } from '@/components/ui/BulkActionsBar';
 import { InputField } from '@/components/ui/FormField';
 import type { NCComment } from '@/types/maintenance';
 import { Plus, Pencil, Trash2, Save, X, Loader2 } from 'lucide-react';
+import { QueryError } from '@/components/ui/QueryError';
 import { useMachines } from '@/hooks/useMachines';
 import { useNonConformities } from '@/hooks/useNonConformities';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
@@ -30,8 +31,8 @@ export default function NCComments() {
     useDeleteComment
   } = useNonConformities();
 
-  const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
-  const { data: nonConformities = [], isLoading: loadingNCs } = useGetNCs();
+  const { data: machines = [], isLoading: loadingMachines, isError: errorMachines, refetch: refetchMachines } = useGetMachines();
+  const { data: nonConformities = [], isLoading: loadingNCs, isError: errorNCs, refetch: refetchNCs } = useGetNCs();
 
   const [selectedNCId, setSelectedNCId] = useState('');
 
@@ -41,7 +42,7 @@ export default function NCComments() {
     }
   }, [nonConformities, selectedNCId]);
 
-  const { data: comments = [], isLoading: loadingComments } = useGetNCComments(selectedNCId);
+  const { data: comments = [], isLoading: loadingComments, isError: errorComments, refetch: refetchComments } = useGetNCComments(selectedNCId);
   const addMutation = useAddComment();
   const updateMutation = useUpdateComment();
   const deleteMutation = useDeleteComment();
@@ -150,6 +151,9 @@ export default function NCComments() {
     );
   }
 
+  if (errorMachines) return <QueryError onRetry={refetchMachines} />;
+  if (errorNCs) return <QueryError onRetry={refetchNCs} />;
+
   const columns = [
     { key: 'date', header: 'DATE' },
     { key: 'comment', header: 'COMMENT', className: 'min-w-[300px]' },
@@ -189,6 +193,8 @@ export default function NCComments() {
             <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
             <p className="text-sm text-muted-foreground">Loading comments...</p>
           </div>
+        ) : errorComments ? (
+          <QueryError onRetry={refetchComments} />
         ) : (
           <div>
             <DataTable

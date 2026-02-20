@@ -120,6 +120,35 @@ export interface WorkforceKPIs {
     departmentsCount: number;
 }
 
+export interface OperatorEfficiencyEntry {
+    operatorName: string;
+    avgEstimated: number;
+    avgActual: number;
+    taskCount: number;
+}
+
+export interface OperatorCompletionRateEntry {
+    operatorName: string;
+    totalTasks: number;
+    completed: number;
+    skipped: number;
+    completionRate: number;
+}
+
+export interface ShiftCoverageEntry {
+    operatorName: string;
+    department: string;
+    shiftName: string;
+    startTime: string;
+    endTime: string;
+}
+
+export interface CompletionTrendEntry {
+    month: string;
+    completed: number;
+    skipped: number;
+}
+
 export interface WorkforceDashboardData {
     kpis: WorkforceKPIs;
     ncWorkloadByOperator: Array<{ operatorName: string; ncCount: number }>;
@@ -130,4 +159,8 @@ export interface WorkforceDashboardData {
         totalAssigned: number;
         completed: number;
     }>;
+    operatorEfficiency: OperatorEfficiencyEntry[];
+    operatorCompletionRates: OperatorCompletionRateEntry[];
+    shiftCoverage: ShiftCoverageEntry[];
+    completionTrend: CompletionTrendEntry[];
 }

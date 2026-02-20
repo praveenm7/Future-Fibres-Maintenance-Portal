@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
 const { generateOccurrences } = require('../utils/occurrences');
+const { validate, schemas } = require('../middleware/validate');
 
 // Helper to map execution database record to frontend model
 const mapExecution = (record) => ({
@@ -104,7 +105,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST create or upsert execution (mark complete)
-router.post('/', async (req, res) => {
+router.post('/', validate(schemas.createExecution), async (req, res) => {
     try {
         const { actionId, machineId, scheduledDate, status, actualTime, completedById, notes } = req.body;
 
@@ -158,7 +159,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update execution
-router.put('/:id', async (req, res) => {
+router.put('/:id', validate(schemas.updateExecution), async (req, res) => {
     try {
         const { status, actualTime, completedById, notes } = req.body;
 

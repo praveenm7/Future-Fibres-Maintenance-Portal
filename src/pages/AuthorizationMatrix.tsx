@@ -8,6 +8,8 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import type { AuthorizationMatrix as AuthMatrixType } from '@/types/maintenance';
 import { Plus, Trash2, Pencil, Save, RotateCcw, Loader2 } from 'lucide-react';
+import { QueryError } from '@/components/ui/QueryError';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useAuthMatrix } from '@/hooks/useAuthMatrix';
 import { useListOptions } from '@/hooks/useListOptions';
 import { useShifts } from '@/hooks/useShifts';
@@ -25,7 +27,7 @@ export default function AuthorizationMatrix() {
   } = useAuthMatrix();
   const { useGetListOptions } = useListOptions();
 
-  const { data: authorizationMatrices = [], isLoading: loadingMatrices } = useGetMatrices();
+  const { data: authorizationMatrices = [], isLoading: loadingMatrices, isError: errorMatrices, refetch: refetchMatrices } = useGetMatrices();
   const { data: groupOptions = [] } = useGetListOptions('AUTHORIZATION_GROUP');
   const { data: shifts = [] } = useShifts();
   const createMutation = useCreateMatrix();
@@ -68,6 +70,7 @@ export default function AuthorizationMatrix() {
       setSelectedUserId('');
       reset(getDefaultValues());
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, groupOptions]);
 
   const handleSelectUser = (id: string) => {
@@ -149,12 +152,26 @@ export default function AuthorizationMatrix() {
     );
   }
 
+  if (errorMatrices) return <QueryError onRetry={refetchMatrices} />;
+
+  if (authorizationMatrices.length === 0 && mode !== 'new') {
+    return (
+      <div>
+        <PageHeader title="Authorization Matrix" />
+        <EmptyState
+          title="No authorization entries"
+          description="No operators have been added to the authorization matrix yet."
+        />
+      </div>
+    );
+  }
+
   return (
     <div>
       <PageHeader title="Authorization Matrix" />
 
       {/* Mode Tabs */}
-      <Tabs value={mode} onValueChange={(v) => setMode(v as any)} className="mb-6">
+      <Tabs value={mode} onValueChange={(v) => setMode(v as 'new' | 'modify' | 'delete')} className="mb-6">
         <TabsList>
           <TabsTrigger value="new" className="gap-1.5">
             <Plus className="h-4 w-4" /> New User

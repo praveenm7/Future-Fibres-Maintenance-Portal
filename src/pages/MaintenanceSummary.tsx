@@ -4,6 +4,7 @@ import { ReportToolbar } from '@/components/ui/ReportToolbar';
 import { useDashboard } from '@/hooks/useDashboard';
 import { exportToExcel, getExportTimestamp } from '@/lib/exportExcel';
 import { Loader2 } from 'lucide-react';
+import { QueryError } from '@/components/ui/QueryError';
 
 const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
@@ -13,7 +14,7 @@ export default function MaintenanceSummary() {
   const [year, setYear] = useState(currentYear);
   const { useGetMaintenanceSummary } = useDashboard();
 
-  const { data: summaryData = [], isLoading } = useGetMaintenanceSummary(periodicity, year);
+  const { data: summaryData = [], isLoading, isError, refetch } = useGetMaintenanceSummary(periodicity, year);
 
   if (isLoading && summaryData.length === 0) {
     return (
@@ -23,6 +24,8 @@ export default function MaintenanceSummary() {
       </div>
     );
   }
+
+  if (isError) return <QueryError onRetry={refetch} />;
 
   const yearSuffix = String(year).slice(-2);
 

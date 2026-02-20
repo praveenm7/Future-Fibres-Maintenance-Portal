@@ -1,6 +1,6 @@
 import { Clock } from 'lucide-react';
 import { ScheduleOperatorLane } from './ScheduleOperatorLane';
-import type { DailySchedule, ShiftSchedule, ScheduledTask, ScheduleBreak } from '@/types/schedule';
+import type { DailySchedule, ShiftSchedule, ScheduledTask } from '@/types/schedule';
 
 const HOUR_WIDTH = 200; // pixels per hour
 const OP_COL_WIDTH = 180; // operator column width
@@ -98,47 +98,64 @@ function ShiftGanttSection({
                                 <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Operator</span>
                             </div>
                             <div className="relative flex-1" style={{ minWidth: `${totalWidth}px` }}>
-                                {/* Break zones in header */}
-                                {breaks.map(brk => (
-                                    <div
-                                        key={brk.label}
-                                        className="absolute top-0 bottom-0 bg-amber-100/50 dark:bg-amber-900/15"
-                                        style={{
-                                            left: `${((brk.startMinute - workStart) / 60) * HOUR_WIDTH}px`,
-                                            width: `${((brk.endMinute - brk.startMinute) / 60) * HOUR_WIDTH}px`,
-                                            backgroundImage: BREAK_STRIPE,
-                                        }}
-                                    >
-                                        <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-widest text-amber-600/60 dark:text-amber-400/50">
-                                            {brk.label}
-                                        </span>
-                                    </div>
-                                ))}
-                                {/* Hour + half-hour labels */}
-                                <div className="flex">
-                                    {hours.map(m => {
-                                        const label = formatMinute(m);
-                                        const halfLabel = formatMinute(m + 30);
-                                        return (
-                                            <div
-                                                key={m}
-                                                className="flex-shrink-0 border-r border-border relative"
-                                                style={{ width: `${HOUR_WIDTH}px` }}
-                                            >
-                                                <div className="px-2 py-2">
-                                                    <span className="text-xs font-mono font-medium text-foreground/70">{label}</span>
-                                                </div>
+                                {/* Break indicator pills row */}
+                                {breaks.length > 0 && (
+                                    <div className="flex items-center h-5 border-b border-border/30 relative">
+                                        {breaks.map(brk => {
+                                            const brkLeft = ((brk.startMinute - workStart) / 60) * HOUR_WIDTH;
+                                            const brkWidth = ((brk.endMinute - brk.startMinute) / 60) * HOUR_WIDTH;
+                                            return (
                                                 <div
-                                                    className="absolute top-0 bottom-0 border-l border-dashed border-border/50"
-                                                    style={{ left: `${HOUR_WIDTH / 2}px` }}
+                                                    key={brk.label}
+                                                    className="absolute flex justify-center"
+                                                    style={{ left: `${brkLeft}px`, width: `${brkWidth}px` }}
                                                 >
-                                                    <div className="px-1.5 py-2">
-                                                        <span className="text-[10px] font-mono text-muted-foreground/50">{halfLabel}</span>
+                                                    <span className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 whitespace-nowrap">
+                                                        {brk.label}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                                {/* Hour + half-hour labels with subtle break shading */}
+                                <div className="relative">
+                                    {breaks.map(brk => (
+                                        <div
+                                            key={brk.label}
+                                            className="absolute top-0 bottom-0 bg-amber-100/30 dark:bg-amber-900/10"
+                                            style={{
+                                                left: `${((brk.startMinute - workStart) / 60) * HOUR_WIDTH}px`,
+                                                width: `${((brk.endMinute - brk.startMinute) / 60) * HOUR_WIDTH}px`,
+                                                backgroundImage: BREAK_STRIPE,
+                                            }}
+                                        />
+                                    ))}
+                                    <div className="flex">
+                                        {hours.map(m => {
+                                            const label = formatMinute(m);
+                                            const halfLabel = formatMinute(m + 30);
+                                            return (
+                                                <div
+                                                    key={m}
+                                                    className="flex-shrink-0 border-r border-border relative"
+                                                    style={{ width: `${HOUR_WIDTH}px` }}
+                                                >
+                                                    <div className="px-2 py-2">
+                                                        <span className="text-xs font-mono font-medium text-foreground/70">{label}</span>
+                                                    </div>
+                                                    <div
+                                                        className="absolute top-0 bottom-0 border-l border-dashed border-border/50"
+                                                        style={{ left: `${HOUR_WIDTH / 2}px` }}
+                                                    >
+                                                        <div className="px-1.5 py-2">
+                                                            <span className="text-[10px] font-mono text-muted-foreground/50">{halfLabel}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
+const { validate, schemas } = require('../middleware/validate');
 
 // Helper to map operator database record to frontend model
 const mapOperator = (record) => ({
@@ -47,7 +48,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST create new operator
-router.post('/', async (req, res) => {
+router.post('/', validate(schemas.createOperator), async (req, res) => {
     try {
         const { operatorName, email, department, isActive } = req.body;
 
@@ -77,7 +78,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update operator
-router.put('/:id', async (req, res) => {
+router.put('/:id', validate(schemas.updateOperator), async (req, res) => {
     try {
         const { operatorName, email, department, isActive } = req.body;
 

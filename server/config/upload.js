@@ -38,12 +38,27 @@ const uploadPhoto = multer({
 });
 
 // Document upload - common doc types, 20MB limit
+// Validates both file extension AND MIME type to prevent spoofing
+const DOCUMENT_MIME_MAP = {
+    '.pdf': 'application/pdf',
+    '.doc': 'application/msword',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.xls': 'application/vnd.ms-excel',
+    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.txt': 'text/plain',
+};
+
 const uploadDocument = multer({
     storage: createStorage('documents'),
     limits: { fileSize: 20 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-        const allowed = /pdf|doc|docx|xls|xlsx|png|jpg|jpeg|gif|txt/;
-        cb(null, allowed.test(path.extname(file.originalname).toLowerCase()));
+        const ext = path.extname(file.originalname).toLowerCase();
+        const expectedMime = DOCUMENT_MIME_MAP[ext];
+        cb(null, !!expectedMime && file.mimetype === expectedMime);
     },
 });
 

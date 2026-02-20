@@ -14,7 +14,6 @@ import {
     Shield,
     ArrowRight
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 interface SectionDashboardProps {

@@ -84,7 +84,7 @@ export const useNonConformities = () => {
         return useMutation({
             mutationFn: ({ id, data }: { id: string | number; data: Partial<NCComment> }) =>
                 api.put<NCComment>(`/nc-comments/${id}`, data),
-            onSuccess: (_, variables) => {
+            onSuccess: () => {
                 queryClient.invalidateQueries({ queryKey: ['nc-comments'] });
                 toast.success('Comment updated');
             },

@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -31,8 +32,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { ScheduleConfig, ScheduledTask } from '@/types/schedule';
 
 export default function MaintenanceCalendar() {
+  // Deep-link support: read URL params for direct navigation to schedule view
+  const [searchParams] = useSearchParams();
+  const initialView = searchParams.get('view') as ViewMode | null;
+  const initialSubView = searchParams.get('subView') as 'tasks' | 'schedule' | null;
+
   // View state
-  const [viewMode, setViewMode] = useState<ViewMode>('month');
+  const [viewMode, setViewMode] = useState<ViewMode>(initialView === 'day' || initialView === 'week' ? initialView : 'month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
@@ -45,8 +51,14 @@ export default function MaintenanceCalendar() {
     null
   );
 
-  // Schedule sub-view state (only relevant when viewMode === 'day')
-  const [daySubView, setDaySubView] = useState<'tasks' | 'schedule'>('tasks');
+  // Schedule sub-view state
+  const [daySubView, setDaySubView] = useState<'tasks' | 'schedule'>(initialSubView === 'schedule' ? 'schedule' : 'tasks');
+  const handleDaySubViewChange = useCallback((sub: 'tasks' | 'schedule') => {
+    setDaySubView(sub);
+    if (sub === 'schedule' && viewMode !== 'day') {
+      setViewMode('day');
+    }
+  }, [viewMode]);
   const [scheduleViewMode, setScheduleViewMode] = useState<'gantt' | 'table'>('gantt');
   const [scheduleConfigOpen, setScheduleConfigOpen] = useState(false);
   const [scheduleConfig, setScheduleConfig] = useState<Partial<ScheduleConfig>>({
@@ -273,7 +285,7 @@ export default function MaintenanceCalendar() {
         sidebarOpen={sidebarOpen}
         activeFilterCount={activeFilterCount}
         daySubView={daySubView}
-        onDaySubViewChange={setDaySubView}
+        onDaySubViewChange={handleDaySubViewChange}
         scheduleViewMode={scheduleViewMode}
         onScheduleViewModeChange={setScheduleViewMode}
         onScheduleConfigOpen={() => setScheduleConfigOpen(true)}

@@ -41,7 +41,7 @@ export interface TableSchema {
 export interface TableDataResponse {
     tableName: string;
     columns: string[];
-    data: Record<string, any>[];
+    data: Record<string, unknown>[];
     pagination: PaginationInfo;
 }
 

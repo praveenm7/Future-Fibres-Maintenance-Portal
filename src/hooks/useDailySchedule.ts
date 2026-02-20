@@ -10,7 +10,7 @@ export function useDailySchedule(date: string, config: Partial<ScheduleConfig> =
     if (config.prioritizeMandatory != null) params.set('prioritizeMandatory', config.prioritizeMandatory.toString());
 
     return useQuery({
-        queryKey: ['daily-schedule', date, config],
+        queryKey: ['daily-schedule', date, config.breakDuration, config.bufferMinutes, config.groupByMachine, config.prioritizeMandatory],
         queryFn: () => api.get<DailySchedule>(`/schedule/daily?${params.toString()}`),
         enabled: !!date,
         staleTime: 2 * 60 * 1000,

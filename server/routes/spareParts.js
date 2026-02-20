@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
+const { validate, schemas } = require('../middleware/validate');
 
 // Helper to map spare part database record to frontend model
 const mapSparePart = (record) => ({
@@ -38,7 +39,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST create new spare part
-router.post('/', async (req, res) => {
+router.post('/', validate(schemas.createSparePart), async (req, res) => {
     try {
         const { machineId, description, reference, quantity, link } = req.body;
 
@@ -69,7 +70,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update spare part
-router.put('/:id', async (req, res) => {
+router.put('/:id', validate(schemas.updateSparePart), async (req, res) => {
     try {
         const { machineId, description, reference, quantity, link } = req.body;
 

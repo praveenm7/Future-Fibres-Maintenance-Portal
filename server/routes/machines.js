@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
 const { uploadPhoto } = require('../config/upload');
+const { validate, schemas } = require('../middleware/validate');
 
 // Helper to map machine database record to frontend model
 const mapMachine = (record) => ({
@@ -68,7 +69,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST create new machine (FinalCode generated server-side)
-router.post('/', async (req, res) => {
+router.post('/', validate(schemas.createMachine), async (req, res) => {
     try {
         const {
             type, description, purchasingDate,
@@ -83,6 +84,7 @@ router.post('/', async (req, res) => {
 
         const pool = await poolPromise;
         const transaction = new sql.Transaction(pool);
+        transaction.timeout = 30000; // 30 second timeout
         await transaction.begin();
 
         try {
@@ -154,7 +156,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update machine (FinalCode is immutable — assigned at creation only)
-router.put('/:id', async (req, res) => {
+router.put('/:id', validate(schemas.updateMachine), async (req, res) => {
     try {
         const {
             type, description, purchasingDate,

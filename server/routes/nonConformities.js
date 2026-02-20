@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
+const { validate, schemas } = require('../middleware/validate');
 
 // Helper to map NC database record to frontend model
 const mapNC = (record) => ({
@@ -63,7 +64,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST create new non-conformity
-router.post('/', async (req, res) => {
+router.post('/', validate(schemas.createNonConformity), async (req, res) => {
     try {
         const {
             machineId, area, maintenanceOperatorId, creationDate,
@@ -102,7 +103,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update non-conformity
-router.put('/:id', async (req, res) => {
+router.put('/:id', validate(schemas.updateNonConformity), async (req, res) => {
     try {
         const {
             machineId, area, maintenanceOperatorId, creationDate,

@@ -18,6 +18,7 @@ import { useDashboards } from '@/hooks/useDashboards';
 import { KPICard } from '@/components/dashboards/KPICard';
 import { DashboardShell } from '@/components/dashboards/DashboardShell';
 import { ChartCard } from '@/components/dashboards/ChartCard';
+import { TodaysScheduleWidget } from '@/components/dashboards/TodaysScheduleWidget';
 
 const STATUS_COLORS: Record<string, string> = {
     'PENDING': 'hsl(48, 96%, 51%)',
@@ -111,6 +112,11 @@ export default function OverviewDashboard() {
                     colorClass="text-emerald-600"
                     isLoading={execLoading}
                 />
+            </div>
+
+            {/* Today's Schedule */}
+            <div className="mb-8">
+                <TodaysScheduleWidget />
             </div>
 
             {/* Charts Row 1 */}

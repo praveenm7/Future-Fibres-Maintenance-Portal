@@ -8,11 +8,11 @@ import { useSpareParts } from '@/hooks/useSpareParts';
 import { useNonConformities } from '@/hooks/useNonConformities';
 import { exportToExcel, formatDateForExport, getExportTimestamp } from '@/lib/exportExcel';
 import { printReport } from '@/lib/printReport';
-import type { NonConformity } from '@/types/maintenance';
 import {
   Loader2, Wrench, Package, AlertTriangle, ImageIcon,
-  Clock, Check, ExternalLink, MapPin, Factory, Hash, User, Minus, TrendingUp
+  Check, ExternalLink, MapPin, Factory, Hash, User, Minus, TrendingUp
 } from 'lucide-react';
+import { QueryError } from '@/components/ui/QueryError';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002/api';
 const SERVER_BASE = API_BASE_URL.replace('/api', '');
@@ -64,7 +64,7 @@ export default function MaintenancePlanReport() {
   const { useGetParts } = useSpareParts();
   const { useGetNCs } = useNonConformities();
 
-  const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
+  const { data: machines = [], isLoading: loadingMachines, isError: errorMachines, refetch: refetchMachines } = useGetMachines();
   const [selectedMachineId, setSelectedMachineId] = useState<string>('');
 
   useEffect(() => {
@@ -73,10 +73,10 @@ export default function MaintenancePlanReport() {
     }
   }, [machines, selectedMachineId]);
 
-  const { data: machineActions = [], isLoading: loadingActions } = useGetActions(selectedMachineId);
+  const { data: machineActions = [], isLoading: loadingActions, isError: errorActions, refetch: refetchActions } = useGetActions(selectedMachineId);
   const { data: executionStats = [] } = useGetExecutionStats(selectedMachineId);
-  const { data: machineParts = [], isLoading: loadingParts } = useGetParts(selectedMachineId);
-  const { data: machineNCs = [], isLoading: loadingNCs } = useGetNCs(selectedMachineId);
+  const { data: machineParts = [], isLoading: loadingParts, isError: errorParts, refetch: refetchParts } = useGetParts(selectedMachineId);
+  const { data: machineNCs = [], isLoading: loadingNCs, isError: errorNCs, refetch: refetchNCs } = useGetNCs(selectedMachineId);
 
   // Build a lookup map for execution stats by actionId
   const statsMap = useMemo(() => new Map(executionStats.map(s => [s.actionId, s])), [executionStats]);
@@ -91,6 +91,8 @@ export default function MaintenancePlanReport() {
 
   const selectedMachine = machines.find(m => m.id === selectedMachineId);
   const isLoadingData = loadingActions || loadingParts || loadingNCs;
+  const hasDataError = errorActions || errorParts || errorNCs;
+  const refetchAllData = () => { refetchActions(); refetchParts(); refetchNCs(); };
 
   const handlePrint = () => {
     if (!selectedMachine) return;
@@ -184,6 +186,8 @@ export default function MaintenancePlanReport() {
     );
   }
 
+  if (errorMachines) return <QueryError onRetry={refetchMachines} />;
+
   return (
     <div>
       <PageHeader title="Maintenance Plan" subtitle="View maintenance actions, spare parts, and NCs per machine" />
@@ -228,6 +232,8 @@ export default function MaintenancePlanReport() {
           )}
         </div>
       </div>
+
+      {hasDataError && <QueryError onRetry={refetchAllData} className="mb-6" />}
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_300px] gap-6">
         {/* Main Content */}

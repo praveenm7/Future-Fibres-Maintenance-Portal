@@ -3,6 +3,8 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { ReportToolbar } from '@/components/ui/ReportToolbar';
 import { DataImportDialog } from '@/components/ui/DataImportDialog';
 import { useMachines } from '@/hooks/useMachines';
+import { QueryError } from '@/components/ui/QueryError';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { exportToExcel, getExportTimestamp } from '@/lib/exportExcel';
 import { printReport } from '@/lib/printReport';
 import type { Machine } from '@/types/maintenance';
@@ -17,7 +19,7 @@ const SERVER_BASE = API_BASE_URL.replace('/api', '');
 
 export default function MachineryListReport() {
   const { useGetMachines, useCreateMachine } = useMachines();
-  const { data: machines = [], isLoading } = useGetMachines();
+  const { data: machines = [], isLoading, isError, refetch } = useGetMachines();
   const createMutation = useCreateMachine();
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,6 +56,21 @@ export default function MachineryListReport() {
       <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
         <p className="text-muted-foreground">Loading machinery list...</p>
+      </div>
+    );
+  }
+
+  if (isError) return <QueryError onRetry={refetch} />;
+
+  if (machines.length === 0) {
+    return (
+      <div>
+        <PageHeader title="Tooling & Machinery List" subtitle="0 machines registered" />
+        <EmptyState
+          icon={Factory}
+          title="No machines found"
+          description="No machines have been registered yet."
+        />
       </div>
     );
   }

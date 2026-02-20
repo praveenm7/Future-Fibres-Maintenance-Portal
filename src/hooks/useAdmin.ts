@@ -61,7 +61,7 @@ export const useAdmin = () => {
 
     const useUpdateRow = () => {
         return useMutation({
-            mutationFn: ({ tableName, rowId, data }: { tableName: string; rowId: string | number; data: Record<string, any> }) =>
+            mutationFn: ({ tableName, rowId, data }: { tableName: string; rowId: string | number; data: Record<string, unknown> }) =>
                 api.put(`/admin/db/tables/${tableName}/rows/${rowId}`, data),
             onSuccess: () => {
                 queryClient.invalidateQueries({ queryKey: ['admin', 'db'] });

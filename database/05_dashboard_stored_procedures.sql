@@ -414,6 +414,62 @@ BEGIN
     WHERE o.[IsActive] = 1
     GROUP BY o.[OperatorName]
     ORDER BY TotalAssigned DESC;
+
+    -- Result set 6: Operator efficiency (avg estimated vs actual time)
+    SELECT TOP 15
+        o.[OperatorName],
+        ROUND(AVG(CAST(ma.[TimeNeeded] AS FLOAT)), 1) AS AvgEstimated,
+        ROUND(AVG(CAST(me.[ActualTime] AS FLOAT)), 1) AS AvgActual,
+        COUNT(*) AS TaskCount
+    FROM [dbo].[MaintenanceExecutions] me
+    INNER JOIN [dbo].[MaintenanceActions] ma ON me.[ActionID] = ma.[ActionID]
+    INNER JOIN [dbo].[Operators] o ON me.[CompletedByID] = o.[OperatorID]
+    WHERE me.[Status] = 'COMPLETED' AND me.[ActualTime] IS NOT NULL
+        AND o.[IsActive] = 1
+    GROUP BY o.[OperatorName]
+    HAVING COUNT(*) >= 3
+    ORDER BY TaskCount DESC;
+
+    -- Result set 7: Operator completion rates (last 3 months)
+    SELECT TOP 15
+        o.[OperatorName],
+        COUNT(*) AS TotalTasks,
+        SUM(CASE WHEN me.[Status] = 'COMPLETED' THEN 1 ELSE 0 END) AS Completed,
+        SUM(CASE WHEN me.[Status] = 'SKIPPED' THEN 1 ELSE 0 END) AS Skipped,
+        ROUND(
+            SUM(CASE WHEN me.[Status] = 'COMPLETED' THEN 1.0 ELSE 0 END) / COUNT(*) * 100,
+            0
+        ) AS CompletionRate
+    FROM [dbo].[MaintenanceExecutions] me
+    INNER JOIN [dbo].[Operators] o ON me.[CompletedByID] = o.[OperatorID]
+    WHERE o.[IsActive] = 1
+        AND me.[ScheduledDate] >= DATEADD(MONTH, -3, GETDATE())
+    GROUP BY o.[OperatorName]
+    HAVING COUNT(*) >= 3
+    ORDER BY CompletionRate DESC;
+
+    -- Result set 8: Shift coverage (operators by shift)
+    SELECT
+        o.[OperatorName],
+        o.[Department],
+        s.[ShiftName],
+        s.[StartTime],
+        s.[EndTime]
+    FROM [dbo].[Operators] o
+    LEFT JOIN [dbo].[Shifts] s ON o.[DefaultShiftID] = s.[ShiftID]
+    WHERE o.[IsActive] = 1
+    ORDER BY s.[ShiftName], o.[OperatorName];
+
+    -- Result set 9: Maintenance completion trend (last 6 months)
+    SELECT
+        FORMAT(me.[ScheduledDate], 'yyyy-MM') AS [Month],
+        COUNT(CASE WHEN me.[Status] = 'COMPLETED' THEN 1 END) AS Completed,
+        COUNT(CASE WHEN me.[Status] = 'SKIPPED' THEN 1 END) AS Skipped,
+        COUNT(*) AS Total
+    FROM [dbo].[MaintenanceExecutions] me
+    WHERE me.[ScheduledDate] >= DATEADD(MONTH, -5, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1))
+    GROUP BY FORMAT(me.[ScheduledDate], 'yyyy-MM')
+    ORDER BY [Month];
 END
 GO
 

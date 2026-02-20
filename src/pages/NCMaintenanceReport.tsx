@@ -9,8 +9,10 @@ import { StatusBadge } from '@/components/ui/StatusBadge';
 import type { NonConformity } from '@/types/maintenance';
 import {
   Loader2, Search, X, AlertTriangle, Clock, Check,
-  MessageSquare, ImageIcon, Circle, Minus
+  MessageSquare, ImageIcon
 } from 'lucide-react';
+import { QueryError } from '@/components/ui/QueryError';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002/api';
 const SERVER_BASE = API_BASE_URL.replace('/api', '');
@@ -29,8 +31,8 @@ export default function NCMaintenanceReport() {
   const { useGetNCs, useGetNCComments } = useNonConformities();
   const { useGetMachines } = useMachines();
 
-  const { data: nonConformities = [], isLoading: loadingNCs } = useGetNCs();
-  const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
+  const { data: nonConformities = [], isLoading: loadingNCs, isError: errorNCs, refetch: refetchNCs } = useGetNCs();
+  const { data: machines = [], isLoading: loadingMachines, isError: errorMachines, refetch: refetchMachines } = useGetMachines();
 
   const [selectedNC, setSelectedNC] = useState<NonConformity | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -63,6 +65,23 @@ export default function NCMaintenanceReport() {
       <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
         <p className="text-muted-foreground">Loading NC maintenance report...</p>
+      </div>
+    );
+  }
+
+  if (errorNCs || errorMachines) {
+    return <QueryError onRetry={() => { refetchNCs(); refetchMachines(); }} />;
+  }
+
+  if (nonConformities.length === 0) {
+    return (
+      <div>
+        <PageHeader title="NC Maintenance" subtitle="0 non-conformities recorded" />
+        <EmptyState
+          icon={AlertTriangle}
+          title="No non-conformities found"
+          description="No non-conformities have been recorded yet."
+        />
       </div>
     );
   }
@@ -325,7 +344,7 @@ export default function NCMaintenanceReport() {
   );
 }
 
-function StatCard({ icon, value, label, dot }: { icon: React.ReactNode; value: number; label: string; dot: string }) {
+function StatCard({ icon, value, label, dot: _dot }: { icon: React.ReactNode; value: number; label: string; dot: string }) {
   return (
     <div className="bg-card border border-border rounded-lg p-3.5">
       <div className="flex items-center gap-2.5">

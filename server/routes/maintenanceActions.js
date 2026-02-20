@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
+const { validate, schemas } = require('../middleware/validate');
 
 // Helper to map maintenance action database record to frontend model
 const mapMaintenanceAction = (record) => ({
@@ -59,7 +60,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST create new maintenance action
-router.post('/', async (req, res) => {
+router.post('/', validate(schemas.createMaintenanceAction), async (req, res) => {
     try {
         const {
             machineId, action, periodicity, timeNeeded,
@@ -101,7 +102,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update maintenance action
-router.put('/:id', async (req, res) => {
+router.put('/:id', validate(schemas.updateMaintenanceAction), async (req, res) => {
     try {
         const {
             machineId, action, periodicity, timeNeeded,

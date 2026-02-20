@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Check, ChevronRight, Circle, Clock, Wrench } from 'lucide-react';
+import { Check, ChevronRight, Clock, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const SERVER_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002/api').replace('/api', '');

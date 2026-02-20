@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
+const { validate, schemas } = require('../middleware/validate');
 
 // Helper to map list option database record to frontend model
 const mapListOption = (record) => ({
@@ -49,7 +50,7 @@ router.get('/types', async (req, res) => {
 });
 
 // POST create new list option
-router.post('/', async (req, res) => {
+router.post('/', validate(schemas.createListOption), async (req, res) => {
     try {
         const { listType, optionValue, value, sortOrder, isActive } = req.body;
 
@@ -79,7 +80,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update list option
-router.put('/:id', async (req, res) => {
+router.put('/:id', validate(schemas.updateListOption), async (req, res) => {
     try {
         const { listType, optionValue, value, sortOrder, isActive } = req.body;
 

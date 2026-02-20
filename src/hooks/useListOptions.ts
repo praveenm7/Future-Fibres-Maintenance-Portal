@@ -8,7 +8,7 @@ export const useListOptions = () => {
 
     const useGetListOptions = (listType?: string) => {
         return useQuery({
-            queryKey: ['list-options', { listType }],
+            queryKey: ['list-options', listType],
             queryFn: () => api.get<ListOption[]>(listType ? `/list-options?listType=${listType}` : '/list-options'),
         });
     };

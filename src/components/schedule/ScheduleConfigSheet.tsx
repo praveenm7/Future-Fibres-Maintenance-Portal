@@ -1,4 +1,4 @@
-import { X, User, RotateCcw, Moon } from 'lucide-react';
+import { X, User, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ScheduleConfig, Shift, OperatorRosterEntry } from '@/types/schedule';
 import { useShifts, useShiftRoster, useSetDefaultShift, useSetShiftOverride, useRemoveShiftOverride } from '@/hooks/useShifts';
@@ -251,7 +251,7 @@ export function ScheduleConfigSheet({ open, onClose, config, onConfigChange, dat
 function OperatorRow({
     entry,
     shifts,
-    date,
+    date: _date,
     onShiftChange,
     onDayOff,
     onRemoveOverride,

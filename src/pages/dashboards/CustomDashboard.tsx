@@ -137,7 +137,7 @@ export default function CustomDashboard() {
 
   const { useOverview, useNCAnalytics, useSparePartsAnalytics, useWorkforce } = useDashboards();
   const { data: overview, isLoading: loadingOverview } = useOverview();
-  const { data: ncData, isLoading: loadingNC } = useNCAnalytics();
+  const { data: ncData } = useNCAnalytics();
   const { data: spareData, isLoading: loadingSP } = useSparePartsAnalytics();
   const { data: workforce, isLoading: loadingWF } = useWorkforce();
 

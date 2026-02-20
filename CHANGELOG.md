@@ -8,7 +8,222 @@
 
 ---
 
-## UNCOMMITTED CHANGES (Current Session — 2026-02-20)
+## UNCOMMITTED CHANGES (Current Session — 2026-02-21)
+
+<!-- QA AUDIT CHANGES — To revert all QA fixes, revert all changes after this comment -->
+<!-- Individual changes can be reverted by restoring the original code noted in each section -->
+
+### ESLint Cleanup: Fix Pre-existing Warnings (40 → 9)
+
+<!-- ESLINT CLEANUP — Reverts: restore original imports/params from git diff -->
+
+Removed 15 unused imports across 10 files, prefixed 6 unused parameters with `_`, removed 2 unused variables, and suppressed 7 intentional `exhaustive-deps` warnings with `eslint-disable-next-line`. Remaining 9 problems are all in shadcn-ui auto-generated components (not user code).
+
+**Files Modified:**
+| File | Change |
+|------|--------|
+| `src/components/calendar/DayView.tsx` | Removed unused `Circle` import |
+| `src/components/schedule/ScheduleConfigSheet.tsx` | Removed `Moon` import; prefixed unused `date` param as `_date` |
+| `src/components/schedule/ScheduleGantt.tsx` | Removed unused `ScheduleBreak` type import |
+| `src/components/ui/DataImportDialog.tsx` | Prefixed unused `i` as `_i` |
+| `src/components/machines/QRScanner.tsx` | Added eslint-disable for intentional deps omission |
+| `src/hooks/use-toast.ts` | Inlined `actionTypes` as direct type (was runtime value used only as type) |
+| `src/hooks/useNonConformities.ts` | Removed unused `variables` param from `useUpdateComment` |
+| `src/pages/AuthorizationMatrix.tsx` | Added eslint-disable for intentional deps omission |
+| `src/pages/MachineManagement.tsx` | Added eslint-disable for intentional deps omission |
+| `src/pages/MaintenancePlan.tsx` | Added eslint-disable for intentional deps omission |
+| `src/pages/MaintenancePlanReport.tsx` | Removed unused `NonConformity`, `Clock` imports |
+| `src/pages/NCMaintenanceReport.tsx` | Removed unused `Circle`, `Minus` imports; prefixed `dot` as `_dot` |
+| `src/pages/NonConformities.tsx` | Removed unused `NonConformity`, `toast` imports; added 2 eslint-disables |
+| `src/pages/SpareParts.tsx` | Added eslint-disable for intentional deps omission |
+| `src/pages/SectionDashboard.tsx` | Removed unused `cn` import |
+| `src/pages/ListsModification.tsx` | Removed unused catch variables (optional catch binding) |
+| `src/pages/admin/AdminDashboard.tsx` | Removed unused `Users`, `Activity`, `AlertTriangle` imports |
+| `src/pages/admin/DatabaseExplorer.tsx` | Removed unused `Eye` import |
+| `src/pages/admin/SystemMonitoring.tsx` | Removed unused `Activity`, `Clock` imports |
+| `src/pages/dashboards/CustomDashboard.tsx` | Removed unused `loadingNC` destructured alias |
+
+### QA Audit: Security Hardening (Backend)
+
+Added security headers via `helmet.js` and API rate limiting via `express-rate-limit` (100 req/15min per IP). Added Joi input validation schemas for all 22 POST/PUT endpoints across 10 route files. Configured MIME type validation for document uploads (extension + mimetype checked). Added connection pool sizing (min:2, max:20), exponential backoff retry (3 attempts), and transaction timeout (30s).
+
+**Files Created:**
+| File | Purpose |
+|------|---------|
+| `server/middleware/validate.js` | Joi validation middleware + schemas for all routes |
+
+**Files Modified:**
+| File | Changes |
+|------|---------|
+| `server/index.js` | Added helmet, rate limiter middleware; explicit body parser limits |
+| `server/config/database.js` | Pool sizing, request timeout, retry logic with exponential backoff |
+| `server/config/upload.js` | MIME type validation map for document uploads |
+| `server/routes/machines.js` | Added validation middleware to POST/PUT; transaction timeout |
+| `server/routes/maintenanceActions.js` | Added validation middleware to POST/PUT |
+| `server/routes/nonConformities.js` | Added validation middleware to POST/PUT |
+| `server/routes/ncComments.js` | Added validation middleware to POST |
+| `server/routes/spareParts.js` | Added validation middleware to POST/PUT |
+| `server/routes/operators.js` | Added validation middleware to POST/PUT |
+| `server/routes/listOptions.js` | Added validation middleware to POST/PUT |
+| `server/routes/authMatrix.js` | Added validation middleware to POST/PUT |
+| `server/routes/maintenanceExecutions.js` | Added validation middleware to POST/PUT |
+| `server/routes/shifts.js` | Added validation middleware to PUT/POST |
+| `server/package.json` | Added helmet, express-rate-limit, joi dependencies |
+
+<!-- REVERT: Remove helmet/rateLimit imports and app.use() from index.js; revert database.js to simple connect(); remove validate() from route handlers; delete validate.js; revert upload.js fileFilter; npm uninstall helmet express-rate-limit joi -->
+
+---
+
+### QA Audit: Type Safety & Code Splitting (Frontend Core)
+
+Fixed API service to use typed generics (`post<T, D>` instead of `any`), added 30s request timeout, and fixed DELETE handler for 204 No Content. Added Error Boundary component. Converted all 29 page imports to `React.lazy()` with Suspense for code splitting. Fixed unsafe type assertions (`as any` → proper types). Replaced `any` types in 7 files with proper interfaces. Flattened queryKey objects to primitives for cache stability.
+
+**Files Created:**
+| File | Purpose |
+|------|---------|
+| `src/components/ErrorBoundary.tsx` | React error boundary with retry/reload UI |
+
+**Files Modified:**
+| File | Changes |
+|------|---------|
+| `src/services/api.ts` | Typed generics `post<T,D>`, `put<T,D>`; AbortSignal.timeout(30s); DELETE handles 204 |
+| `src/App.tsx` | All imports → React.lazy(); Suspense + ErrorBoundary wrappers |
+| `src/pages/AuthorizationMatrix.tsx` | `as any` → `as 'new' \| 'modify' \| 'delete'` |
+| `src/pages/MaintenancePlan.tsx` | `'IDEAL' as any` → `'IDEAL' as const` |
+| `src/pages/NonConformities.tsx` | `'' as unknown as number` → `0` |
+| `src/pages/SpareParts.tsx` | `'' as unknown as number` → `0` |
+| `src/hooks/useDashboard.ts` | `any` → `DashboardStats`, `MaintenanceReportRow` types |
+| `src/pages/dashboards/WorkforceDashboard.tsx` | 6 `any` → proper typed callbacks |
+| `src/pages/admin/SystemMonitoring.tsx` | `icon: any` → `icon: LucideIcon` |
+| `src/pages/admin/DatabaseExplorer.tsx` | `Record<string, any>` → `Record<string, unknown>` |
+| `src/pages/ListsModification.tsx` | `any[]` → `ListItem[]` with proper interface |
+| `src/types/dashboards.ts` | Added 4 workforce interfaces |
+| `src/types/admin.ts` | `any` → `unknown` in TableDataResponse |
+| `src/hooks/useAdmin.ts` | `any` → `unknown` in mutation param |
+| `src/hooks/useDashboards.ts` | Flattened filter objects in queryKeys |
+| `src/hooks/useDailySchedule.ts` | Flattened config object in queryKey |
+| `src/hooks/useListOptions.ts` | `{ listType }` → `listType` in queryKey |
+
+<!-- REVERT: Restore api.ts to use `any`; revert App.tsx to direct imports; revert type assertion files to original casts; delete ErrorBoundary.tsx -->
+
+---
+
+### QA Audit: Error States, Empty States & Accessibility (Frontend UX)
+
+Added error handling UI (`QueryError` component with retry button) to all 10 data-fetching pages. Added empty state displays where missing. Added `aria-label` attributes to image gallery action buttons.
+
+**Files Created:**
+| File | Purpose |
+|------|---------|
+| `src/components/ui/QueryError.tsx` | Reusable query error component with retry button |
+
+**Files Modified:**
+| File | Changes |
+|------|---------|
+| `src/pages/MachineryListReport.tsx` | Added error state + empty state |
+| `src/pages/MaintenancePlan.tsx` | Added error states for machines + actions |
+| `src/pages/NonConformities.tsx` | Added error states for machines + NCs |
+| `src/pages/SpareParts.tsx` | Added error state + empty state |
+| `src/pages/AuthorizationMatrix.tsx` | Added error state + empty state |
+| `src/pages/NCComments.tsx` | Added error states for machines + NCs + comments |
+| `src/pages/MaintenancePlanReport.tsx` | Added combined error state for all queries |
+| `src/pages/NCMaintenanceReport.tsx` | Added error state + empty state |
+| `src/pages/MaintenanceSummary.tsx` | Added error state |
+| `src/pages/AuthorizationReport.tsx` | Added error state + empty state |
+| `src/components/machines/ImageGallery.tsx` | Added aria-label to remove buttons |
+
+<!-- REVERT: Remove QueryError imports and isError/refetch destructuring from all pages; delete QueryError.tsx; remove aria-labels from ImageGallery.tsx -->
+
+---
+
+### QA Audit: ESLint Strictness
+
+Re-enabled `@typescript-eslint/no-unused-vars` rule (changed from `"off"` to `"warn"`) to detect dead code.
+
+**File Modified:** `eslint.config.js` — `no-unused-vars: "off"` → `"warn"`
+
+<!-- REVERT: Change "warn" back to "off" in eslint.config.js line 23 -->
+
+---
+
+### Fix: Gantt Chart Break Label Overlap
+
+Break labels ("BREAKFAST", "LUNCH") previously overlapped with hour markers in the schedule Gantt chart timeline header because both were absolutely positioned on the same layer. Fixed by splitting the header into two distinct rows: a thin break indicator pills row on top, and the existing hour labels row below. Break zone overlay opacity reduced from 50% to 30% for cleaner visual separation.
+
+**File Modified:** `src/components/schedule/ScheduleGantt.tsx`
+
+---
+
+### Feature: Today's Schedule Dashboard Widget
+
+New widget on the Overview Dashboard providing at-a-glance visibility into today's schedule without navigating to the calendar. Shows 5 mini KPIs (total tasks, scheduled, completed, unscheduled, avg utilization) and lists up to 5 upcoming pending tasks with time, machine code, action, duration, and assigned operator. Includes a "View Full Schedule" button that deep-links directly to the calendar's schedule view.
+
+**Files Created:**
+
+| File | Purpose |
+|------|---------|
+| `src/components/dashboards/TodaysScheduleWidget.tsx` | Self-contained schedule summary widget with loading skeleton and empty state |
+
+**Files Modified:**
+
+| File | Changes |
+|------|---------|
+| `src/pages/dashboards/OverviewDashboard.tsx` | Imported and rendered `TodaysScheduleWidget` between KPI cards and charts |
+
+---
+
+### Feature: Deep-Link Support for Calendar Schedule View
+
+The maintenance calendar now accepts URL search parameters (`?view=day&subView=schedule`) to open directly into a specific view mode and sub-view. Enables bookmarkable links and navigation from the dashboard widget.
+
+**File Modified:** `src/pages/MaintenanceCalendar.tsx` — Added `useSearchParams` from React Router to initialize `viewMode` and `daySubView` state from URL params.
+
+---
+
+### Feature: Always-Visible Tasks/Schedule Toggle
+
+The Tasks/Schedule toggle in the calendar header was previously only visible in Day view (requiring users to first switch to Day, then discover the toggle). Now visible in all view modes (Month, Week, Day). Selecting "Schedule" from Month or Week automatically switches to Day view.
+
+**Files Modified:**
+
+| File | Changes |
+|------|---------|
+| `src/components/calendar/CalendarHeader.tsx` | Removed `viewMode === 'day'` condition gating the toggle visibility |
+| `src/pages/MaintenanceCalendar.tsx` | Added `handleDaySubViewChange` wrapper that auto-switches to Day view when Schedule is selected from Month/Week |
+
+---
+
+### Feature: Workforce Dashboard — 4 New Visualizations + 2 New KPIs
+
+Expanded the Workforce Dashboard with richer insights using schedule, execution, and shift data.
+
+**New Charts:**
+- **Operator Efficiency (Est. vs Actual Time)** — Grouped bar chart comparing average estimated vs actual task time per operator, with task count in tooltip
+- **Completion Rate by Operator (Last 3 Months)** — Horizontal bar chart with color-coded bars: green (>80%), amber (50-80%), red (<50%)
+- **Shift Coverage** — Custom table grouped by shift with color-coded shift badges (Morning=amber, Day=orange, Afternoon=purple, Night=indigo) showing operator names and departments
+- **Maintenance Completion Trend (6 Months)** — Stacked area chart showing completed (green) vs skipped (red) tasks over time
+
+**New KPI Cards:**
+- **Avg Completion Rate** — Average completion percentage across all operators (from last 3 months)
+- **Avg Time Variance** — Average difference between actual and estimated task time in minutes (positive = over budget)
+
+KPI grid expanded from `lg:grid-cols-5` to `lg:grid-cols-7`.
+
+**Backend — 4 new result sets** added to `sp_GetWorkforceAnalytics` stored procedure:
+1. Operator Efficiency (avg estimated vs actual time from completed executions, min 3 tasks)
+2. Operator Completion Rates (last 3 months, completed/skipped/total with percentage)
+3. Shift Coverage (active operators with their default shift)
+4. Maintenance Completion Trend (6-month monthly breakdown of completed vs skipped)
+
+**Files Modified:**
+
+| File | Changes |
+|------|---------|
+| `database/05_dashboard_stored_procedures.sql` | Added result sets 6-9 to `sp_GetWorkforceAnalytics` |
+| `server/routes/dashboards.js` | Extended `/workforce` route to map `recordsets[5]` through `[8]` into response |
+| `src/pages/dashboards/WorkforceDashboard.tsx` | Added 4 chart cards (2 new rows), 2 new KPI cards, new imports (AreaChart, Area, Clock, CheckCircle2), shift badge colors, month formatter |
+
+---
 
 ### Feature: Per-Operator Shift Scheduling
 

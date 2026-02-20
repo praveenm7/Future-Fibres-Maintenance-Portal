@@ -135,7 +135,7 @@ export function DataImportDialog({
       if (!mapping?.fileColumn) {
         validationErrors.push(`Required field "${field.label}" is not mapped`);
       } else {
-        const emptyRows = mapped.filter((row, i) => !row[field.key]).length;
+        const emptyRows = mapped.filter((row, _i) => !row[field.key]).length;
         if (emptyRows > 0) {
           validationErrors.push(`${emptyRows} row(s) have empty "${field.label}"`);
         }

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
+const { validate, schemas } = require('../middleware/validate');
 
 // GET /api/shifts — list all shift definitions
 router.get('/', async (req, res) => {
@@ -99,7 +100,7 @@ router.get('/roster', async (req, res) => {
 });
 
 // PUT /api/shifts/operators/:id/default — set operator's default shift
-router.put('/operators/:id/default', async (req, res) => {
+router.put('/operators/:id/default', validate(schemas.setDefaultShift), async (req, res) => {
     try {
         const { shiftId } = req.body; // null to unset
 
@@ -117,7 +118,7 @@ router.put('/operators/:id/default', async (req, res) => {
 });
 
 // POST /api/shifts/overrides — create/update a shift override for an operator on a date
-router.post('/overrides', async (req, res) => {
+router.post('/overrides', validate(schemas.createShiftOverride), async (req, res) => {
     try {
         const { operatorId, date, shiftId } = req.body; // shiftId null = day off
 

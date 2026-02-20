@@ -7,7 +7,9 @@ import { DataTable } from '@/components/ui/DataTable';
 import { BulkActionsBar } from '@/components/ui/BulkActionsBar';
 import { SelectField, InputField, CheckboxField } from '@/components/ui/FormField';
 import type { MaintenanceAction } from '@/types/maintenance';
-import { Plus, Pencil, Trash2, Save, X, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Save, X, Loader2, Wrench } from 'lucide-react';
+import { QueryError } from '@/components/ui/QueryError';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useMachines } from '@/hooks/useMachines';
 import { useMaintenanceActions } from '@/hooks/useMaintenanceActions';
 import { useMaintenanceExecutions } from '@/hooks/useMaintenanceExecutions';
@@ -44,10 +46,10 @@ export default function MaintenancePlan() {
   const { useGetListOptions } = useListOptions();
   const { useGetExecutionStats } = useMaintenanceExecutions();
 
-  const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
+  const { data: machines = [], isLoading: loadingMachines, isError: errorMachines, refetch: refetchMachines } = useGetMachines();
   const [selectedMachineId, setSelectedMachineId] = useState('');
 
-  const { data: machineActions = [], isLoading: loadingActions } = useGetActions(selectedMachineId);
+  const { data: machineActions = [], isLoading: loadingActions, isError: errorActions, refetch: refetchActions } = useGetActions(selectedMachineId);
   const { data: executionStats = [] } = useGetExecutionStats(selectedMachineId);
   const { data: periodicityOptions = [] } = useGetListOptions('PERIODICITY');
 
@@ -61,6 +63,7 @@ export default function MaintenancePlan() {
     if (machines.length > 0 && !selectedMachineId) {
       setSelectedMachineId(machines[0].id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [machines]);
 
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
@@ -120,7 +123,7 @@ export default function MaintenancePlan() {
           id: '',
           machineId: selectedMachineId,
           ...data,
-          status: 'IDEAL' as any,
+          status: 'IDEAL' as const,
         });
         reset({ ...defaultValues, periodicity: data.periodicity, month: data.month });
       } else if (mode === 'edit' && selectedRowId) {
@@ -174,6 +177,8 @@ export default function MaintenancePlan() {
       </div>
     );
   }
+
+  if (errorMachines) return <QueryError onRetry={refetchMachines} />;
 
   const columns = [
     { key: 'action', header: 'ACTION', className: 'max-w-[300px]' },
@@ -229,6 +234,14 @@ export default function MaintenancePlan() {
               <Loader2 className="h-6 w-6 animate-spin text-primary mb-2" />
               <p className="text-sm text-muted-foreground">Loading maintenance actions...</p>
             </div>
+          ) : errorActions ? (
+            <QueryError onRetry={refetchActions} />
+          ) : machineActions.length === 0 ? (
+            <EmptyState
+              icon={Wrench}
+              title="No maintenance actions"
+              description="No maintenance actions have been defined for this machine yet."
+            />
           ) : (
             <div>
               <DataTable

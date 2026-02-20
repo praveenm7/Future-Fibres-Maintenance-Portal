@@ -111,7 +111,7 @@ export function CalendarHeader({
       )}
 
       {/* Day sub-view: Tasks | Schedule toggle */}
-      {viewMode === 'day' && onDaySubViewChange && (
+      {onDaySubViewChange && (
         <>
           <div className="h-6 w-px bg-border" />
           <div className="flex items-center border border-border rounded-lg overflow-hidden">

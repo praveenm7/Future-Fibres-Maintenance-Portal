@@ -66,6 +66,7 @@ export function ImageGallery({ images, onDelete, disabled }: ImageGalleryProps) 
               }}
               className="absolute top-1 right-1 bg-destructive/80 hover:bg-destructive text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
               title="Remove image"
+              aria-label="Remove image"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -99,6 +100,7 @@ export function ImageGallery({ images, onDelete, disabled }: ImageGalleryProps) 
                     }}
                     className="absolute inset-0 bg-destructive/60 text-white flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity"
                     title="Remove"
+                    aria-label="Remove"
                   >
                     <Trash2 className="h-3 w-3" />
                   </button>

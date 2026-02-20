@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,44 +6,52 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import MainLayout from "@/components/layout/MainLayout";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Loader2 } from "lucide-react";
 
-// Sections
-import LandingPage from "./pages/LandingPage";
-import SectionDashboard from "./pages/SectionDashboard";
+// Lazy-loaded pages — code-split for smaller initial bundle
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const SectionDashboard = lazy(() => import("./pages/SectionDashboard"));
 
 // Forms Pages
-import MachineManagement from "./pages/MachineManagement";
-import MaintenancePlan from "./pages/MaintenancePlan";
-import NonConformities from "./pages/NonConformities";
-import NCComments from "./pages/NCComments";
-import SpareParts from "./pages/SpareParts";
-import AuthorizationMatrix from "./pages/AuthorizationMatrix";
-import ListsModification from "./pages/ListsModification";
-import MaintenanceCalendar from "./pages/MaintenanceCalendar";
+const MachineManagement = lazy(() => import("./pages/MachineManagement"));
+const MaintenancePlan = lazy(() => import("./pages/MaintenancePlan"));
+const NonConformities = lazy(() => import("./pages/NonConformities"));
+const NCComments = lazy(() => import("./pages/NCComments"));
+const SpareParts = lazy(() => import("./pages/SpareParts"));
+const AuthorizationMatrix = lazy(() => import("./pages/AuthorizationMatrix"));
+const ListsModification = lazy(() => import("./pages/ListsModification"));
+const MaintenanceCalendar = lazy(() => import("./pages/MaintenanceCalendar"));
 
 // Reports Pages
-import MachineryListReport from "./pages/MachineryListReport";
-import NCMaintenanceReport from "./pages/NCMaintenanceReport";
-import MaintenanceSummary from "./pages/MaintenanceSummary";
-import MaintenancePlanReport from "./pages/MaintenancePlanReport";
-import AuthorizationReport from "./pages/AuthorizationReport";
+const MachineryListReport = lazy(() => import("./pages/MachineryListReport"));
+const NCMaintenanceReport = lazy(() => import("./pages/NCMaintenanceReport"));
+const MaintenanceSummary = lazy(() => import("./pages/MaintenanceSummary"));
+const MaintenancePlanReport = lazy(() => import("./pages/MaintenancePlanReport"));
+const AuthorizationReport = lazy(() => import("./pages/AuthorizationReport"));
 
 // Dashboard Pages
-import DashboardsIndex from "./pages/dashboards/DashboardsIndex";
-import OverviewDashboard from "./pages/dashboards/OverviewDashboard";
-import NCAnalyticsDashboard from "./pages/dashboards/NCAnalyticsDashboard";
-import EquipmentHealthDashboard from "./pages/dashboards/EquipmentHealthDashboard";
-import SparePartsDashboard from "./pages/dashboards/SparePartsDashboard";
-import WorkforceDashboard from "./pages/dashboards/WorkforceDashboard";
+const DashboardsIndex = lazy(() => import("./pages/dashboards/DashboardsIndex"));
+const OverviewDashboard = lazy(() => import("./pages/dashboards/OverviewDashboard"));
+const NCAnalyticsDashboard = lazy(() => import("./pages/dashboards/NCAnalyticsDashboard"));
+const EquipmentHealthDashboard = lazy(() => import("./pages/dashboards/EquipmentHealthDashboard"));
+const SparePartsDashboard = lazy(() => import("./pages/dashboards/SparePartsDashboard"));
+const WorkforceDashboard = lazy(() => import("./pages/dashboards/WorkforceDashboard"));
 
 // Admin Pages
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import DatabaseExplorer from "./pages/admin/DatabaseExplorer";
-import UserManagement from "./pages/admin/UserManagement";
-import SystemMonitoring from "./pages/admin/SystemMonitoring";
-import ActivityLogs from "./pages/admin/ActivityLogs";
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const DatabaseExplorer = lazy(() => import("./pages/admin/DatabaseExplorer"));
+const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
+const SystemMonitoring = lazy(() => import("./pages/admin/SystemMonitoring"));
+const ActivityLogs = lazy(() => import("./pages/admin/ActivityLogs"));
 
-import NotFound from "./pages/NotFound";
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[400px]">
+    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+  </div>
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,7 +59,7 @@ const queryClient = new QueryClient({
       networkMode: 'offlineFirst',
       staleTime: 5 * 60 * 1000,        // 5 minutes
       gcTime: 30 * 60 * 1000,           // 30 minutes
-      retry: (failureCount, error) => {
+      retry: (failureCount, _error) => {
         // Don't retry if offline
         if (!navigator.onLine) return false;
         return failureCount < 3;
@@ -69,6 +78,8 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+        <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Landing Page - Sidebar Hidden */}
           <Route path="/" element={<MainLayout><LandingPage /></MainLayout>} />
@@ -112,6 +123,8 @@ const App = () => (
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </Suspense>
+        </ErrorBoundary>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

@@ -5,14 +5,13 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { ActionButton } from '@/components/ui/ActionButton';
 import { FormField, SelectField, InputField } from '@/components/ui/FormField';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { NonConformity } from '@/types/maintenance';
 import { Plus, Save, Trash, Loader2 } from 'lucide-react';
+import { QueryError } from '@/components/ui/QueryError';
 import { useMachines } from '@/hooks/useMachines';
 import { useNonConformities } from '@/hooks/useNonConformities';
 import { useListOptions } from '@/hooks/useListOptions';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { nonConformityFormSchema, type NonConformityFormValues } from '@/lib/schemas/nonConformitySchema';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002/api';
@@ -25,7 +24,7 @@ const getDefaultValues = (): NonConformityFormValues => ({
   creationDate: new Date().toLocaleDateString('en-GB'),
   initiationDate: '',
   status: '',
-  priority: '' as unknown as number,
+  priority: 0,
   category: '',
 });
 
@@ -39,14 +38,14 @@ export default function NonConformities() {
   } = useNonConformities();
   const { useGetListOptions } = useListOptions();
 
-  const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
+  const { data: machines = [], isLoading: loadingMachines, isError: errorMachines, refetch: refetchMachines } = useGetMachines();
 
   const [selectedMachineId, setSelectedMachineId] = useState('');
   const [mode, setMode] = useState<Mode>('new');
   const [selectedNCId, setSelectedNCId] = useState('');
   const [ncCode, setNcCode] = useState('');
 
-  const { data: nonConformities = [], isLoading: loadingNCs } = useGetNCs(selectedMachineId);
+  const { data: nonConformities = [], isLoading: loadingNCs, isError: errorNCs, refetch: refetchNCs } = useGetNCs(selectedMachineId);
   const { data: statusOptions = [] } = useGetListOptions('NC_STATUS');
   const { data: priorityOptions = [] } = useGetListOptions('NC_PRIORITY');
   const createMutation = useCreateNC();
@@ -57,6 +56,7 @@ export default function NonConformities() {
     if (machines.length > 0 && !selectedMachineId) {
       setSelectedMachineId(machines[0].id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [machines]);
 
   const {
@@ -83,6 +83,7 @@ export default function NonConformities() {
       setNcCode(`NC${new Date().getFullYear()}-${String(nextNum).padStart(4, '0')}`);
       reset(getDefaultValues());
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, nonConformities, selectedMachineId]);
 
   const handleMachineChange = (machineId: string) => {
@@ -180,6 +181,8 @@ export default function NonConformities() {
     );
   }
 
+  if (errorMachines) return <QueryError onRetry={refetchMachines} />;
+
   return (
     <div>
       <PageHeader title="Non-Conformities" />
@@ -257,6 +260,7 @@ export default function NonConformities() {
                   </div>
                 )}
               </div>
+              {errorNCs && <QueryError onRetry={refetchNCs} className="py-4" />}
             </div>
           )}
 

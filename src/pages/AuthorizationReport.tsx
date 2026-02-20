@@ -6,13 +6,15 @@ import { useListOptions } from '@/hooks/useListOptions';
 import { exportToExcel, getExportTimestamp } from '@/lib/exportExcel';
 import { printReport } from '@/lib/printReport';
 import { Loader2 } from 'lucide-react';
+import { QueryError } from '@/components/ui/QueryError';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export default function AuthorizationReport() {
   const { useGetMatrices } = useAuthMatrix();
   const { useGetListOptions } = useListOptions();
 
-  const { data: authMatrices = [], isLoading: loadingMatrices } = useGetMatrices();
-  const { data: authGroups = [], isLoading: loadingGroups } = useGetListOptions('AUTHORIZATION_GROUP');
+  const { data: authMatrices = [], isLoading: loadingMatrices, isError: errorMatrices, refetch: refetchMatrices } = useGetMatrices();
+  const { data: authGroups = [], isLoading: loadingGroups, isError: errorGroups, refetch: refetchGroups } = useGetListOptions('AUTHORIZATION_GROUP');
 
   // Map database list options to simple strings
   const authorizationGroups = authGroups.map(g => g.value);
@@ -26,6 +28,22 @@ export default function AuthorizationReport() {
       <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
         <p className="text-muted-foreground">Loading authorization report...</p>
+      </div>
+    );
+  }
+
+  if (errorMatrices || errorGroups) {
+    return <QueryError onRetry={() => { refetchMatrices(); refetchGroups(); }} />;
+  }
+
+  if (authMatrices.length === 0) {
+    return (
+      <div>
+        <PageHeader title="Authorization Matrix" />
+        <EmptyState
+          title="No authorization data"
+          description="No operators have been added to the authorization matrix yet."
+        />
       </div>
     );
   }
