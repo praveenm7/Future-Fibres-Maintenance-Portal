@@ -11,6 +11,8 @@ const mapAuthMatrix = (record) => ({
     department: record.Department,
     updatedDate: record.UpdatedDate,
     authorizations: record.Authorizations ? JSON.parse(record.Authorizations) : {},
+    defaultShiftId: record.DefaultShiftID ? record.DefaultShiftID.toString() : null,
+    defaultShiftName: record.DefaultShiftName || null,
     createdDate: record.CreatedDate,
     lastUpdatedDate: record.LastUpdatedDate
 });
@@ -20,7 +22,15 @@ router.get('/', async (req, res) => {
     try {
         const pool = await poolPromise;
         const result = await pool.request()
-            .execute('sp_GetAuthorizationMatrix');
+            .query(`
+                SELECT am.*, o.OperatorName, o.Email, o.Department, o.DefaultShiftID,
+                       s.ShiftName AS DefaultShiftName
+                FROM AuthorizationMatrix am
+                INNER JOIN Operators o ON am.OperatorID = o.OperatorID
+                LEFT JOIN Shifts s ON o.DefaultShiftID = s.ShiftID
+                WHERE o.IsActive = 1
+                ORDER BY o.OperatorName
+            `);
 
         res.json(result.recordset.map(mapAuthMatrix));
     } catch (err) {
@@ -32,11 +42,12 @@ router.get('/', async (req, res) => {
 // POST/PUT authorization
 router.post('/', async (req, res) => {
     try {
-        const { operatorName, email, department, authorizations, updatedDate } = req.body;
+        const { operatorName, email, department, authorizations, updatedDate, defaultShiftId } = req.body;
         let { operatorId } = req.body;
         const pool = await poolPromise;
 
         const authJson = JSON.stringify(authorizations || {});
+        const shiftId = defaultShiftId ? parseInt(defaultShiftId, 10) : null;
 
         // Resolve OperatorID if not provided
         if (!operatorId && operatorName) {
@@ -44,20 +55,22 @@ router.post('/', async (req, res) => {
                 .input('OperatorName', sql.NVarChar(100), operatorName)
                 .input('Email', sql.NVarChar(100), email || null)
                 .input('Department', sql.NVarChar(50), department || null)
+                .input('DefaultShiftID', sql.Int, shiftId)
                 .query(`
                     DECLARE @OpRefID INT;
                     SELECT @OpRefID = OperatorID FROM Operators WHERE OperatorName = @OperatorName;
                     IF @OpRefID IS NULL
                     BEGIN
-                        INSERT INTO Operators (OperatorName, Email, Department, IsActive)
-                        VALUES (@OperatorName, @Email, @Department, 1);
+                        INSERT INTO Operators (OperatorName, Email, Department, IsActive, DefaultShiftID)
+                        VALUES (@OperatorName, @Email, @Department, 1, @DefaultShiftID);
                         SET @OpRefID = SCOPE_IDENTITY();
                     END
                     ELSE
                     BEGIN
-                        UPDATE Operators 
+                        UPDATE Operators
                         SET Email = ISNULL(@Email, Email),
-                            Department = ISNULL(@Department, Department)
+                            Department = ISNULL(@Department, Department),
+                            DefaultShiftID = @DefaultShiftID
                         WHERE OperatorID = @OpRefID
                     END
                     SELECT @OpRefID AS OperatorID;
@@ -103,9 +116,11 @@ router.post('/', async (req, res) => {
         const result = await pool.request()
             .input('OperatorID', sql.Int, operatorId)
             .query(`
-                SELECT am.*, o.OperatorName, o.Email, o.Department
+                SELECT am.*, o.OperatorName, o.Email, o.Department, o.DefaultShiftID,
+                       s.ShiftName AS DefaultShiftName
                 FROM AuthorizationMatrix am
                 INNER JOIN Operators o ON am.OperatorID = o.OperatorID
+                LEFT JOIN Shifts s ON o.DefaultShiftID = s.ShiftID
                 WHERE am.OperatorID = @OperatorID
             `);
 
@@ -119,10 +134,11 @@ router.post('/', async (req, res) => {
 // PUT update by ID
 router.put('/:id', async (req, res) => {
     try {
-        const { authorizations, updatedDate, email, department } = req.body;
+        const { authorizations, updatedDate, email, department, defaultShiftId } = req.body;
         const pool = await poolPromise;
 
         const authJson = JSON.stringify(authorizations || {});
+        const shiftId = defaultShiftId ? parseInt(defaultShiftId, 10) : null;
 
         // Parse Date robustly
         let dbDate = new Date();
@@ -141,17 +157,19 @@ router.put('/:id', async (req, res) => {
             .input('UpdatedDate', sql.Date, dbDate)
             .input('Email', sql.NVarChar(100), email || null)
             .input('Department', sql.NVarChar(50), department || null)
+            .input('DefaultShiftID', sql.Int, shiftId)
             .query(`
                 DECLARE @OpID INT;
                 SELECT @OpID = OperatorID FROM AuthorizationMatrix WHERE AuthMatrixID = @AuthMatrixID;
 
-                UPDATE Operators 
+                UPDATE Operators
                 SET Email = ISNULL(@Email, Email),
-                    Department = ISNULL(@Department, Department)
+                    Department = ISNULL(@Department, Department),
+                    DefaultShiftID = @DefaultShiftID
                 WHERE OperatorID = @OpID;
 
-                UPDATE AuthorizationMatrix 
-                SET Authorizations = @Authorizations, 
+                UPDATE AuthorizationMatrix
+                SET Authorizations = @Authorizations,
                     UpdatedDate = @UpdatedDate,
                     LastUpdatedDate = GETDATE()
                 WHERE AuthMatrixID = @AuthMatrixID
@@ -160,9 +178,11 @@ router.put('/:id', async (req, res) => {
         const result = await pool.request()
             .input('AuthMatrixID', sql.Int, req.params.id)
             .query(`
-                SELECT am.*, o.OperatorName, o.Email, o.Department
+                SELECT am.*, o.OperatorName, o.Email, o.Department, o.DefaultShiftID,
+                       s.ShiftName AS DefaultShiftName
                 FROM AuthorizationMatrix am
                 INNER JOIN Operators o ON am.OperatorID = o.OperatorID
+                LEFT JOIN Shifts s ON o.DefaultShiftID = s.ShiftID
                 WHERE am.AuthMatrixID = @AuthMatrixID
             `);
 

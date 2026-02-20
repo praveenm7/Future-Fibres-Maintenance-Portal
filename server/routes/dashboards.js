@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
+const { generateOccurrences, countPlannedOccurrences } = require('../utils/occurrences');
 
 // GET /api/dashboards/overview
 router.get('/overview', async (req, res) => {
@@ -223,6 +224,110 @@ router.get('/workforce', async (req, res) => {
         });
     } catch (err) {
         console.error('Error fetching workforce analytics:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/dashboards/execution-summary?area=&type=
+router.get('/execution-summary', async (req, res) => {
+    try {
+        const pool = await poolPromise;
+        const { area, type } = req.query;
+
+        // Build optional filter clause (reused across queries)
+        const filterClause = `
+            ${area ? 'AND m.Area = @Area' : ''}
+            ${type ? 'AND m.Type = @Type' : ''}
+        `;
+
+        // Helper to add filter inputs to a request
+        const addFilterInputs = (request) => {
+            if (area) request.input('Area', sql.NVarChar(100), area);
+            if (type) request.input('Type', sql.NVarChar(50), type);
+            return request;
+        };
+
+        // KPIs for current month — completed count from executions
+        const kpiResult = await addFilterInputs(pool.request()).query(`
+            DECLARE @MonthStart DATE = DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1);
+            DECLARE @MonthEnd DATE = EOMONTH(GETDATE());
+
+            SELECT
+                COUNT(CASE WHEN me.Status = 'COMPLETED' AND me.ScheduledDate >= @MonthStart AND me.ScheduledDate <= @MonthEnd THEN 1 END) AS CompletedThisMonth,
+                COUNT(CASE WHEN me.ScheduledDate >= @MonthStart AND me.ScheduledDate <= @MonthEnd THEN 1 END) AS TotalThisMonth,
+                AVG(CASE WHEN me.Status = 'COMPLETED' THEN CAST(me.ActualTime AS FLOAT) - CAST(ma.TimeNeeded AS FLOAT) END) AS AvgTimeVariance
+            FROM MaintenanceExecutions me
+            INNER JOIN MaintenanceActions ma ON me.ActionID = ma.ActionID
+            INNER JOIN Machines m ON me.MachineID = m.MachineID
+            WHERE 1=1 ${filterClause}
+        `);
+
+        // Fetch actions (filtered by machine type/area) to compute planned occurrences
+        const actionsResult = await addFilterInputs(pool.request()).query(`
+            SELECT ma.ActionID, ma.Periodicity, ma.Month
+            FROM MaintenanceActions ma
+            INNER JOIN Machines m ON ma.MachineID = m.MachineID
+            WHERE 1=1 ${filterClause}
+        `);
+
+        const now = new Date();
+        const monthStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+        const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+
+        const plannedThisMonth = countPlannedOccurrences(
+            actionsResult.recordset,
+            monthStart,
+            today
+        );
+
+        const kpi = kpiResult.recordset[0];
+        const completedThisMonth = kpi.CompletedThisMonth || 0;
+        const completionRate = plannedThisMonth > 0 ? Math.round((completedThisMonth / plannedThisMonth) * 100) : 0;
+
+        // Completion trend: last 6 months with planned counts
+        const trendResult = await addFilterInputs(pool.request()).query(`
+            SELECT
+                FORMAT(me.ScheduledDate, 'yyyy-MM') AS Month,
+                COUNT(CASE WHEN me.Status = 'COMPLETED' THEN 1 END) AS Completed,
+                COUNT(*) AS Total
+            FROM MaintenanceExecutions me
+            INNER JOIN Machines m ON me.MachineID = m.MachineID
+            WHERE me.ScheduledDate >= DATEADD(MONTH, -5, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1))
+                ${filterClause}
+            GROUP BY FORMAT(me.ScheduledDate, 'yyyy-MM')
+            ORDER BY Month
+        `);
+
+        // Compute planned count for each trend month
+        const trendData = trendResult.recordset.map(r => {
+            const [y, m] = r.Month.split('-').map(Number);
+            const trendMonthStart = new Date(Date.UTC(y, m - 1, 1));
+            // For current month, use today; for past months, use last day
+            const isCurrentMonth = y === now.getFullYear() && (m - 1) === now.getMonth();
+            const trendMonthEnd = isCurrentMonth
+                ? today
+                : new Date(Date.UTC(y, m, 0)); // last day of that month
+            const planned = countPlannedOccurrences(actionsResult.recordset, trendMonthStart, trendMonthEnd);
+            return {
+                month: r.Month,
+                completed: r.Completed,
+                total: r.Total,
+                planned,
+            };
+        });
+
+        res.json({
+            kpis: {
+                completedThisMonth,
+                plannedThisMonth,
+                totalThisMonth: kpi.TotalThisMonth || 0,
+                completionRate,
+                avgTimeVariance: kpi.AvgTimeVariance != null ? Math.round(kpi.AvgTimeVariance * 10) / 10 : null,
+            },
+            completionTrend: trendData,
+        });
+    } catch (err) {
+        console.error('Error fetching execution summary:', err);
         res.status(500).json({ error: err.message });
     }
 });

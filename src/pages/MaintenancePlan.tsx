@@ -10,6 +10,7 @@ import type { MaintenanceAction } from '@/types/maintenance';
 import { Plus, Pencil, Trash2, Save, X, Loader2 } from 'lucide-react';
 import { useMachines } from '@/hooks/useMachines';
 import { useMaintenanceActions } from '@/hooks/useMaintenanceActions';
+import { useMaintenanceExecutions } from '@/hooks/useMaintenanceExecutions';
 import { useListOptions } from '@/hooks/useListOptions';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { maintenanceActionFormSchema, type MaintenanceActionFormValues } from '@/lib/schemas/maintenanceActionSchema';
@@ -41,12 +42,17 @@ export default function MaintenancePlan() {
     useDeleteAction
   } = useMaintenanceActions();
   const { useGetListOptions } = useListOptions();
+  const { useGetExecutionStats } = useMaintenanceExecutions();
 
   const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
   const [selectedMachineId, setSelectedMachineId] = useState('');
 
   const { data: machineActions = [], isLoading: loadingActions } = useGetActions(selectedMachineId);
+  const { data: executionStats = [] } = useGetExecutionStats(selectedMachineId);
   const { data: periodicityOptions = [] } = useGetListOptions('PERIODICITY');
+
+  // Build a lookup map for execution stats by actionId
+  const statsMap = new Map(executionStats.map(s => [s.actionId, s]));
   const createMutation = useCreateAction();
   const updateMutation = useUpdateAction();
   const deleteMutation = useDeleteAction();
@@ -176,6 +182,20 @@ export default function MaintenancePlan() {
     { key: 'maintenanceInCharge', header: 'MAINT. NEEDED', render: (item: MaintenanceAction) => item.maintenanceInCharge ? 'Y' : 'N' },
     { key: 'status', header: 'STATUS' },
     { key: 'month', header: 'MONTH', render: (item: MaintenanceAction) => item.month || '-' },
+    { key: 'completion', header: 'COMPLETION', render: (item: MaintenanceAction) => {
+      const stats = statsMap.get(item.id);
+      if (!stats || stats.totalRecords === 0) return <span className="text-muted-foreground">—</span>;
+      return (
+        <span className={stats.completionRate >= 75 ? 'text-emerald-600 dark:text-emerald-400 font-medium' : stats.completionRate >= 50 ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-muted-foreground'}>
+          {stats.totalCompleted}/{stats.totalRecords}
+        </span>
+      );
+    }},
+    { key: 'lastDone', header: 'LAST DONE', render: (item: MaintenanceAction) => {
+      const stats = statsMap.get(item.id);
+      if (!stats?.lastCompletedDate) return <span className="text-muted-foreground">—</span>;
+      return new Date(stats.lastCompletedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    }},
   ];
 
   return (

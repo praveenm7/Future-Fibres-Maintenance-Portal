@@ -1,6 +1,9 @@
 import { useMemo } from 'react';
-import { ChevronRight, Clock, Wrench } from 'lucide-react';
+import { Check, ChevronRight, Circle, Clock, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const SERVER_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002/api').replace('/api', '');
+
 import { Badge } from '@/components/ui/badge';
 import {
   CalendarEvent,
@@ -14,9 +17,10 @@ interface DayViewProps {
   currentDate: Date;
   events: CalendarEvent[];
   onEventClick: (event: CalendarEvent) => void;
+  onToggleComplete?: (event: CalendarEvent) => void;
 }
 
-export function DayView({ currentDate, events, onEventClick }: DayViewProps) {
+export function DayView({ currentDate, events, onEventClick, onToggleComplete }: DayViewProps) {
   // Group events by machine
   const machineGroups = useMemo(() => {
     const map = new Map<
@@ -50,6 +54,7 @@ export function DayView({ currentDate, events, onEventClick }: DayViewProps) {
   }, [events]);
 
   const totalTime = events.reduce((sum, e) => sum + e.action.timeNeeded, 0);
+  const completedCount = events.filter((e) => e.execution?.status === 'COMPLETED').length;
 
   return (
     <div className="space-y-4">
@@ -61,8 +66,11 @@ export function DayView({ currentDate, events, onEventClick }: DayViewProps) {
               {format(currentDate, 'EEEE, MMMM d, yyyy')}
             </h2>
             <p className="text-sm text-muted-foreground">
-              {events.length} action{events.length !== 1 ? 's' : ''} &middot;{' '}
-              {formatTimeMinutes(totalTime)} total
+              {events.length} action{events.length !== 1 ? 's' : ''}
+              {completedCount > 0 && (
+                <span className="text-emerald-600 dark:text-emerald-400"> &middot; {completedCount} completed</span>
+              )}
+              {' '}&middot; {formatTimeMinutes(totalTime)} total
             </p>
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -105,6 +113,7 @@ export function DayView({ currentDate, events, onEventClick }: DayViewProps) {
             (sum, e) => sum + e.action.timeNeeded,
             0
           );
+          const machineCompleted = machineEvents.filter((e) => e.execution?.status === 'COMPLETED').length;
 
           return (
             <div
@@ -116,7 +125,7 @@ export function DayView({ currentDate, events, onEventClick }: DayViewProps) {
                 <div className="flex items-center gap-2 min-w-0">
                   {machine.imageUrl ? (
                     <img
-                      src={machine.imageUrl}
+                      src={machine.imageUrl.startsWith('http') ? machine.imageUrl : `${SERVER_BASE}${machine.imageUrl}`}
                       alt={machine.finalCode}
                       className="h-6 w-6 rounded object-cover"
                     />
@@ -133,6 +142,11 @@ export function DayView({ currentDate, events, onEventClick }: DayViewProps) {
                   </span>
                 </div>
                 <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1.5">
+                  {machineCompleted > 0 && (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                      {machineCompleted}/{machineEvents.length}
+                    </span>
+                  )}
                   <Clock className="h-3 w-3" />
                   {machineEvents.length} action
                   {machineEvents.length !== 1 ? 's' : ''} &middot;{' '}
@@ -146,52 +160,97 @@ export function DayView({ currentDate, events, onEventClick }: DayViewProps) {
                   const colors =
                     PERIODICITY_COLORS[event.action.periodicity];
                   const isMandatory = event.action.status === 'MANDATORY';
+                  const isCompleted = event.execution?.status === 'COMPLETED';
+                  const isSkipped = event.execution?.status === 'SKIPPED';
 
                   return (
-                    <button
-                      type="button"
+                    <div
                       key={event.id}
-                      onClick={() => onEventClick(event)}
-                      className="w-full text-left p-3 hover:bg-muted/30 transition-colors flex items-center gap-3 cursor-pointer"
+                      className={cn(
+                        'flex items-center gap-3 transition-colors',
+                        isCompleted && 'bg-emerald-50/50 dark:bg-emerald-950/20',
+                        isSkipped && 'bg-muted/30 opacity-60'
+                      )}
                     >
-                      <div
-                        className={cn(
-                          'h-2.5 w-2.5 rounded-full flex-shrink-0',
-                          colors.dot
-                        )}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {event.action.action}
-                        </p>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {formatTimeMinutes(event.action.timeNeeded)}
-                          </span>
-                          <Badge
-                            variant="secondary"
-                            className={cn(
-                              colors.bg,
-                              colors.text,
-                              'text-[10px] px-1.5 py-0 border',
-                              colors.border
-                            )}
-                          >
-                            {colors.label}
-                          </Badge>
-                          {isMandatory && (
-                            <Badge
-                              variant="destructive"
-                              className="text-[10px] px-1.5 py-0"
-                            >
-                              Mandatory
-                            </Badge>
+                      {/* Quick complete checkbox */}
+                      {onToggleComplete && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleComplete(event);
+                          }}
+                          className={cn(
+                            'ml-3 flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer',
+                            'hover:scale-110',
+                            isCompleted
+                              ? 'bg-emerald-500 border-emerald-500 text-white'
+                              : 'border-muted-foreground/30 hover:border-emerald-400'
                           )}
+                        >
+                          {isCompleted && <Check className="h-3 w-3" />}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => onEventClick(event)}
+                        className={cn(
+                          'flex-1 text-left p-3 hover:bg-muted/30 transition-colors flex items-center gap-3 cursor-pointer',
+                          onToggleComplete && 'pl-0'
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            'h-2.5 w-2.5 rounded-full flex-shrink-0',
+                            colors.dot
+                          )}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className={cn(
+                            'text-sm font-medium truncate',
+                            isCompleted && 'line-through text-muted-foreground'
+                          )}>
+                            {event.action.action}
+                          </p>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {formatTimeMinutes(event.action.timeNeeded)}
+                            </span>
+                            <Badge
+                              variant="secondary"
+                              className={cn(
+                                colors.bg,
+                                colors.text,
+                                'text-[10px] px-1.5 py-0 border',
+                                colors.border
+                              )}
+                            >
+                              {colors.label}
+                            </Badge>
+                            {isMandatory && (
+                              <Badge
+                                variant="destructive"
+                                className="text-[10px] px-1.5 py-0"
+                              >
+                                Mandatory
+                              </Badge>
+                            )}
+                            {isCompleted && (
+                              <Badge className="text-[10px] px-1.5 py-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700">
+                                Done
+                              </Badge>
+                            )}
+                            {isSkipped && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                Skipped
+                              </Badge>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    </button>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      </button>
+                    </div>
                   );
                 })}
               </div>

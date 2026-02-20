@@ -3,13 +3,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ActionButton } from '@/components/ui/ActionButton';
-import { InputField } from '@/components/ui/FormField';
+import { InputField, SelectField } from '@/components/ui/FormField';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import type { AuthorizationMatrix as AuthMatrixType } from '@/types/maintenance';
 import { Plus, Trash2, Pencil, Save, RotateCcw, Loader2 } from 'lucide-react';
 import { useAuthMatrix } from '@/hooks/useAuthMatrix';
 import { useListOptions } from '@/hooks/useListOptions';
+import { useShifts } from '@/hooks/useShifts';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { authMatrixFormSchema, type AuthMatrixFormValues } from '@/lib/schemas/authMatrixSchema';
 import { toast } from 'sonner';
@@ -26,6 +27,7 @@ export default function AuthorizationMatrix() {
 
   const { data: authorizationMatrices = [], isLoading: loadingMatrices } = useGetMatrices();
   const { data: groupOptions = [] } = useGetListOptions('AUTHORIZATION_GROUP');
+  const { data: shifts = [] } = useShifts();
   const createMutation = useCreateMatrix();
   const updateMutation = useUpdateMatrix();
   const deleteMutation = useDeleteMatrix();
@@ -37,6 +39,7 @@ export default function AuthorizationMatrix() {
     operatorName: '',
     email: '',
     department: '',
+    defaultShiftId: '',
     updatedDate: new Date().toLocaleDateString('en-GB'),
     authorizations: groupOptions.reduce((acc, group) => {
       acc[group.value] = false;
@@ -75,6 +78,7 @@ export default function AuthorizationMatrix() {
         operatorName: user.operatorName,
         email: user.email || '',
         department: user.department || '',
+        defaultShiftId: user.defaultShiftId || '',
         updatedDate: user.updatedDate,
         authorizations: user.authorizations || {},
       });
@@ -95,6 +99,7 @@ export default function AuthorizationMatrix() {
           operatorName: data.operatorName,
           email: data.email,
           department: data.department,
+          defaultShiftId: data.defaultShiftId || null,
           updatedDate: data.updatedDate,
           authorizations: data.authorizations,
         } as AuthMatrixType);
@@ -111,6 +116,7 @@ export default function AuthorizationMatrix() {
             operatorName: data.operatorName,
             email: data.email,
             department: data.department,
+            defaultShiftId: data.defaultShiftId || null,
             updatedDate: data.updatedDate,
             authorizations: data.authorizations,
           } as AuthMatrixType,
@@ -193,7 +199,7 @@ export default function AuthorizationMatrix() {
         <div className={cn("transition-opacity",
           (mode !== 'new' && !selectedUserId) ? "opacity-50 pointer-events-none" : "opacity-100"
         )}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
             <InputField label="Operator" value={formValues.operatorName}
               onChange={(v) => setValue('operatorName', v, { shouldValidate: true, shouldDirty: true })}
               readOnly={mode !== 'new'}
@@ -205,6 +211,16 @@ export default function AuthorizationMatrix() {
               error={errors.email?.message} />
             <InputField label="Department" value={formValues.department || ''}
               onChange={(v) => setValue('department', v, { shouldDirty: true })}
+              disabled={mode === 'delete' || createMutation.isPending || updateMutation.isPending} />
+            <SelectField label="Default Shift" value={formValues.defaultShiftId || 'none'}
+              onChange={(v) => setValue('defaultShiftId', v === 'none' ? '' : v, { shouldDirty: true })}
+              options={[
+                { value: 'none', label: 'No Shift' },
+                ...shifts.map((s: { shiftId: string; shiftName: string; startTime: string; endTime: string }) => ({
+                  value: s.shiftId,
+                  label: `${s.shiftName} (${s.startTime}–${s.endTime})`,
+                })),
+              ]}
               disabled={mode === 'delete' || createMutation.isPending || updateMutation.isPending} />
             <InputField label="Updated Date" value={formValues.updatedDate}
               onChange={(v) => setValue('updatedDate', v, { shouldDirty: true })}

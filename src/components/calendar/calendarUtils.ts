@@ -12,7 +12,7 @@ import {
   addWeeks,
   addDays,
 } from 'date-fns';
-import { MaintenanceAction, Machine } from '@/types/maintenance';
+import { MaintenanceAction, Machine, MaintenanceExecution } from '@/types/maintenance';
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -24,6 +24,7 @@ export interface CalendarEvent {
   machine: Machine;
   date: Date;
   dateKey: string;
+  execution?: MaintenanceExecution;
 }
 
 // ─── Periodicity Colors ──────────────────────────────────────

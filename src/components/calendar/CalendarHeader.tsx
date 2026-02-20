@@ -4,6 +4,9 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Filter,
+  ListChecks,
+  GanttChart,
+  Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -17,6 +20,12 @@ interface CalendarHeaderProps {
   onToggleSidebar: () => void;
   sidebarOpen: boolean;
   activeFilterCount: number;
+  // Day sub-view controls (optional)
+  daySubView?: 'tasks' | 'schedule';
+  onDaySubViewChange?: (sub: 'tasks' | 'schedule') => void;
+  scheduleViewMode?: 'gantt' | 'table';
+  onScheduleViewModeChange?: (mode: 'gantt' | 'table') => void;
+  onScheduleConfigOpen?: () => void;
 }
 
 const VIEW_OPTIONS: { value: ViewMode; label: string }[] = [
@@ -33,6 +42,11 @@ export function CalendarHeader({
   onToggleSidebar,
   sidebarOpen,
   activeFilterCount,
+  daySubView,
+  onDaySubViewChange,
+  scheduleViewMode,
+  onScheduleViewModeChange,
+  onScheduleConfigOpen,
 }: CalendarHeaderProps) {
   return (
     <div className="flex flex-wrap items-center gap-2 py-3">
@@ -94,6 +108,83 @@ export function CalendarHeader({
           <Filter className="h-3 w-3" />
           <span>{activeFilterCount}</span>
         </div>
+      )}
+
+      {/* Day sub-view: Tasks | Schedule toggle */}
+      {viewMode === 'day' && onDaySubViewChange && (
+        <>
+          <div className="h-6 w-px bg-border" />
+          <div className="flex items-center border border-border rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => onDaySubViewChange('tasks')}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5',
+                daySubView === 'tasks'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted'
+              )}
+            >
+              <ListChecks className="h-3.5 w-3.5" />
+              Tasks
+            </button>
+            <button
+              type="button"
+              onClick={() => onDaySubViewChange('schedule')}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5',
+                daySubView === 'schedule'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:bg-muted'
+              )}
+            >
+              <GanttChart className="h-3.5 w-3.5" />
+              Schedule
+            </button>
+          </div>
+
+          {/* Gantt/Table toggle + Settings gear (only when schedule active) */}
+          {daySubView === 'schedule' && onScheduleViewModeChange && (
+            <>
+              <div className="flex items-center border border-border rounded-lg overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => onScheduleViewModeChange('gantt')}
+                  className={cn(
+                    'px-2.5 py-1.5 text-xs font-medium transition-colors',
+                    scheduleViewMode === 'gantt'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-muted'
+                  )}
+                >
+                  Gantt
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onScheduleViewModeChange('table')}
+                  className={cn(
+                    'px-2.5 py-1.5 text-xs font-medium transition-colors',
+                    scheduleViewMode === 'table'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:bg-muted'
+                  )}
+                >
+                  Table
+                </button>
+              </div>
+              {onScheduleConfigOpen && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={onScheduleConfigOpen}
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
+              )}
+            </>
+          )}
+        </>
       )}
 
       {/* View mode toggle */}

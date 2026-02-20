@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
+import type { MaintenanceSummaryRow } from '@/types/maintenance';
 
 export const useDashboard = () => {
     const useGetStats = () => {
@@ -16,8 +17,18 @@ export const useDashboard = () => {
         });
     };
 
+    const useGetMaintenanceSummary = (periodicity: string, year: number) => {
+        return useQuery({
+            queryKey: ['dashboard', 'summary', periodicity, year],
+            queryFn: () => api.get<MaintenanceSummaryRow[]>(
+                `/dashboard/maintenance-summary?periodicity=${periodicity}&year=${year}`
+            ),
+        });
+    };
+
     return {
         useGetStats,
         useGetMaintenanceReport,
+        useGetMaintenanceSummary,
     };
 };

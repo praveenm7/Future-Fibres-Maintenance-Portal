@@ -5,6 +5,7 @@ import {
     PauseCircle,
     CalendarClock,
     AlertCircle,
+    TrendingUp,
 } from 'lucide-react';
 import {
     PieChart, Pie, Cell,
@@ -41,8 +42,9 @@ const AGE_COLORS: Record<string, string> = {
 
 export default function EquipmentHealthDashboard() {
     const [filters, setFilters] = useState<DashboardFilters>({});
-    const { useEquipmentHealth } = useDashboards();
+    const { useEquipmentHealth, useExecutionSummary } = useDashboards();
     const { data, isLoading } = useEquipmentHealth(filters);
+    const { data: execData, isLoading: execLoading } = useExecutionSummary(filters);
 
     return (
         <DashboardShell
@@ -58,7 +60,7 @@ export default function EquipmentHealthDashboard() {
             }
         >
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
                 <KPICard
                     title="Total Machines"
                     value={data?.kpis.totalMachines ?? 0}
@@ -94,6 +96,14 @@ export default function EquipmentHealthDashboard() {
                     icon={AlertCircle}
                     colorClass="text-destructive"
                     isLoading={isLoading}
+                />
+                <KPICard
+                    title="Plan Execution"
+                    value={execData?.kpis.completionRate ?? 0}
+                    icon={TrendingUp}
+                    suffix="%"
+                    colorClass="text-emerald-600"
+                    isLoading={execLoading}
                 />
             </div>
 

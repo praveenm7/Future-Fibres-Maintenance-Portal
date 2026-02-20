@@ -72,6 +72,21 @@ export interface EquipmentHealthDashboardData {
     ageDistribution: Array<{ bracket: string; count: number }>;
 }
 
+// --- Execution Summary (for Overview Dashboard) ---
+
+export interface ExecutionSummaryKPIs {
+    completedThisMonth: number;
+    plannedThisMonth: number;
+    totalThisMonth: number;
+    completionRate: number;
+    avgTimeVariance: number | null;
+}
+
+export interface ExecutionSummaryData {
+    kpis: ExecutionSummaryKPIs;
+    completionTrend: Array<{ month: string; completed: number; total: number; planned: number }>;
+}
+
 // --- Spare Parts Dashboard ---
 
 export interface SparePartsKPIs {

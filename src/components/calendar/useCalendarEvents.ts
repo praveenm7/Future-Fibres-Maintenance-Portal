@@ -4,11 +4,11 @@ import {
   startOfMonth,
   startOfYear,
   differenceInDays,
-  getMonth,
 } from 'date-fns';
 import { useMachines } from '@/hooks/useMachines';
 import { useMaintenanceActions } from '@/hooks/useMaintenanceActions';
-import { MaintenanceAction, Machine } from '@/types/maintenance';
+import { useMaintenanceExecutions } from '@/hooks/useMaintenanceExecutions';
+import { MaintenanceAction, Machine, MaintenanceExecution } from '@/types/maintenance';
 import {
   CalendarEvent,
   ViewMode,
@@ -111,6 +111,8 @@ interface UseCalendarEventsReturn {
   machines: Machine[];
   totalActions: number;
   totalMachines: number;
+  upsertExecution: ReturnType<ReturnType<typeof useMaintenanceExecutions>['useUpsertExecution']>;
+  deleteExecution: ReturnType<ReturnType<typeof useMaintenanceExecutions>['useDeleteExecution']>;
 }
 
 export function useCalendarEvents(
@@ -119,6 +121,7 @@ export function useCalendarEvents(
 ): UseCalendarEventsReturn {
   const { useGetMachines } = useMachines();
   const { useGetActions } = useMaintenanceActions();
+  const { useGetExecutions, useUpsertExecution, useDeleteExecution } = useMaintenanceExecutions();
 
   const { data: machines = [], isLoading: loadingMachines } = useGetMachines();
   const { data: allActions = [], isLoading: loadingActions } = useGetActions();
@@ -127,6 +130,24 @@ export function useCalendarEvents(
     () => getVisibleDateRange(currentDate, viewMode),
     [currentDate, viewMode]
   );
+
+  const fromKey = getDateKey(start);
+  const toKey = getDateKey(end);
+
+  const { data: executions = [], isLoading: loadingExecutions } = useGetExecutions(fromKey, toKey);
+  const upsertExecution = useUpsertExecution();
+  const deleteExecution = useDeleteExecution();
+
+  // Build execution lookup: "actionId-dateKey" → execution
+  const executionMap = useMemo(() => {
+    const map = new Map<string, MaintenanceExecution>();
+    for (const exec of executions) {
+      // scheduledDate comes back as ISO string, extract the date part
+      const dateKey = exec.scheduledDate.substring(0, 10);
+      map.set(`${exec.actionId}-${dateKey}`, exec);
+    }
+    return map;
+  }, [executions]);
 
   const events = useMemo(() => {
     if (!machines.length || !allActions.length) return [];
@@ -145,18 +166,20 @@ export function useCalendarEvents(
       const occurrences = generateOccurrences(action, start, end);
       for (const date of occurrences) {
         const dateKey = getDateKey(date);
+        const eventId = `${action.id}-${dateKey}`;
         result.push({
-          id: `${action.id}-${dateKey}`,
+          id: eventId,
           action,
           machine,
           date,
           dateKey,
+          execution: executionMap.get(eventId),
         });
       }
     }
 
     return result;
-  }, [machines, allActions, start, end]);
+  }, [machines, allActions, start, end, executionMap]);
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {};
@@ -175,9 +198,11 @@ export function useCalendarEvents(
     events,
     eventsByDate,
     daysWithEvents,
-    isLoading: loadingMachines || loadingActions,
+    isLoading: loadingMachines || loadingActions || loadingExecutions,
     machines,
     totalActions: allActions.length,
     totalMachines: machines.length,
+    upsertExecution,
+    deleteExecution,
   };
 }

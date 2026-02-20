@@ -72,12 +72,54 @@ export interface AuthorizationMatrix {
   department?: string;
   updatedDate: string;
   authorizations: Record<string, boolean>;
+  defaultShiftId?: string | null;
+  defaultShiftName?: string | null;
 }
 
 export interface ListOption {
   id: string;
   listType: string;
   value: string;
+}
+
+export interface MaintenanceExecution {
+  id: string;
+  actionId: string;
+  machineId: string;
+  scheduledDate: string;
+  status: 'PENDING' | 'COMPLETED' | 'SKIPPED';
+  actualTime: number | null;
+  completedById: string | null;
+  completedByName: string | null;
+  completedDate: string | null;
+  notes: string | null;
+}
+
+export interface ExecutionStats {
+  actionId: string;
+  totalCompleted: number;
+  totalSkipped: number;
+  totalRecords: number;
+  totalPlanned: number;
+  lastCompletedDate: string | null;
+  avgActualTime: number | null;
+  completionRate: number;
+}
+
+export interface Operator {
+  id: string;
+  operatorName: string;
+  email: string;
+  department: string;
+}
+
+export interface MaintenanceSummaryRow {
+  machineId: string;
+  finalCode: string;
+  description: string;
+  area: string;
+  efficiency: number;       // 0-100, or -1 for N/A
+  weeklyData: number[];     // 48 elements: 0=red, 1=green, 2=yellow, -1=neutral
 }
 
 export interface MachineDocument {

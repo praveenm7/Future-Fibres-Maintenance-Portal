@@ -3,6 +3,7 @@ import { api } from '@/services/api';
 import type {
     DashboardFilters,
     OverviewDashboardData,
+    ExecutionSummaryData,
     NCAnalyticsDashboardData,
     EquipmentHealthDashboardData,
     SparePartsDashboardData,
@@ -57,6 +58,16 @@ export const useDashboards = () => {
         });
     };
 
+    const useExecutionSummary = (filters?: DashboardFilters) => {
+        return useQuery({
+            queryKey: ['dashboards', 'execution-summary', filters],
+            queryFn: () => api.get<ExecutionSummaryData>(
+                `/dashboards/execution-summary${buildFilterParams(filters)}`
+            ),
+            staleTime: 60000,
+        });
+    };
+
     const useWorkforce = () => {
         return useQuery({
             queryKey: ['dashboards', 'workforce'],
@@ -67,6 +78,7 @@ export const useDashboards = () => {
 
     return {
         useOverview,
+        useExecutionSummary,
         useNCAnalytics,
         useEquipmentHealth,
         useSparePartsAnalytics,

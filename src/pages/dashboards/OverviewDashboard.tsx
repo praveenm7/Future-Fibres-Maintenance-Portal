@@ -5,6 +5,8 @@ import {
     Clock,
     Package,
     ShieldCheck,
+    CheckCircle2,
+    TrendingUp,
 } from 'lucide-react';
 import {
     PieChart, Pie, Cell,
@@ -40,8 +42,9 @@ const formatMonth = (month: string) => {
 };
 
 export default function OverviewDashboard() {
-    const { useOverview } = useDashboards();
+    const { useOverview, useExecutionSummary } = useDashboards();
     const { data, isLoading } = useOverview();
+    const { data: execData, isLoading: execLoading } = useExecutionSummary();
 
     return (
         <DashboardShell
@@ -49,7 +52,7 @@ export default function OverviewDashboard() {
             subtitle="High-level operational snapshot across all maintenance areas"
         >
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
                 <KPICard
                     title="Total Machines"
                     value={data?.kpis.totalMachines ?? 0}
@@ -92,6 +95,21 @@ export default function OverviewDashboard() {
                     suffix="%"
                     colorClass="text-success"
                     isLoading={isLoading}
+                />
+                <KPICard
+                    title="Done This Month"
+                    value={execData ? `${execData.kpis.completedThisMonth} / ${execData.kpis.plannedThisMonth}` : '0'}
+                    icon={CheckCircle2}
+                    colorClass="text-emerald-600"
+                    isLoading={execLoading}
+                />
+                <KPICard
+                    title="Completion Rate"
+                    value={execData?.kpis.completionRate ?? 0}
+                    icon={TrendingUp}
+                    suffix="%"
+                    colorClass="text-emerald-600"
+                    isLoading={execLoading}
                 />
             </div>
 
@@ -151,7 +169,7 @@ export default function OverviewDashboard() {
             </div>
 
             {/* Charts Row 2 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <ChartCard title="NC Trend (Last 12 Months)">
                     {data?.ncMonthlyTrend && data.ncMonthlyTrend.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
@@ -173,6 +191,26 @@ export default function OverviewDashboard() {
                     ) : (
                         <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
                             No trend data available
+                        </div>
+                    )}
+                </ChartCard>
+
+                <ChartCard title="Completion Trend (Last 6 Months)">
+                    {execData?.completionTrend && execData.completionTrend.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={execData.completionTrend}>
+                                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                                <XAxis dataKey="month" tickFormatter={formatMonth} tick={{ fontSize: 11 }} />
+                                <YAxis tick={{ fontSize: 11 }} />
+                                <Tooltip labelFormatter={formatMonth} />
+                                <Legend />
+                                <Bar dataKey="completed" name="Completed" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="planned" name="Planned" fill="hsl(215, 16%, 67%)" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                            No execution data yet
                         </div>
                     )}
                 </ChartCard>

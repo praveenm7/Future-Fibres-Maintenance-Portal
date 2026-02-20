@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ReportToolbar } from '@/components/ui/ReportToolbar';
 import { useMachines } from '@/hooks/useMachines';
 import { useMaintenanceActions } from '@/hooks/useMaintenanceActions';
+import { useMaintenanceExecutions } from '@/hooks/useMaintenanceExecutions';
 import { useSpareParts } from '@/hooks/useSpareParts';
 import { useNonConformities } from '@/hooks/useNonConformities';
 import { exportToExcel, formatDateForExport, getExportTimestamp } from '@/lib/exportExcel';
@@ -10,7 +11,7 @@ import { printReport } from '@/lib/printReport';
 import type { NonConformity } from '@/types/maintenance';
 import {
   Loader2, Wrench, Package, AlertTriangle, ImageIcon,
-  Clock, Check, ExternalLink, MapPin, Factory, Hash, User, Minus
+  Clock, Check, ExternalLink, MapPin, Factory, Hash, User, Minus, TrendingUp
 } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002/api';
@@ -59,6 +60,7 @@ function PeriodicityBadge({ periodicity }: { periodicity: string }) {
 export default function MaintenancePlanReport() {
   const { useGetMachines } = useMachines();
   const { useGetActions } = useMaintenanceActions();
+  const { useGetExecutionStats } = useMaintenanceExecutions();
   const { useGetParts } = useSpareParts();
   const { useGetNCs } = useNonConformities();
 
@@ -72,8 +74,20 @@ export default function MaintenancePlanReport() {
   }, [machines, selectedMachineId]);
 
   const { data: machineActions = [], isLoading: loadingActions } = useGetActions(selectedMachineId);
+  const { data: executionStats = [] } = useGetExecutionStats(selectedMachineId);
   const { data: machineParts = [], isLoading: loadingParts } = useGetParts(selectedMachineId);
   const { data: machineNCs = [], isLoading: loadingNCs } = useGetNCs(selectedMachineId);
+
+  // Build a lookup map for execution stats by actionId
+  const statsMap = useMemo(() => new Map(executionStats.map(s => [s.actionId, s])), [executionStats]);
+
+  // Overall completion rate for this machine (planned vs completed)
+  const overallCompletionRate = useMemo(() => {
+    if (executionStats.length === 0) return null;
+    const totalCompleted = executionStats.reduce((sum, s) => sum + s.totalCompleted, 0);
+    const totalPlanned = executionStats.reduce((sum, s) => sum + s.totalPlanned, 0);
+    return totalPlanned > 0 ? Math.round((totalCompleted / totalPlanned) * 100) : 0;
+  }, [executionStats]);
 
   const selectedMachine = machines.find(m => m.id === selectedMachineId);
   const isLoadingData = loadingActions || loadingParts || loadingNCs;
@@ -86,9 +100,16 @@ export default function MaintenancePlanReport() {
     </div>`;
 
     const actionsTable = `<div class="section-title">Maintenance Actions</div>
-    <table><thead><tr><th>Action</th><th>Periodicity</th><th>Time (min)</th><th>Maint. In Charge</th></tr></thead>
-    <tbody>${machineActions.length === 0 ? '<tr><td colspan="4" style="text-align:center">No actions defined</td></tr>' :
-      machineActions.map(a => `<tr><td>${a.action}</td><td>${a.periodicity}</td><td style="text-align:center">${a.timeNeeded}</td><td style="text-align:center">${a.maintenanceInCharge ? 'Yes' : 'No'}</td></tr>`).join('')}
+    <table><thead><tr><th>Action</th><th>Periodicity</th><th>Time (min)</th><th>Maint.</th><th>Done</th><th>Rate</th><th>Avg Time</th><th>Last Done</th></tr></thead>
+    <tbody>${machineActions.length === 0 ? '<tr><td colspan="8" style="text-align:center">No actions defined</td></tr>' :
+      machineActions.map(a => {
+        const stats = statsMap.get(a.id);
+        const done = stats && stats.totalPlanned > 0 ? `${stats.totalCompleted}/${stats.totalPlanned}` : '—';
+        const rate = stats && stats.totalPlanned > 0 ? `${stats.completionRate}%` : '—';
+        const avgTime = stats?.avgActualTime != null ? `${Math.round(stats.avgActualTime)}m / ${a.timeNeeded}m` : '—';
+        const lastDone = stats?.lastCompletedDate ? new Date(stats.lastCompletedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '—';
+        return `<tr><td>${a.action}</td><td>${a.periodicity}</td><td style="text-align:center">${a.timeNeeded}</td><td style="text-align:center">${a.maintenanceInCharge ? 'Yes' : 'No'}</td><td style="text-align:center">${done}</td><td style="text-align:center">${rate}</td><td style="text-align:center">${avgTime}</td><td>${lastDone}</td></tr>`;
+      }).join('')}
     </tbody></table>`;
 
     const partsTable = `<div class="section-title">Spare Parts</div>
@@ -121,10 +142,17 @@ export default function MaintenancePlanReport() {
       sheets: [
         {
           name: 'Actions',
-          headers: ['Action', 'Periodicity', 'Time (min)', 'Maintenance In Charge'],
-          rows: machineActions.map(a => [
-            a.action, a.periodicity, a.timeNeeded, a.maintenanceInCharge ? 'Yes' : 'No'
-          ]),
+          headers: ['Action', 'Periodicity', 'Time (min)', 'Maintenance In Charge', 'Completed', 'Planned', 'Rate %', 'Avg Actual Time', 'Last Done'],
+          rows: machineActions.map(a => {
+            const stats = statsMap.get(a.id);
+            return [
+              a.action, a.periodicity, a.timeNeeded, a.maintenanceInCharge ? 'Yes' : 'No',
+              stats?.totalCompleted ?? '', stats?.totalPlanned ?? '',
+              stats && stats.totalPlanned > 0 ? stats.completionRate : '',
+              stats?.avgActualTime != null ? Math.round(stats.avgActualTime) : '',
+              stats?.lastCompletedDate ? new Date(stats.lastCompletedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''
+            ];
+          }),
         },
         {
           name: 'Spare Parts',
@@ -190,6 +218,9 @@ export default function MaintenancePlanReport() {
               <QuickStat icon={<Wrench className="h-3.5 w-3.5" />} value={machineActions.length} label="Actions" />
               <QuickStat icon={<Package className="h-3.5 w-3.5" />} value={machineParts.length} label="Parts" />
               <QuickStat icon={<AlertTriangle className="h-3.5 w-3.5" />} value={machineNCs.length} label="NCs" />
+              {overallCompletionRate !== null && (
+                <QuickStat icon={<TrendingUp className="h-3.5 w-3.5" />} value={overallCompletionRate} label="% Done" />
+              )}
               <div className="flex items-center px-3">
                 <ReportToolbar onPrint={handlePrint} onExportExcel={handleExportExcel} />
               </div>
@@ -211,37 +242,81 @@ export default function MaintenancePlanReport() {
               <table className="data-table text-xs">
                 <thead>
                   <tr>
-                    <th className="w-[40%]">Action</th>
+                    <th className="w-[30%]">Action</th>
                     <th>Periodicity</th>
                     <th className="text-center">Time</th>
-                    <th className="text-center">Maint. In Charge</th>
+                    <th className="text-center">Maint.</th>
+                    <th className="text-center">Done</th>
+                    <th className="text-center">Rate</th>
+                    <th className="text-center">Avg Time</th>
+                    <th>Last Done</th>
                   </tr>
                 </thead>
                 <tbody>
                   {machineActions.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="text-center py-8 text-muted-foreground">
+                      <td colSpan={8} className="text-center py-8 text-muted-foreground">
                         <Wrench className="h-6 w-6 mx-auto mb-1.5 opacity-15" />
                         <p className="text-xs">No maintenance actions defined</p>
                       </td>
                     </tr>
                   ) : (
-                    machineActions.map((action) => (
-                      <tr key={action.id}>
-                        <td className="font-medium">{action.action}</td>
-                        <td><PeriodicityBadge periodicity={action.periodicity} /></td>
-                        <td className="text-center">
-                          <span className="font-mono text-muted-foreground">{action.timeNeeded} min</span>
-                        </td>
-                        <td className="text-center">
-                          {action.maintenanceInCharge ? (
-                            <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400 mx-auto" strokeWidth={2.5} />
-                          ) : (
-                            <Minus className="h-4 w-4 text-muted-foreground/30 mx-auto" />
-                          )}
-                        </td>
-                      </tr>
-                    ))
+                    machineActions.map((action) => {
+                      const stats = statsMap.get(action.id);
+                      return (
+                        <tr key={action.id}>
+                          <td className="font-medium">{action.action}</td>
+                          <td><PeriodicityBadge periodicity={action.periodicity} /></td>
+                          <td className="text-center">
+                            <span className="font-mono text-muted-foreground">{action.timeNeeded} min</span>
+                          </td>
+                          <td className="text-center">
+                            {action.maintenanceInCharge ? (
+                              <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400 mx-auto" strokeWidth={2.5} />
+                            ) : (
+                              <Minus className="h-4 w-4 text-muted-foreground/30 mx-auto" />
+                            )}
+                          </td>
+                          <td className="text-center">
+                            {stats && stats.totalPlanned > 0 ? (
+                              <span className="font-mono text-muted-foreground">{stats.totalCompleted}/{stats.totalPlanned}</span>
+                            ) : (
+                              <span className="text-muted-foreground/30">—</span>
+                            )}
+                          </td>
+                          <td className="text-center">
+                            {stats && stats.totalPlanned > 0 ? (
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${
+                                stats.completionRate >= 75
+                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400'
+                                  : stats.completionRate >= 50
+                                    ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
+                                    : 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                              }`}>
+                                {stats.completionRate}%
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground/30">—</span>
+                            )}
+                          </td>
+                          <td className="text-center">
+                            {stats?.avgActualTime != null ? (
+                              <span className="font-mono text-muted-foreground">
+                                {Math.round(stats.avgActualTime)}m
+                                <span className="text-muted-foreground/50"> / {action.timeNeeded}m</span>
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground/30">—</span>
+                            )}
+                          </td>
+                          <td className="whitespace-nowrap text-muted-foreground">
+                            {stats?.lastCompletedDate
+                              ? new Date(stats.lastCompletedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+                              : <span className="text-muted-foreground/30">—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

@@ -18,6 +18,9 @@ export const useAuthMatrix = () => {
             mutationFn: (data: Partial<AuthorizationMatrix>) => api.post<AuthorizationMatrix>('/auth-matrix', data),
             onSuccess: () => {
                 queryClient.invalidateQueries({ queryKey: ['auth-matrix'] });
+                queryClient.invalidateQueries({ queryKey: ['shift-roster'] });
+                queryClient.invalidateQueries({ queryKey: ['daily-schedule'] });
+                queryClient.invalidateQueries({ queryKey: ['operators'] });
                 toast.success('Authorization created successfully');
             },
             onError: (error: Error) => {
@@ -32,6 +35,9 @@ export const useAuthMatrix = () => {
                 api.put<AuthorizationMatrix>(`/auth-matrix/${id}`, data),
             onSuccess: () => {
                 queryClient.invalidateQueries({ queryKey: ['auth-matrix'] });
+                queryClient.invalidateQueries({ queryKey: ['shift-roster'] });
+                queryClient.invalidateQueries({ queryKey: ['daily-schedule'] });
+                queryClient.invalidateQueries({ queryKey: ['operators'] });
                 toast.success('Authorization updated successfully');
             },
             onError: (error: Error) => {

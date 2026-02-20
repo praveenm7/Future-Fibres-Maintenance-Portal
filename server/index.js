@@ -18,6 +18,9 @@ const authMatrixRouter = require('./routes/authMatrix');
 const adminRouter = require('./routes/admin');
 const dashboardsRouter = require('./routes/dashboards');
 const documentsRouter = require('./routes/documents');
+const maintenanceExecutionsRouter = require('./routes/maintenanceExecutions');
+const scheduleRouter = require('./routes/schedule');
+const shiftsRouter = require('./routes/shifts');
 const requestLogger = require('./middleware/requestLogger');
 
 const app = express();
@@ -54,6 +57,9 @@ app.use('/api/auth-matrix', authMatrixRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/dashboards', dashboardsRouter);
 app.use('/api/documents', documentsRouter);
+app.use('/api/maintenance-executions', maintenanceExecutionsRouter);
+app.use('/api/schedule', scheduleRouter);
+app.use('/api/shifts', shiftsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
