@@ -4,12 +4,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ActionButton } from '@/components/ui/ActionButton';
-import { FormField, SelectField, InputField, CheckboxField } from '@/components/ui/FormField';
+import { FormField, SelectField, InputField, CheckboxField, ComboboxField } from '@/components/ui/FormField';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Machine } from '@/types/maintenance';
 import { Eye, Upload, Printer, FileText, BookOpen, Save, Trash, Plus, RotateCcw, Loader2, X, ScanLine, ImageIcon } from 'lucide-react';
 import { useMachines } from '@/hooks/useMachines';
 import { useListOptions } from '@/hooks/useListOptions';
+import { useAuthMatrix } from '@/hooks/useAuthMatrix';
 import { useMachineDocuments } from '@/hooks/useMachineDocuments';
 import { FileUploadDialog } from '@/components/machines/FileUploadDialog';
 import { PrintLabelDialog } from '@/components/machines/PrintLabelDialog';
@@ -41,7 +42,7 @@ const defaultValues: MachineFormValues = {
   authorizationGroup: '',
   maintenanceNeeded: false,
   maintenanceOnHold: false,
-  personInCharge: '',
+  personInChargeID: '',
 };
 
 export default function MachineManagement() {
@@ -58,6 +59,12 @@ export default function MachineManagement() {
   const { data: typeOptions = [] } = useGetListOptions('MACHINE_TYPE');
   const { data: groupOptions = [] } = useGetListOptions('MACHINE_GROUP');
   const { data: areaOptions = [] } = useGetListOptions('AREA');
+  const { useGetMatrices } = useAuthMatrix();
+  const { data: authMatrixUsers = [], isLoading: loadingUsers } = useGetMatrices();
+  const operatorOptions = authMatrixUsers.map((u) => ({
+    value: u.operatorId || u.id,
+    label: u.operatorName,
+  }));
   const createMachineMutation = useCreateMachine();
   const updateMachineMutation = useUpdateMachine();
   const deleteMachineMutation = useDeleteMachine();
@@ -134,7 +141,7 @@ export default function MachineManagement() {
         authorizationGroup: String(machine.authorizationGroup ?? ''),
         maintenanceNeeded: machine.maintenanceNeeded ?? false,
         maintenanceOnHold: machine.maintenanceOnHold ?? false,
-        personInCharge: String(machine.personInCharge ?? ''),
+        personInChargeID: machine.personInChargeID ? String(machine.personInChargeID) : '',
       });
     }
   };
@@ -197,6 +204,7 @@ export default function MachineManagement() {
         const newMachine = {
           imageUrl: '',
           ...data,
+          personInChargeID: data.personInChargeID ? parseInt(data.personInChargeID, 10) : null,
         };
         const created = await createMachineMutation.mutateAsync(newMachine);
 
@@ -223,14 +231,13 @@ export default function MachineManagement() {
         reset(defaultValues);
         setImageUrl('');
       } else if (mode === 'modify') {
-        const selectedMachine = machines.find(m => m.id === selectedMachineId);
         await updateMachineMutation.mutateAsync({
           id: selectedMachineId,
           data: {
             id: selectedMachineId,
             imageUrl,
             ...data,
-            personInChargeID: selectedMachine?.personInChargeID ?? null,
+            personInChargeID: data.personInChargeID ? parseInt(data.personInChargeID, 10) : null,
           } as Machine,
         });
         // Reset form with current values to clear dirty state
@@ -673,10 +680,15 @@ export default function MachineManagement() {
                   checked={formValues.maintenanceOnHold}
                   onChange={(v) => setValue('maintenanceOnHold', v, { shouldDirty: true })}
                 />
-                <InputField
+                <ComboboxField
                   label="Person In Charge"
-                  value={formValues.personInCharge}
-                  onChange={(v) => setValue('personInCharge', v, { shouldDirty: true })}
+                  value={formValues.personInChargeID}
+                  onChange={(v) => setValue('personInChargeID', v, { shouldDirty: true })}
+                  options={operatorOptions}
+                  placeholder="Select person..."
+                  searchPlaceholder="Search operators..."
+                  emptyMessage={loadingUsers ? 'Loading...' : 'No operators found.'}
+                  disabled={mode === 'delete'}
                 />
               </div>
             </div>

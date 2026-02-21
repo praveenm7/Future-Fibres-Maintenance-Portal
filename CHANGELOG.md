@@ -4,18 +4,35 @@
 **Repository:** `d:\Repos\Maintenance Dashboard App\Future-Fibres-Maintenance-Portal`
 **Stack:** React 18 + TypeScript + Vite | Express + Node.js | SQL Server
 **Branch:** `main`
-**Last Updated:** 2026-02-20
+**Last Updated:** 2026-02-21
 
 ---
 
-## UNCOMMITTED CHANGES (Current Session — 2026-02-21)
+## UNCOMMITTED CHANGES
 
-<!-- QA AUDIT CHANGES — To revert all QA fixes, revert all changes after this comment -->
-<!-- Individual changes can be reverted by restoring the original code noted in each section -->
+### Feature: Person In Charge — Searchable Dropdown from Auth Matrix
+
+Replaced the free-text "Person In Charge" input in Machine Management with a searchable combobox (Popover + Command/cmdk) populated from auth matrix users. Also fixed two data-flow bugs: in New mode `personInChargeID` was never sent (always NULL in DB), and in Modify mode the submit handler hardcoded the original machine's stale ID, ignoring user changes.
+
+**New Component:** `ComboboxField` — reusable searchable dropdown following the existing `SelectField`/`InputField` pattern. Uses Radix Popover + cmdk (both already installed but previously unused). Supports search filtering, keyboard navigation, toggle-to-clear, disabled state, and error display.
+
+**Files Modified:**
+
+| File | Changes |
+|------|---------|
+| `src/components/ui/FormField.tsx` | Added `ComboboxField` export (~85 lines) using Popover + Command pattern |
+| `src/lib/schemas/machineSchema.ts` | Renamed `personInCharge` (free text) → `personInChargeID` (operator ID string) |
+| `src/pages/MachineManagement.tsx` | Fetches auth matrix users via `useAuthMatrix`; replaced `InputField` with `ComboboxField`; fixed New mode to send `personInChargeID` as integer; fixed Modify mode to use form-selected ID instead of stale machine data |
+
+---
+
+## v1.8 — 2026-02-21 (Commit `b401df4`)
+
+### QA Audit + UI Improvements
+
+ESLint cleanup, security hardening, type safety, error states, and several feature additions.
 
 ### ESLint Cleanup: Fix Pre-existing Warnings (40 → 9)
-
-<!-- ESLINT CLEANUP — Reverts: restore original imports/params from git diff -->
 
 Removed 15 unused imports across 10 files, prefixed 6 unused parameters with `_`, removed 2 unused variables, and suppressed 7 intentional `exhaustive-deps` warnings with `eslint-disable-next-line`. Remaining 9 problems are all in shadcn-ui auto-generated components (not user code).
 
@@ -70,8 +87,6 @@ Added security headers via `helmet.js` and API rate limiting via `express-rate-l
 | `server/routes/shifts.js` | Added validation middleware to PUT/POST |
 | `server/package.json` | Added helmet, express-rate-limit, joi dependencies |
 
-<!-- REVERT: Remove helmet/rateLimit imports and app.use() from index.js; revert database.js to simple connect(); remove validate() from route handlers; delete validate.js; revert upload.js fileFilter; npm uninstall helmet express-rate-limit joi -->
-
 ---
 
 ### QA Audit: Type Safety & Code Splitting (Frontend Core)
@@ -104,8 +119,6 @@ Fixed API service to use typed generics (`post<T, D>` instead of `any`), added 3
 | `src/hooks/useDailySchedule.ts` | Flattened config object in queryKey |
 | `src/hooks/useListOptions.ts` | `{ listType }` → `listType` in queryKey |
 
-<!-- REVERT: Restore api.ts to use `any`; revert App.tsx to direct imports; revert type assertion files to original casts; delete ErrorBoundary.tsx -->
-
 ---
 
 ### QA Audit: Error States, Empty States & Accessibility (Frontend UX)
@@ -132,8 +145,6 @@ Added error handling UI (`QueryError` component with retry button) to all 10 dat
 | `src/pages/AuthorizationReport.tsx` | Added error state + empty state |
 | `src/components/machines/ImageGallery.tsx` | Added aria-label to remove buttons |
 
-<!-- REVERT: Remove QueryError imports and isError/refetch destructuring from all pages; delete QueryError.tsx; remove aria-labels from ImageGallery.tsx -->
-
 ---
 
 ### QA Audit: ESLint Strictness
@@ -141,8 +152,6 @@ Added error handling UI (`QueryError` component with retry button) to all 10 dat
 Re-enabled `@typescript-eslint/no-unused-vars` rule (changed from `"off"` to `"warn"`) to detect dead code.
 
 **File Modified:** `eslint.config.js` — `no-unused-vars: "off"` → `"warn"`
-
-<!-- REVERT: Change "warn" back to "off" in eslint.config.js line 23 -->
 
 ---
 
@@ -192,6 +201,12 @@ The Tasks/Schedule toggle in the calendar header was previously only visible in 
 | `src/pages/MaintenanceCalendar.tsx` | Added `handleDaySubViewChange` wrapper that auto-switches to Day view when Schedule is selected from Month/Week |
 
 ---
+
+## v1.7 — 2026-02-20 (Commit `f47a09c`)
+
+### Daily Schedule, Shift Scheduling, Calendar Completion & Dashboard Enhancements
+
+Major feature release adding per-operator shift scheduling, interactive calendar completion tracking, planned-vs-completed metrics, and workforce dashboard visualizations.
 
 ### Feature: Workforce Dashboard — 4 New Visualizations + 2 New KPIs
 
@@ -793,9 +808,7 @@ database/03_stored_procedures.sql
 database/04_admin_schema.sql
 database/05_dashboard_stored_procedures.sql
 database/06_migrate_finalcodes.sql
-database/07_maintenance_executions.sql (NEW - uncommitted)
-database/08_shifts.sql (NEW - uncommitted)
-database/CHECK_PERMISSIONS.sql
+database/07_maintenance_executions.sqldatabase/08_shifts.sqldatabase/CHECK_PERMISSIONS.sql
 database/GRANT_ACCESS.sql
 database/SETUP_ALL_IN_ONE.sql
 database/SETUP_COMPLETE.sql
@@ -805,8 +818,7 @@ database/SETUP_COMPLETE.sql
 ```
 server/routes/machines.js
 server/routes/maintenanceActions.js
-server/routes/maintenanceExecutions.js (NEW - uncommitted)
-server/routes/nonConformities.js
+server/routes/maintenanceExecutions.jsserver/routes/nonConformities.js
 server/routes/ncComments.js
 server/routes/spareParts.js
 server/routes/operators.js
@@ -816,9 +828,7 @@ server/routes/documents.js
 server/routes/dashboard.js
 server/routes/dashboards.js
 server/routes/admin.js
-server/routes/schedule.js (NEW - uncommitted)
-server/routes/shifts.js (NEW - uncommitted)
-```
+server/routes/schedule.jsserver/routes/shifts.js```
 
 ### Frontend Pages (29 files)
 ```
@@ -857,18 +867,14 @@ src/pages/admin/ActivityLogs.tsx
 ```
 src/hooks/useMachines.ts
 src/hooks/useMaintenanceActions.ts
-src/hooks/useMaintenanceExecutions.ts (NEW - uncommitted)
-src/hooks/useNonConformities.ts
+src/hooks/useMaintenanceExecutions.tssrc/hooks/useNonConformities.ts
 src/hooks/useSpareParts.ts
-src/hooks/useOperators.ts (NEW - uncommitted)
-src/hooks/useListOptions.ts
+src/hooks/useOperators.tssrc/hooks/useListOptions.ts
 src/hooks/useAuthMatrix.ts
 src/hooks/useMachineDocuments.ts
 src/hooks/useDashboard.ts
 src/hooks/useDashboards.ts
-src/hooks/useDailySchedule.ts (NEW - uncommitted)
-src/hooks/useShifts.ts (NEW - uncommitted)
-src/hooks/useAdmin.ts
+src/hooks/useDailySchedule.tssrc/hooks/useShifts.tssrc/hooks/useAdmin.ts
 src/hooks/useSidebarBadges.ts
 src/hooks/useOnlineStatus.ts
 src/hooks/useUnsavedChanges.ts
@@ -899,19 +905,13 @@ Shifts (NEW)            OperatorShiftOverrides (NEW)
 /api/list-options                    — GET (by category), POST, PUT, DELETE
 /api/auth-matrix                     — GET (by machine), POST, PUT, DELETE
 /api/documents                       — GET, POST, DELETE + file serving
-/api/schedule                        — GET (?date=&breakDuration=&...) (NEW - uncommitted)
-/api/shifts                          — GET (list shifts) (NEW - uncommitted)
-/api/shifts/roster                   — GET (?date=) (NEW - uncommitted)
-/api/shifts/operators/:id/default    — PUT (set default shift) (NEW - uncommitted)
-/api/shifts/overrides                — POST (upsert), DELETE (NEW - uncommitted)
-/api/dashboard                       — GET (legacy stats)
+/api/schedule                        — GET (?date=&breakDuration=&...)/api/shifts                          — GET (list shifts)/api/shifts/roster                   — GET (?date=)/api/shifts/operators/:id/default    — PUT (set default shift)/api/shifts/overrides                — POST (upsert), DELETE/api/dashboard                       — GET (legacy stats)
 /api/dashboards/overview             — GET
 /api/dashboards/nc-analytics         — GET (?area=)
 /api/dashboards/equipment-health     — GET (?type=&area=)
 /api/dashboards/spare-parts          — GET (?area=)
 /api/dashboards/workforce            — GET
-/api/dashboards/execution-summary    — GET (NEW - uncommitted)
-/api/admin/db/*                      — Database explorer
+/api/dashboards/execution-summary    — GET/api/admin/db/*                      — Database explorer
 /api/admin/metrics/*                 — System monitoring
 /api/admin/users                     — User management
 /api/health                          — Health check

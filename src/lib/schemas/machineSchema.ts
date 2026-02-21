@@ -17,7 +17,7 @@ export const machineFormSchema = z.object({
   authorizationGroup: z.coerce.string(),
   maintenanceNeeded: z.boolean(),
   maintenanceOnHold: z.boolean(),
-  personInCharge: z.coerce.string(),
+  personInChargeID: z.coerce.string(),
 });
 
 export type MachineFormValues = z.infer<typeof machineFormSchema>;

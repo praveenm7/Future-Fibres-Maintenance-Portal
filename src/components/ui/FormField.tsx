@@ -1,6 +1,17 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from '@/components/ui/command';
 import {
   Select,
   SelectContent,
@@ -60,6 +71,93 @@ export function SelectField({ label, value, onChange, options, className = '', d
           ))}
         </SelectContent>
       </Select>
+      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+    </div>
+  );
+}
+
+interface ComboboxFieldProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  placeholder?: string;
+  searchPlaceholder?: string;
+  emptyMessage?: string;
+  className?: string;
+  disabled?: boolean;
+  required?: boolean;
+  error?: string;
+}
+
+export function ComboboxField({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder = 'Select...',
+  searchPlaceholder = 'Search...',
+  emptyMessage = 'No results found.',
+  className = '',
+  disabled = false,
+  required,
+  error,
+}: ComboboxFieldProps) {
+  const [open, setOpen] = useState(false);
+  const selectedLabel = options.find((opt) => opt.value === value)?.label;
+
+  return (
+    <div className={cn('space-y-1.5', className)}>
+      <label className="text-sm font-medium text-muted-foreground">
+        {label}
+        {required && <span className="text-destructive ml-0.5">*</span>}
+      </label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            disabled={disabled}
+            className={cn(
+              'flex h-9 min-h-[44px] sm:min-h-0 w-full justify-between font-normal',
+              !value && 'text-muted-foreground',
+              error && 'border-destructive focus:ring-destructive',
+            )}
+          >
+            {selectedLabel || placeholder}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command>
+            <CommandInput placeholder={searchPlaceholder} />
+            <CommandList>
+              <CommandEmpty>{emptyMessage}</CommandEmpty>
+              <CommandGroup>
+                {options.map((opt) => (
+                  <CommandItem
+                    key={opt.value}
+                    value={opt.label}
+                    onSelect={() => {
+                      onChange(opt.value === value ? '' : opt.value);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        value === opt.value ? 'opacity-100' : 'opacity-0',
+                      )}
+                    />
+                    {opt.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
       {error && <p className="text-xs text-destructive mt-1">{error}</p>}
     </div>
   );
