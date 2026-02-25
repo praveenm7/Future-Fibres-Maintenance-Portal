@@ -8,6 +8,7 @@ import {
     Package,
     Users,
     List,
+    Calendar,
     LayoutDashboard,
     ClipboardList,
     BarChart3,
@@ -62,6 +63,12 @@ const formItems = [
         label: 'Lists Management',
         description: 'Configure system lists and options',
         icon: List
+    },
+    {
+        path: '/maintenance-calendar',
+        label: 'Maintenance Calendar',
+        description: 'View and manage the maintenance calendar and schedule',
+        icon: Calendar
     },
 ];
 
