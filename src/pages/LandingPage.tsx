@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ClipboardList, FileBarChart, BarChart3, CircleUser, Shield, LogOut } from 'lucide-react';
+import { ClipboardList, FileBarChart, BarChart3, Headset, CircleUser, Shield, LogOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
@@ -77,7 +77,7 @@ export default function LandingPage() {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl w-full">
                     <Link
                         to="/forms"
                         className="group bg-card border border-border rounded-lg p-6 transition-all duration-200 hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5"
@@ -119,6 +119,21 @@ export default function LandingPage() {
                             <h2 className="text-xl font-semibold text-foreground">Dashboards</h2>
                             <p className="text-sm text-muted-foreground">
                                 Visual analytics for machines, maintenance, NCs, and inventory.
+                            </p>
+                        </div>
+                    </Link>
+
+                    <Link
+                        to="/support"
+                        className="group bg-card border border-border rounded-lg p-6 transition-all duration-200 hover:shadow-md hover:border-primary/40 hover:-translate-y-0.5"
+                    >
+                        <div className="flex flex-col items-center text-center space-y-3">
+                            <div className="p-3 bg-primary/8 rounded-lg group-hover:bg-primary/12 transition-colors">
+                                <Headset className="h-8 w-8 text-primary" />
+                            </div>
+                            <h2 className="text-xl font-semibold text-foreground">Support</h2>
+                            <p className="text-sm text-muted-foreground">
+                                Raise and track maintenance support tickets and requests.
                             </p>
                         </div>
                     </Link>

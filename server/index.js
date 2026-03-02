@@ -23,6 +23,9 @@ const documentsRouter = require('./routes/documents');
 const maintenanceExecutionsRouter = require('./routes/maintenanceExecutions');
 const scheduleRouter = require('./routes/schedule');
 const shiftsRouter = require('./routes/shifts');
+const supportTicketsRouter = require('./routes/supportTickets');
+const ticketCommentsRouter = require('./routes/ticketComments');
+const ticketAttachmentsRouter = require('./routes/ticketAttachments');
 const requestLogger = require('./middleware/requestLogger');
 
 const app = express();
@@ -77,6 +80,9 @@ app.use('/api/documents', documentsRouter);
 app.use('/api/maintenance-executions', maintenanceExecutionsRouter);
 app.use('/api/schedule', scheduleRouter);
 app.use('/api/shifts', shiftsRouter);
+app.use('/api/support-tickets', supportTicketsRouter);
+app.use('/api/ticket-comments', ticketCommentsRouter);
+app.use('/api/ticket-attachments', ticketAttachmentsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -104,7 +110,10 @@ app.get('/', (req, res) => {
             dashboard: '/api/dashboard',
             authMatrix: '/api/auth-matrix',
             admin: '/api/admin',
-            dashboards: '/api/dashboards'
+            dashboards: '/api/dashboards',
+            supportTickets: '/api/support-tickets',
+            ticketComments: '/api/ticket-comments',
+            ticketAttachments: '/api/ticket-attachments'
         }
     });
 });

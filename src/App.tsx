@@ -45,6 +45,11 @@ const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
 const SystemMonitoring = lazy(() => import("./pages/admin/SystemMonitoring"));
 const ActivityLogs = lazy(() => import("./pages/admin/ActivityLogs"));
 
+// Support Pages
+const SupportTickets = lazy(() => import("./pages/SupportTickets"));
+const CreateEditTicket = lazy(() => import("./pages/CreateEditTicket"));
+const SupportDashboard = lazy(() => import("./pages/SupportDashboard"));
+
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const PageLoader = () => (
@@ -112,6 +117,13 @@ const App = () => (
           <Route path="/dashboards/equipment-health" element={<MainLayout><EquipmentHealthDashboard /></MainLayout>} />
           <Route path="/dashboards/spare-parts" element={<MainLayout><SparePartsDashboard /></MainLayout>} />
           <Route path="/dashboards/workforce" element={<MainLayout><WorkforceDashboard /></MainLayout>} />
+
+          {/* Support */}
+          <Route path="/support" element={<MainLayout><SectionDashboard type="support" /></MainLayout>} />
+          <Route path="/support/tickets" element={<MainLayout><SupportTickets /></MainLayout>} />
+          <Route path="/support/create" element={<MainLayout><CreateEditTicket /></MainLayout>} />
+          <Route path="/support/tickets/:id/edit" element={<MainLayout><CreateEditTicket /></MainLayout>} />
+          <Route path="/support/dashboard" element={<MainLayout><SupportDashboard /></MainLayout>} />
 
           {/* Admin */}
           <Route path="/admin" element={<MainLayout><AdminDashboard /></MainLayout>} />

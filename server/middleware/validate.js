@@ -196,4 +196,48 @@ schemas.createShiftOverride = Joi.object({
     shiftId: Joi.number().integer().allow(null),
 });
 
+// --- Support Tickets ---
+schemas.createTicket = Joi.object({
+    machineId: Joi.number().integer().required(),
+    title: Joi.string().max(200).required(),
+    description: Joi.string().max(4000).allow(null, ''),
+    category: Joi.string().max(100).required(),
+    priority: Joi.string().valid('CRITICAL', 'HIGH', 'MEDIUM', 'LOW').required(),
+    submittedById: Joi.number().integer().required(),
+});
+
+schemas.updateTicket = Joi.object({
+    machineId: Joi.number().integer().required(),
+    title: Joi.string().max(200).required(),
+    description: Joi.string().max(4000).allow(null, ''),
+    category: Joi.string().max(100).required(),
+    priority: Joi.string().valid('CRITICAL', 'HIGH', 'MEDIUM', 'LOW').required(),
+    status: Joi.string().valid(
+        'SUBMITTED', 'APPROVED', 'ASSIGNED', 'IN PROGRESS',
+        'RESOLVED', 'CLOSED', 'CANCELLED'
+    ).required(),
+    assignedToId: Joi.number().integer().allow(null),
+    approvedById: Joi.number().integer().allow(null),
+    dueDate: Joi.date().iso().allow(null, ''),
+    resolutionNotes: Joi.string().max(4000).allow(null, ''),
+});
+
+schemas.updateTicketStatus = Joi.object({
+    status: Joi.string().valid(
+        'SUBMITTED', 'APPROVED', 'ASSIGNED', 'IN PROGRESS',
+        'RESOLVED', 'CLOSED', 'CANCELLED'
+    ).required(),
+    assignedToId: Joi.number().integer().allow(null),
+    approvedById: Joi.number().integer().allow(null),
+    dueDate: Joi.date().iso().allow(null, ''),
+    resolutionNotes: Joi.string().max(4000).allow(null, ''),
+});
+
+// --- Ticket Comments ---
+schemas.createTicketComment = Joi.object({
+    ticketId: Joi.number().integer().required(),
+    comment: Joi.string().max(2000).required(),
+    operatorId: Joi.number().integer().required(),
+});
+
 module.exports = { validate, validateQuery, schemas };

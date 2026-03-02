@@ -4,6 +4,7 @@ import {
   FileBarChart,
   BarChart3,
   Shield,
+  Headset,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -11,6 +12,7 @@ const tabs = [
   { path: '/forms', label: 'Forms', icon: ClipboardList },
   { path: '/reports', label: 'Reports', icon: FileBarChart },
   { path: '/dashboards', label: 'Dashboards', icon: BarChart3 },
+  { path: '/support', label: 'Support', icon: Headset },
   { path: '/admin', label: 'Admin', icon: Shield },
 ];
 
@@ -24,6 +26,7 @@ export function BottomNav() {
     }
     if (path === '/reports') return location.pathname.startsWith('/reports');
     if (path === '/dashboards') return location.pathname.startsWith('/dashboards');
+    if (path === '/support') return location.pathname.startsWith('/support');
     return false;
   };
 

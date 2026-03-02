@@ -13,12 +13,14 @@ import {
     ClipboardList,
     BarChart3,
     Shield,
-    ArrowRight
+    ArrowRight,
+    Headset,
+    Plus,
 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 
 interface SectionDashboardProps {
-    type: 'forms' | 'reports';
+    type: 'forms' | 'reports' | 'support';
 }
 
 const formItems = [
@@ -105,9 +107,30 @@ const reportItems = [
     },
 ];
 
+const supportItems = [
+    {
+        path: '/support/tickets',
+        label: 'Support Tickets',
+        description: 'View and manage all maintenance support tickets',
+        icon: Headset
+    },
+    {
+        path: '/support/create',
+        label: 'Create Ticket',
+        description: 'Submit a new maintenance support request',
+        icon: Plus
+    },
+    {
+        path: '/support/dashboard',
+        label: 'Support Dashboard',
+        description: 'Ticket analytics, KPIs and trend overview',
+        icon: BarChart3
+    },
+];
+
 export default function SectionDashboard({ type }: SectionDashboardProps) {
-    const items = type === 'forms' ? formItems : reportItems;
-    const title = type === 'forms' ? 'Forms' : 'Reports';
+    const items = type === 'forms' ? formItems : type === 'reports' ? reportItems : supportItems;
+    const title = type === 'forms' ? 'Forms' : type === 'reports' ? 'Reports' : 'Support';
 
     return (
         <div className="animate-in fade-in duration-300">

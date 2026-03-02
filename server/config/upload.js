@@ -7,6 +7,7 @@ const fs = require('fs');
 const UPLOAD_DIRS = {
     photos: path.join(__dirname, '..', 'uploads', 'photos'),
     documents: path.join(__dirname, '..', 'uploads', 'documents'),
+    tickets: path.join(__dirname, '..', 'uploads', 'tickets'),
 };
 
 Object.values(UPLOAD_DIRS).forEach(dir => {
@@ -62,4 +63,15 @@ const uploadDocument = multer({
     },
 });
 
-module.exports = { uploadPhoto, uploadDocument, UPLOAD_DIRS };
+// Ticket attachment upload - same validation as documents, stored in tickets/
+const uploadTicketAttachment = multer({
+    storage: createStorage('tickets'),
+    limits: { fileSize: 20 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        const expectedMime = DOCUMENT_MIME_MAP[ext];
+        cb(null, !!expectedMime && file.mimetype === expectedMime);
+    },
+});
+
+module.exports = { uploadPhoto, uploadDocument, uploadTicketAttachment, UPLOAD_DIRS };

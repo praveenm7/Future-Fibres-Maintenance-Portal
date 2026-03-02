@@ -5,6 +5,7 @@ import type { OverviewDashboardData } from '@/types/dashboards';
 export interface SidebarBadges {
   nonConformities?: number;
   spareParts?: number;
+  openTickets?: number;
 }
 
 export function useSidebarBadges(enabled: boolean) {
@@ -19,6 +20,7 @@ export function useSidebarBadges(enabled: boolean) {
   if (data?.kpis) {
     if (data.kpis.activeNCs > 0) badges.nonConformities = data.kpis.activeNCs;
     if (data.kpis.criticalSpareParts > 0) badges.spareParts = data.kpis.criticalSpareParts;
+    if ((data.kpis as Record<string, number>).openSupportTickets > 0) badges.openTickets = (data.kpis as Record<string, number>).openSupportTickets;
   }
 
   return badges;

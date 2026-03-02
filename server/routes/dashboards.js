@@ -16,6 +16,17 @@ router.get('/overview', async (req, res) => {
         const ncMonthlyTrend = result.recordsets[3];
         const maintenanceByPeriodicity = result.recordsets[4];
 
+        // Fetch open support tickets count for sidebar badge
+        let openSupportTickets = 0;
+        try {
+            const ticketResult = await pool.request().query(
+                "SELECT COUNT(*) AS OpenCount FROM SupportTickets WHERE Status NOT IN ('CLOSED', 'CANCELLED', 'RESOLVED')"
+            );
+            openSupportTickets = ticketResult.recordset[0].OpenCount;
+        } catch (e) {
+            // SupportTickets table may not exist yet — ignore
+        }
+
         res.json({
             kpis: {
                 totalMachines: kpis.TotalMachines,
@@ -23,7 +34,8 @@ router.get('/overview', async (req, res) => {
                 activeNCs: kpis.ActiveNCs,
                 overdueNCs: kpis.OverdueNCs,
                 criticalSpareParts: kpis.CriticalSpareParts,
-                complianceRate: kpis.ComplianceRate
+                complianceRate: kpis.ComplianceRate,
+                openSupportTickets,
             },
             ncStatusDistribution: ncStatusDist.map(r => ({
                 status: r.Status, count: r.Count
@@ -354,6 +366,43 @@ router.get('/execution-summary', async (req, res) => {
         });
     } catch (err) {
         console.error('Error fetching execution summary:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/dashboards/support
+router.get('/support', async (req, res) => {
+    try {
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .execute('sp_GetSupportDashboard');
+
+        const kpis = result.recordsets[0][0];
+        const byStatus = result.recordsets[1];
+        const byPriority = result.recordsets[2];
+        const byCategory = result.recordsets[3];
+        const topMachines = result.recordsets[4];
+        const monthlyTrend = result.recordsets[5];
+
+        res.json({
+            kpis: {
+                openTickets: kpis.OpenTickets,
+                overdueTickets: kpis.OverdueTickets,
+                avgResolutionDays: kpis.AvgResolutionDays,
+                criticalOpen: kpis.CriticalOpen,
+                ticketsThisMonth: kpis.TicketsThisMonth,
+                resolutionRate: kpis.ResolutionRate,
+            },
+            ticketsByStatus: byStatus.map(r => ({ status: r.Status, count: r.Count })),
+            ticketsByPriority: byPriority.map(r => ({ priority: r.Priority, count: r.Count })),
+            ticketsByCategory: byCategory.map(r => ({ category: r.Category, count: r.Count })),
+            topMachinesByTickets: topMachines.map(r => ({
+                finalCode: r.FinalCode, description: r.Description, ticketCount: r.TicketCount
+            })),
+            monthlyTrend: monthlyTrend.map(r => ({ month: r.Month, count: r.Count })),
+        });
+    } catch (err) {
+        console.error('Error fetching support dashboard:', err);
         res.status(500).json({ error: err.message });
     }
 });

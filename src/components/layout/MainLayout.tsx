@@ -25,6 +25,8 @@ import {
   Search,
   X,
   Calendar,
+  Headset,
+  Plus,
   LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -88,6 +90,16 @@ const sections: NavSection[] = [
       { path: '/dashboards/spare-parts', label: 'Spare Parts', icon: Package },
       { path: '/dashboards/workforce', label: 'Workforce', icon: Users },
     ],
+  },
+  {
+    key: 'support',
+    label: 'Support',
+    links: [
+      { path: '/support/tickets', label: 'Support Tickets', icon: Headset, badgeKey: 'openTickets' },
+      { path: '/support/create', label: 'Create Ticket', icon: Plus },
+      { path: '/support/dashboard', label: 'Support Dashboard', icon: BarChart3 },
+    ],
+    isActiveCheck: (pathname, link) => pathname.startsWith(link.path),
   },
   {
     key: 'admin',
@@ -179,10 +191,10 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
       // Ctrl+1-4 to navigate sections
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
-        const sectionKeys = ['forms', 'reports', 'dashboards', 'admin'];
-        const sectionPaths = ['/forms', '/reports', '/dashboards', '/admin'];
+        const sectionKeys = ['forms', 'reports', 'dashboards', 'support', 'admin'];
+        const sectionPaths = ['/forms', '/reports', '/dashboards', '/support', '/admin'];
         const num = parseInt(e.key);
-        if (num >= 1 && num <= 4) {
+        if (num >= 1 && num <= 5) {
           e.preventDefault();
           navigate(sectionPaths[num - 1]);
           setExpandedSections((prev) => ({ ...prev, [sectionKeys[num - 1]]: true }));
