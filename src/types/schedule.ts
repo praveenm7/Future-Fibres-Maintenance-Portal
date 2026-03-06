@@ -102,10 +102,42 @@ export interface DailyScheduleSummary {
 export interface DailySchedule {
     date: string;               // "2026-02-20"
     config: ScheduleConfig;
+    hasOverrides?: boolean;
     shifts: ShiftSchedule[];
     unassigned: UnassignedOperator[];
     unscheduled: UnscheduledTask[];
     summary: DailyScheduleSummary;
+}
+
+// --- Shift roster types (for config sheet) ---
+
+// --- Weekly Schedule types ---
+
+export interface WeeklySchedule {
+    days: Record<string, DailySchedule>;
+    weekSummary: {
+        totalTasks: number;
+        scheduledTasks: number;
+        unscheduledTasks: number;
+        totalMinutes: number;
+        mandatoryCount: number;
+        idealCount: number;
+    };
+}
+
+// --- Timing Batch types (for month view overlays) ---
+
+export interface TaskTiming {
+    startMinute: number;
+    endMinute: number;
+    startTime: string;          // "06:00"
+    endTime: string;            // "07:00"
+    operatorName: string;
+    shiftName: string;
+}
+
+export interface TimingBatch {
+    timings: Record<string, TaskTiming>; // key: "actionId_YYYY-MM-DD"
 }
 
 // --- Shift roster types (for config sheet) ---

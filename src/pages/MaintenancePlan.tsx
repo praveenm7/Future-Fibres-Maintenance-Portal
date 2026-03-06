@@ -6,6 +6,8 @@ import { ActionButton } from '@/components/ui/ActionButton';
 import { DataTable } from '@/components/ui/DataTable';
 import { BulkActionsBar } from '@/components/ui/BulkActionsBar';
 import { SelectField, InputField, CheckboxField } from '@/components/ui/FormField';
+import { PeriodicityConfigurator } from '@/components/calendar/PeriodicityConfigurator';
+import { formatScheduleSummary } from '@/components/calendar/calendarUtils';
 import type { MaintenanceAction } from '@/types/maintenance';
 import { Plus, Pencil, Trash2, Save, X, Loader2, Wrench } from 'lucide-react';
 import { QueryError } from '@/components/ui/QueryError';
@@ -21,14 +23,14 @@ import { toast } from 'sonner';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002/api';
 const SERVER_BASE = API_BASE_URL.replace('/api', '');
 
-const months = [
-  'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
-  'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'
-];
-
 const defaultValues: MaintenanceActionFormValues = {
   action: '',
-  periodicity: '',
+  periodicity: 'WEEKLY',
+  intervalMultiplier: 1,
+  dayOfWeek: null,
+  weekOfMonth: null,
+  quarterMonth: null,
+  dayOfMonth: null,
   timeNeeded: '' as unknown as number,
   maintenanceInCharge: false,
   status: '',
@@ -98,6 +100,11 @@ export default function MaintenancePlan() {
       reset({
         action: item.action,
         periodicity: item.periodicity,
+        intervalMultiplier: item.intervalMultiplier ?? 1,
+        dayOfWeek: item.dayOfWeek ?? null,
+        weekOfMonth: item.weekOfMonth ?? null,
+        quarterMonth: item.quarterMonth ?? null,
+        dayOfMonth: item.dayOfMonth ?? null,
         timeNeeded: item.timeNeeded,
         maintenanceInCharge: item.maintenanceInCharge,
         status: item.status,
@@ -125,7 +132,16 @@ export default function MaintenancePlan() {
           ...data,
           status: 'IDEAL' as const,
         });
-        reset({ ...defaultValues, periodicity: data.periodicity, month: data.month });
+        reset({
+          ...defaultValues,
+          periodicity: data.periodicity,
+          intervalMultiplier: data.intervalMultiplier,
+          dayOfWeek: data.dayOfWeek,
+          weekOfMonth: data.weekOfMonth,
+          quarterMonth: data.quarterMonth,
+          dayOfMonth: data.dayOfMonth,
+          month: data.month,
+        });
       } else if (mode === 'edit' && selectedRowId) {
         await updateMutation.mutateAsync({
           id: selectedRowId,
@@ -182,11 +198,12 @@ export default function MaintenancePlan() {
 
   const columns = [
     { key: 'action', header: 'ACTION', className: 'max-w-[300px]' },
-    { key: 'periodicity', header: 'PERIODICITY' },
+    { key: 'schedule', header: 'SCHEDULE', render: (item: MaintenanceAction) => (
+      <span className="text-xs">{formatScheduleSummary(item)}</span>
+    )},
     { key: 'timeNeeded', header: 'TIME', render: (item: MaintenanceAction) => `${item.timeNeeded} min` },
     { key: 'maintenanceInCharge', header: 'MAINT. NEEDED', render: (item: MaintenanceAction) => item.maintenanceInCharge ? 'Y' : 'N' },
     { key: 'status', header: 'STATUS' },
-    { key: 'month', header: 'MONTH', render: (item: MaintenanceAction) => item.month || '-' },
     { key: 'completion', header: 'COMPLETION', render: (item: MaintenanceAction) => {
       const stats = statsMap.get(item.id);
       if (!stats || stats.totalRecords === 0) return <span className="text-muted-foreground">—</span>;
@@ -306,17 +323,19 @@ export default function MaintenancePlan() {
                   disabled={createMutation.isPending || updateMutation.isPending}
                   required error={errors.periodicity?.message} />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Schedule configuration */}
+              <PeriodicityConfigurator
+                watch={watch}
+                setValue={setValue}
+                disabled={createMutation.isPending || updateMutation.isPending}
+              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <InputField label="Time Needed (min)" value={String(formValues.timeNeeded)}
                   onChange={(v) => setValue('timeNeeded', parseInt(v) || 0, { shouldValidate: true, shouldDirty: true })}
                   type="number" min="0" disabled={createMutation.isPending || updateMutation.isPending}
                   error={errors.timeNeeded?.message} />
                 <CheckboxField label="Maintenance In Charge" checked={formValues.maintenanceInCharge}
                   onChange={(v) => setValue('maintenanceInCharge', v, { shouldDirty: true })}
-                  disabled={createMutation.isPending || updateMutation.isPending} />
-                <SelectField label="Month" value={formValues.month}
-                  onChange={(v) => setValue('month', v, { shouldDirty: true })}
-                  options={months.map(m => ({ value: m, label: m }))}
                   disabled={createMutation.isPending || updateMutation.isPending} />
               </div>
               <div className="pt-2">

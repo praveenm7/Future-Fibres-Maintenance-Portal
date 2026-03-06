@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Check, ChevronRight, Clock, Wrench } from 'lucide-react';
+import { Check, ChevronRight, Clock, Plus, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const SERVER_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002/api').replace('/api', '');
@@ -18,9 +18,10 @@ interface DayViewProps {
   events: CalendarEvent[];
   onEventClick: (event: CalendarEvent) => void;
   onToggleComplete?: (event: CalendarEvent) => void;
+  onCreateAction?: (date: Date) => void;
 }
 
-export function DayView({ currentDate, events, onEventClick, onToggleComplete }: DayViewProps) {
+export function DayView({ currentDate, events, onEventClick, onToggleComplete, onCreateAction }: DayViewProps) {
   // Group events by machine
   const machineGroups = useMemo(() => {
     const map = new Map<
@@ -73,7 +74,17 @@ export function DayView({ currentDate, events, onEventClick, onToggleComplete }:
               {' '}&middot; {formatTimeMinutes(totalTime)} total
             </p>
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {onCreateAction && (
+              <button
+                type="button"
+                onClick={() => onCreateAction(currentDate)}
+                className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md border border-dashed border-primary/40 text-primary hover:bg-primary/10 transition-colors"
+              >
+                <Plus className="h-3 w-3" />
+                Add
+              </button>
+            )}
             {periodicityBreakdown.map(({ periodicity, count }) => {
               const colors = PERIODICITY_COLORS[periodicity];
               return (
@@ -106,6 +117,16 @@ export function DayView({ currentDate, events, onEventClick, onToggleComplete }:
           <p className="text-xs text-muted-foreground/60 mt-1">
             This day has no scheduled maintenance tasks
           </p>
+          {onCreateAction && (
+            <button
+              type="button"
+              onClick={() => onCreateAction(currentDate)}
+              className="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Action
+            </button>
+          )}
         </div>
       ) : (
         machineGroups.map(({ machine, events: machineEvents }) => {

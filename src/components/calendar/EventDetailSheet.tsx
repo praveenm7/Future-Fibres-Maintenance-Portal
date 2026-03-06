@@ -30,6 +30,7 @@ import {
   PERIODICITY_COLORS,
   format,
   formatTimeMinutes,
+  formatScheduleSummary,
 } from './calendarUtils';
 
 interface EventDetailSheetProps {
@@ -196,7 +197,7 @@ export function EventDetailSheet({
                 variant="secondary"
                 className={cn(colors.bg, colors.text, 'border', colors.border)}
               >
-                {colors.label}
+                {formatScheduleSummary(action)}
               </Badge>
             </DetailRow>
 

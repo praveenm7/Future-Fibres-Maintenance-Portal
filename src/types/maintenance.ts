@@ -22,11 +22,18 @@ export interface Machine {
   imageUrl?: string;
 }
 
+export type PeriodicityUnit = 'BEFORE EACH USE' | 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+
 export interface MaintenanceAction {
   id: string;
   machineId: string;
   action: string;
-  periodicity: 'BEFORE EACH USE' | 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
+  periodicity: PeriodicityUnit;
+  intervalMultiplier: number;
+  dayOfWeek?: number | null;
+  weekOfMonth?: number | null;
+  quarterMonth?: number | null;
+  dayOfMonth?: number | null;
   timeNeeded: number;
   maintenanceInCharge: boolean;
   status: 'IDEAL' | 'MANDATORY';

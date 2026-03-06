@@ -5,6 +5,7 @@ import {
   eachDayOfInterval,
   isToday as dateFnsIsToday,
 } from 'date-fns';
+import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
@@ -19,12 +20,14 @@ interface WeekViewProps {
   currentDate: Date;
   eventsByDate: Record<string, CalendarEvent[]>;
   onEventClick: (event: CalendarEvent) => void;
+  onCreateAction?: (date: Date) => void;
 }
 
 export function WeekView({
   currentDate,
   eventsByDate,
   onEventClick,
+  onCreateAction,
 }: WeekViewProps) {
   const weekDays = useMemo(() => {
     const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -54,7 +57,7 @@ export function WeekView({
             {/* Column header */}
             <div
               className={cn(
-                'px-2 py-2 text-center border-b border-border bg-muted/30',
+                'px-2 py-2 text-center border-b border-border bg-muted/30 relative',
                 today && 'bg-primary/10'
               )}
             >
@@ -73,6 +76,16 @@ export function WeekView({
                 <div className="text-[10px] text-muted-foreground mt-0.5">
                   {formatTimeMinutes(totalTime)}
                 </div>
+              )}
+              {onCreateAction && (
+                <button
+                  type="button"
+                  onClick={() => onCreateAction(day)}
+                  className="absolute top-1 right-1 h-5 w-5 rounded flex items-center justify-center text-muted-foreground/40 hover:text-primary hover:bg-primary/10 transition-colors"
+                  title="Add action"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
               )}
             </div>
 

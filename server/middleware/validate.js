@@ -76,11 +76,16 @@ schemas.updateMachine = schemas.createMachine;
 schemas.createMaintenanceAction = Joi.object({
     machineId: Joi.number().integer().required(),
     action: Joi.string().max(500).required(),
-    periodicity: Joi.string().max(50).required(),
+    periodicity: Joi.string().valid('BEFORE EACH USE', 'DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY').required(),
+    intervalMultiplier: Joi.number().integer().min(1).max(365).default(1),
+    dayOfWeek: Joi.number().integer().min(0).max(6).allow(null),
+    weekOfMonth: Joi.number().integer().min(1).max(4).allow(null),
+    quarterMonth: Joi.number().integer().min(1).max(3).allow(null),
+    dayOfMonth: Joi.number().integer().min(1).max(28).allow(null),
     timeNeeded: Joi.number().integer().min(1).required(),
     maintenanceInCharge: Joi.boolean().required(),
     status: Joi.string().max(50).required(),
-    month: Joi.string().max(50).required(),
+    month: Joi.string().max(50).allow('').required(),
 });
 
 schemas.updateMaintenanceAction = schemas.createMaintenanceAction;

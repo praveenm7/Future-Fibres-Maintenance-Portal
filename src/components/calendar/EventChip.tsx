@@ -6,7 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { CalendarEvent, PERIODICITY_COLORS, formatTimeMinutes } from './calendarUtils';
+import { CalendarEvent, PERIODICITY_COLORS, formatTimeMinutes, formatScheduleSummary } from './calendarUtils';
 
 interface EventChipProps {
   event: CalendarEvent;
@@ -117,7 +117,7 @@ export const EventChip = memo(function EventChip({
             <Clock className="h-3 w-3" />
             <span>{event.action.timeNeeded} min</span>
             <span className="text-muted-foreground">|</span>
-            <span>{PERIODICITY_COLORS[event.action.periodicity].label}</span>
+            <span>{formatScheduleSummary(event.action)}</span>
             {isMandatory && (
               <span className="text-red-500 font-semibold">MANDATORY</span>
             )}

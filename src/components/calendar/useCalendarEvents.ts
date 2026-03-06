@@ -1,9 +1,6 @@
 import { useMemo } from 'react';
 import {
   eachDayOfInterval,
-  startOfMonth,
-  startOfYear,
-  differenceInDays,
 } from 'date-fns';
 import { useMachines } from '@/hooks/useMachines';
 import { useMaintenanceActions } from '@/hooks/useMaintenanceActions';
@@ -17,83 +14,168 @@ import {
   getMonthIndex,
 } from './calendarUtils';
 
+// Universal epoch for stable multi-interval alignment (2020-01-06 = Monday)
+const EPOCH = new Date(2020, 0, 6);
+const EPOCH_TS = EPOCH.getTime();
+const MS_PER_DAY = 86400000;
+
+/** Get day-of-week: 0=Mon..6=Sun */
+function getDayOfWeekMon(d: Date): number {
+  return (d.getDay() + 6) % 7;
+}
+
+/** Compute the nth weekday of a given month/year. */
+function nthWeekday(year: number, month: number, n: number, dow: number): Date | null {
+  const jsDow = (dow + 1) % 7;
+  const first = new Date(year, month, 1);
+  const firstDow = first.getDay();
+  const dayOffset = (jsDow - firstDow + 7) % 7;
+  const day = 1 + dayOffset + (n - 1) * 7;
+  const result = new Date(year, month, day);
+  if (result.getMonth() !== month) return null;
+  return result;
+}
+
+/** Create a safe day-of-month date, capping at 28. */
+function safeDayOfMonth(year: number, month: number, day: number): Date {
+  return new Date(year, month, Math.min(day, 28));
+}
+
 function generateOccurrences(
   action: MaintenanceAction,
   rangeStart: Date,
   rangeEnd: Date
 ): Date[] {
   const dates: Date[] = [];
+  const interval = action.intervalMultiplier ?? 1;
 
   switch (action.periodicity) {
     case 'BEFORE EACH USE': {
       return eachDayOfInterval({ start: rangeStart, end: rangeEnd });
     }
 
-    case 'WEEKLY': {
-      // Use a stable anchor: the start of the year, then step by 7 days
-      const anchor = startOfYear(rangeStart);
-      const daysDiff = differenceInDays(rangeStart, anchor);
-      const offsetToNextOccurrence = (7 - (daysDiff % 7)) % 7;
+    case 'DAILY': {
+      const daysSinceEpoch = Math.floor((rangeStart.getTime() - EPOCH_TS) / MS_PER_DAY);
+      const remainder = ((daysSinceEpoch % interval) + interval) % interval;
+      const offset = remainder === 0 ? 0 : interval - remainder;
       let current = new Date(rangeStart);
-      current.setDate(current.getDate() + offsetToNextOccurrence);
+      current.setDate(current.getDate() + offset);
       while (current <= rangeEnd) {
         dates.push(new Date(current));
         current = new Date(current);
-        current.setDate(current.getDate() + 7);
+        current.setDate(current.getDate() + interval);
+      }
+      return dates;
+    }
+
+    case 'WEEKLY': {
+      const targetDow = action.dayOfWeek ?? 0;
+      const startDow = getDayOfWeekMon(rangeStart);
+      const daysToTarget = (targetDow - startDow + 7) % 7;
+      let current = new Date(rangeStart);
+      current.setDate(current.getDate() + daysToTarget);
+
+      if (interval > 1) {
+        const weeksSinceEpoch = Math.floor((current.getTime() - EPOCH_TS) / (MS_PER_DAY * 7));
+        const weekRemainder = ((weeksSinceEpoch % interval) + interval) % interval;
+        if (weekRemainder !== 0) {
+          current.setDate(current.getDate() + (interval - weekRemainder) * 7);
+        }
+      }
+
+      while (current <= rangeEnd) {
+        if (current >= rangeStart) {
+          dates.push(new Date(current));
+        }
+        current = new Date(current);
+        current.setDate(current.getDate() + interval * 7);
       }
       return dates;
     }
 
     case 'MONTHLY': {
-      // First day of each month in range
-      let current = startOfMonth(rangeStart);
-      if (current < rangeStart) {
-        current = new Date(current);
-        current.setMonth(current.getMonth() + 1);
-        current = startOfMonth(current);
-      }
-      while (current <= rangeEnd) {
-        dates.push(new Date(current));
-        current = new Date(current);
-        current.setMonth(current.getMonth() + 1);
-        current = startOfMonth(current);
+      const hasDayOfMonth = action.dayOfMonth != null;
+      const hasWeekOfMonth = action.weekOfMonth != null;
+      const dow = action.dayOfWeek ?? 0;
+
+      const epochMonth = EPOCH.getFullYear() * 12 + EPOCH.getMonth();
+      const startMonth = rangeStart.getFullYear() * 12 + rangeStart.getMonth();
+      const endMonth = rangeEnd.getFullYear() * 12 + rangeEnd.getMonth();
+
+      let monthOffset = startMonth - epochMonth;
+      const remainder = ((monthOffset % interval) + interval) % interval;
+      let m = remainder === 0 ? startMonth : startMonth + (interval - remainder);
+
+      while (m <= endMonth) {
+        const year = Math.floor(m / 12);
+        const month = m % 12;
+        let date: Date | null;
+
+        if (hasDayOfMonth) {
+          date = safeDayOfMonth(year, month, action.dayOfMonth!);
+        } else if (hasWeekOfMonth) {
+          date = nthWeekday(year, month, action.weekOfMonth!, dow);
+        } else {
+          date = new Date(year, month, 1);
+        }
+
+        if (date && date >= rangeStart && date <= rangeEnd) {
+          dates.push(date);
+        }
+        m += interval;
       }
       return dates;
     }
 
     case 'QUARTERLY': {
-      // Quarter start months: Jan(0), Apr(3), Jul(6), Oct(9)
-      const quarterMonths = [0, 3, 6, 9];
-      let year = rangeStart.getFullYear();
-      const endYear = rangeEnd.getFullYear();
-      while (year <= endYear) {
-        for (const m of quarterMonths) {
-          const date = new Date(year, m, 1);
+      const quarterMonthOffset = (action.quarterMonth ?? 1) - 1;
+      const dayOfMonth = action.dayOfMonth ?? 1;
+
+      const epochQuarter = Math.floor(EPOCH.getMonth() / 3) + EPOCH.getFullYear() * 4;
+      const startQuarter = Math.floor(rangeStart.getMonth() / 3) + rangeStart.getFullYear() * 4;
+      const endQuarter = Math.floor(rangeEnd.getMonth() / 3) + rangeEnd.getFullYear() * 4;
+
+      let qOffset = startQuarter - epochQuarter;
+      const remainder = ((qOffset % interval) + interval) % interval;
+      let q = remainder === 0 ? startQuarter : startQuarter + (interval - remainder);
+
+      while (q <= endQuarter) {
+        const year = Math.floor(q / 4);
+        const quarterBase = (q % 4) * 3;
+        const targetMonth = quarterBase + quarterMonthOffset;
+
+        if (targetMonth <= 11) {
+          const date = safeDayOfMonth(year, targetMonth, dayOfMonth);
           if (date >= rangeStart && date <= rangeEnd) {
             dates.push(date);
           }
         }
-        year++;
+        q += interval;
       }
       return dates;
     }
 
     case 'YEARLY': {
-      // Respect the action.month field if present
-      const targetMonth = action.month
-        ? getMonthIndex(action.month)
-        : 0; // Default to January
-
+      const targetMonth = action.month ? getMonthIndex(action.month) : 0;
       if (targetMonth === -1) return dates;
+      const dayOfMonth = action.dayOfMonth ?? 1;
 
       let year = rangeStart.getFullYear();
       const endYear = rangeEnd.getFullYear();
+
+      const epochYear = EPOCH.getFullYear();
+      let yearOffset = year - epochYear;
+      const remainder = ((yearOffset % interval) + interval) % interval;
+      if (remainder !== 0) {
+        year += interval - remainder;
+      }
+
       while (year <= endYear) {
-        const date = new Date(year, targetMonth, 1);
+        const date = safeDayOfMonth(year, targetMonth, dayOfMonth);
         if (date >= rangeStart && date <= rangeEnd) {
           dates.push(date);
         }
-        year++;
+        year += interval;
       }
       return dates;
     }

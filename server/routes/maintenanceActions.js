@@ -9,6 +9,11 @@ const mapMaintenanceAction = (record) => ({
     machineId: record.MachineID ? record.MachineID.toString() : null,
     action: record.Action,
     periodicity: record.Periodicity,
+    intervalMultiplier: record.IntervalMultiplier ?? 1,
+    dayOfWeek: record.DayOfWeek ?? null,
+    weekOfMonth: record.WeekOfMonth ?? null,
+    quarterMonth: record.QuarterMonth ?? null,
+    dayOfMonth: record.DayOfMonth ?? null,
     timeNeeded: record.TimeNeeded,
     maintenanceInCharge: record.MaintenanceInCharge,
     status: record.Status,
@@ -63,8 +68,9 @@ router.get('/:id', async (req, res) => {
 router.post('/', validate(schemas.createMaintenanceAction), async (req, res) => {
     try {
         const {
-            machineId, action, periodicity, timeNeeded,
-            maintenanceInCharge, status, month
+            machineId, action, periodicity, intervalMultiplier,
+            dayOfWeek, weekOfMonth, quarterMonth, dayOfMonth,
+            timeNeeded, maintenanceInCharge, status, month
         } = req.body;
 
         const pool = await poolPromise;
@@ -72,18 +78,25 @@ router.post('/', validate(schemas.createMaintenanceAction), async (req, res) => 
             .input('MachineID', sql.Int, machineId)
             .input('Action', sql.NVarChar(500), action)
             .input('Periodicity', sql.NVarChar(50), periodicity)
+            .input('IntervalMultiplier', sql.Int, intervalMultiplier || 1)
+            .input('DayOfWeek', sql.Int, dayOfWeek ?? null)
+            .input('WeekOfMonth', sql.Int, weekOfMonth ?? null)
+            .input('QuarterMonth', sql.Int, quarterMonth ?? null)
+            .input('DayOfMonth', sql.Int, dayOfMonth ?? null)
             .input('TimeNeeded', sql.Int, timeNeeded)
             .input('MaintenanceInCharge', sql.Bit, maintenanceInCharge)
             .input('Status', sql.NVarChar(50), status)
             .input('Month', sql.NVarChar(50), month)
             .query(`
         INSERT INTO MaintenanceActions (
-          MachineID, Action, Periodicity, TimeNeeded,
-          MaintenanceInCharge, Status, Month
+          MachineID, Action, Periodicity, IntervalMultiplier,
+          DayOfWeek, WeekOfMonth, QuarterMonth, DayOfMonth,
+          TimeNeeded, MaintenanceInCharge, Status, Month
         )
         VALUES (
-          @MachineID, @Action, @Periodicity, @TimeNeeded,
-          @MaintenanceInCharge, @Status, @Month
+          @MachineID, @Action, @Periodicity, @IntervalMultiplier,
+          @DayOfWeek, @WeekOfMonth, @QuarterMonth, @DayOfMonth,
+          @TimeNeeded, @MaintenanceInCharge, @Status, @Month
         );
         SELECT SCOPE_IDENTITY() AS ActionID;
       `);
@@ -105,8 +118,9 @@ router.post('/', validate(schemas.createMaintenanceAction), async (req, res) => 
 router.put('/:id', validate(schemas.updateMaintenanceAction), async (req, res) => {
     try {
         const {
-            machineId, action, periodicity, timeNeeded,
-            maintenanceInCharge, status, month
+            machineId, action, periodicity, intervalMultiplier,
+            dayOfWeek, weekOfMonth, quarterMonth, dayOfMonth,
+            timeNeeded, maintenanceInCharge, status, month
         } = req.body;
 
         const pool = await poolPromise;
@@ -115,6 +129,11 @@ router.put('/:id', validate(schemas.updateMaintenanceAction), async (req, res) =
             .input('MachineID', sql.Int, machineId)
             .input('Action', sql.NVarChar(500), action)
             .input('Periodicity', sql.NVarChar(50), periodicity)
+            .input('IntervalMultiplier', sql.Int, intervalMultiplier || 1)
+            .input('DayOfWeek', sql.Int, dayOfWeek ?? null)
+            .input('WeekOfMonth', sql.Int, weekOfMonth ?? null)
+            .input('QuarterMonth', sql.Int, quarterMonth ?? null)
+            .input('DayOfMonth', sql.Int, dayOfMonth ?? null)
             .input('TimeNeeded', sql.Int, timeNeeded)
             .input('MaintenanceInCharge', sql.Bit, maintenanceInCharge)
             .input('Status', sql.NVarChar(50), status)
@@ -124,6 +143,11 @@ router.put('/:id', validate(schemas.updateMaintenanceAction), async (req, res) =
           MachineID = @MachineID,
           Action = @Action,
           Periodicity = @Periodicity,
+          IntervalMultiplier = @IntervalMultiplier,
+          DayOfWeek = @DayOfWeek,
+          WeekOfMonth = @WeekOfMonth,
+          QuarterMonth = @QuarterMonth,
+          DayOfMonth = @DayOfMonth,
           TimeNeeded = @TimeNeeded,
           MaintenanceInCharge = @MaintenanceInCharge,
           Status = @Status,
