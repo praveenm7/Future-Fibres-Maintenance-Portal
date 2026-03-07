@@ -95,7 +95,9 @@ router.get('/maintenance-summary', async (req, res) => {
         const actionsReq = pool.request();
         actionsReq.input('EntityID2', sql.Int, req.entityId);
         let actionsQuery = `
-            SELECT ma.ActionID, ma.MachineID, ma.Periodicity, ma.Status, ma.Month
+            SELECT ma.ActionID, ma.MachineID, ma.Periodicity, ma.Status, ma.Month,
+                   ma.IntervalMultiplier, ma.DayOfWeek, ma.WeekOfMonth,
+                   ma.QuarterMonth, ma.DayOfMonth
             FROM MaintenanceActions ma
             INNER JOIN Machines m ON ma.MachineID = m.MachineID
             WHERE ma.Periodicity != 'BEFORE EACH USE' AND m.EntityID = @EntityID2
@@ -107,14 +109,16 @@ router.get('/maintenance-summary', async (req, res) => {
         const actionsResult = await actionsReq.query(actionsQuery);
 
         // Query 3: Completed executions for the year
-        // Return ScheduledDate as pre-formatted string to avoid JS timezone issues
+        // Fetch ScheduledDate as both a string and raw date for slot-based matching
         const execResult = await pool.request()
             .input('YearStart', sql.Date, yearStart)
             .input('YearEnd', sql.Date, yearEnd)
             .input('EntityID', sql.Int, req.entityId)
             .query(`
                 SELECT me.ActionID, me.MachineID,
-                       CONVERT(VARCHAR(10), me.ScheduledDate, 120) AS ScheduledDateStr
+                       YEAR(me.ScheduledDate) AS SY,
+                       MONTH(me.ScheduledDate) AS SM,
+                       DAY(me.ScheduledDate) AS SD
                 FROM MaintenanceExecutions me
                 INNER JOIN Machines m ON me.MachineID = m.MachineID
                 WHERE me.Status = 'COMPLETED'
@@ -123,10 +127,13 @@ router.get('/maintenance-summary', async (req, res) => {
                   AND m.EntityID = @EntityID
             `);
 
-        // Build completion lookup: "actionId-YYYY-MM-DD" -> true
-        const completionSet = new Set();
+        // Build completion lookup by slot: "actionId-slot" -> true
+        // This matches completions to the week they fall in, not the exact date
+        const completionBySlot = new Set();
         for (const exec of execResult.recordset) {
-            completionSet.add(`${exec.ActionID}-${exec.ScheduledDateStr}`);
+            const execDate = new Date(Date.UTC(exec.SY, exec.SM - 1, exec.SD));
+            const slot = dateToSlot(execDate);
+            completionBySlot.add(`${exec.ActionID}-${slot}`);
         }
 
         // Group actions by machineId
@@ -158,10 +165,10 @@ router.get('/maintenance-summary', async (req, res) => {
                 };
             }
 
-            // Build slotActions[slot] = { ideal: [...], mandatory: [...] }
+            // Build slotActions[slot] = { ideal: Set<actionId>, mandatory: Set<actionId> }
             const slotActions = Array.from({ length: 48 }, () => ({
-                ideal: [],
-                mandatory: [],
+                ideal: new Set(),
+                mandatory: new Set(),
             }));
 
             for (const action of actions) {
@@ -169,15 +176,11 @@ router.get('/maintenance-summary', async (req, res) => {
                 for (const date of occurrences) {
                     const slot = dateToSlot(date);
                     if (slot < 0 || slot > 47) continue;
-                    const dateStr = formatDateStr(date);
-                    const key = `${action.ActionID}-${dateStr}`;
-                    const completed = completionSet.has(key);
-                    const entry = { actionId: action.ActionID, dateStr, completed };
 
                     if (action.Status === 'IDEAL') {
-                        slotActions[slot].ideal.push(entry);
+                        slotActions[slot].ideal.add(action.ActionID);
                     } else {
-                        slotActions[slot].mandatory.push(entry);
+                        slotActions[slot].mandatory.add(action.ActionID);
                     }
                 }
             }
@@ -189,7 +192,7 @@ router.get('/maintenance-summary', async (req, res) => {
 
             for (let slot = 0; slot < 48; slot++) {
                 const sa = slotActions[slot];
-                const hasActions = sa.ideal.length > 0 || sa.mandatory.length > 0;
+                const hasActions = sa.ideal.size > 0 || sa.mandatory.size > 0;
 
                 if (!hasActions) {
                     weeklyData[slot] = -1;
@@ -204,8 +207,11 @@ router.get('/maintenance-summary', async (req, res) => {
 
                 activeWeeks++;
 
-                const allIdealDone = sa.ideal.length === 0 || sa.ideal.every(a => a.completed);
-                const allMandatoryDone = sa.mandatory.length === 0 || sa.mandatory.every(a => a.completed);
+                // Check if each action for this slot has a completion in the same slot
+                const allIdealDone = sa.ideal.size === 0 ||
+                    [...sa.ideal].every(aid => completionBySlot.has(`${aid}-${slot}`));
+                const allMandatoryDone = sa.mandatory.size === 0 ||
+                    [...sa.mandatory].every(aid => completionBySlot.has(`${aid}-${slot}`));
 
                 if (allIdealDone && allMandatoryDone) {
                     weeklyData[slot] = 1; // green — everything done

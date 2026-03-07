@@ -11,6 +11,14 @@ function requestLogger(req, res, next) {
 
     const startTime = Date.now();
 
+    // Intercept res.json() to capture error response bodies for ErrorLogs
+    const originalJson = res.json.bind(res);
+    res.json = function (body) {
+        // Store the response body so we can log errors from it
+        res._responseBody = body;
+        return originalJson(body);
+    };
+
     res.on('finish', () => {
         const responseTimeMs = Date.now() - startTime;
         const method = req.method;
@@ -40,6 +48,22 @@ function requestLogger(req, res, next) {
                         INSERT INTO ApiRequestLogs (Method, Path, StatusCode, ResponseTimeMs, RequestBody, IpAddress, CreatedDate)
                         VALUES (@Method, @Path, @StatusCode, @ResponseTimeMs, @RequestBody, @IpAddress, GETUTCDATE())
                     `);
+
+                // Also log to ErrorLogs when status >= 400
+                if (statusCode >= 400) {
+                    const body = res._responseBody;
+                    const errorMessage = body?.error?.message || body?.error || body?.message || `HTTP ${statusCode} error`;
+                    await pool.request()
+                        .input('Path', sql.NVarChar(500), path.substring(0, 500))
+                        .input('Method', sql.NVarChar(10), method)
+                        .input('ErrorMessage', sql.NVarChar(sql.MAX), String(errorMessage))
+                        .input('StackTrace', sql.NVarChar(sql.MAX), requestBody)
+                        .input('StatusCode', sql.Int, statusCode)
+                        .query(`
+                            INSERT INTO ErrorLogs (Path, Method, ErrorMessage, StackTrace, StatusCode, CreatedDate)
+                            VALUES (@Path, @Method, @ErrorMessage, @StackTrace, @StatusCode, GETUTCDATE())
+                        `);
+                }
             } catch (err) {
                 // Don't crash the server if logging fails
                 console.error('Request logger error:', err.message);

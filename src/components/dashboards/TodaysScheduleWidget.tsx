@@ -73,7 +73,7 @@ export function TodaysScheduleWidget() {
                 </div>
                 <button
                     onClick={handleViewSchedule}
-                    className="flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer"
+                    className="no-print flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors cursor-pointer"
                 >
                     View Full Schedule
                     <ArrowRight className="h-3.5 w-3.5" />
