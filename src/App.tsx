@@ -47,6 +47,10 @@ const SupportTickets = lazy(() => import("./pages/SupportTickets"));
 const CreateEditTicket = lazy(() => import("./pages/CreateEditTicket"));
 const SupportDashboard = lazy(() => import("./pages/SupportDashboard"));
 
+// Custom Reports
+const CustomReports = lazy(() => import("./pages/CustomReports"));
+const ReportBuilder = lazy(() => import("./pages/ReportBuilder"));
+
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const PageLoader = () => (
@@ -104,6 +108,9 @@ const App = () => (
           <Route path="/reports/maintenance-summary" element={<MainLayout><MaintenanceSummary /></MainLayout>} />
           <Route path="/reports/maintenance-plan" element={<MainLayout><MaintenancePlanReport /></MainLayout>} />
           <Route path="/reports/authorization" element={<MainLayout><AuthorizationReport /></MainLayout>} />
+          <Route path="/reports/custom" element={<MainLayout><CustomReports /></MainLayout>} />
+          <Route path="/reports/custom/new" element={<MainLayout><ReportBuilder /></MainLayout>} />
+          <Route path="/reports/custom/:id" element={<MainLayout><ReportBuilder /></MainLayout>} />
 
           {/* Dashboards */}
           <Route path="/dashboards" element={<MainLayout><DashboardsIndex /></MainLayout>} />

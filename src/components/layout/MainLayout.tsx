@@ -24,6 +24,7 @@ import {
   Calendar,
   Headset,
   Plus,
+  FileSearch,
   LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -75,6 +76,7 @@ const sections: NavSection[] = [
       { path: '/reports/maintenance-summary', label: 'Maintenance Summary', icon: BarChart3 },
       { path: '/reports/maintenance-plan', label: 'Maintenance Plan', icon: FileText },
       { path: '/reports/authorization', label: 'Authorization Matrix', icon: Shield },
+      { path: '/reports/custom', label: 'Custom Reports', icon: FileSearch },
     ],
   },
   {

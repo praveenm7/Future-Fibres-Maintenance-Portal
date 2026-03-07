@@ -29,6 +29,8 @@ const ROUTE_MAP: Record<string, { label: string; section?: string }> = {
   '/reports/maintenance-summary': { label: 'Maintenance Summary', section: 'Reports' },
   '/reports/maintenance-plan': { label: 'Maintenance Plan', section: 'Reports' },
   '/reports/authorization': { label: 'Authorization Matrix', section: 'Reports' },
+  '/reports/custom': { label: 'Custom Reports', section: 'Reports' },
+  '/reports/custom/new': { label: 'Report Builder', section: 'Reports' },
   // Dashboards
   '/dashboards/overview': { label: 'Overview', section: 'Dashboards' },
   '/dashboards/equipment-health': { label: 'Equipment Health', section: 'Dashboards' },

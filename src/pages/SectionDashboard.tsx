@@ -13,6 +13,7 @@ import {
     ArrowRight,
     Headset,
     Plus,
+    FileSearch,
 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
 
@@ -83,6 +84,12 @@ const reportItems = [
         label: 'Authorization Matrix',
         description: 'View authorization list for a specific user',
         icon: Shield
+    },
+    {
+        path: '/reports/custom',
+        label: 'Custom Reports',
+        description: 'Build custom reports from available data fields',
+        icon: FileSearch
     },
 ];
 

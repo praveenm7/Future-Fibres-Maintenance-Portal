@@ -214,4 +214,20 @@ schemas.createTicketComment = Joi.object({
     operatorId: Joi.number().integer().required(),
 });
 
+// --- Custom Reports ---
+schemas.createCustomReport = Joi.object({
+    reportName: Joi.string().max(200).required(),
+    description: Joi.string().max(1000).allow(null, ''),
+    definition: Joi.object().required(),
+    ownerOperatorId: Joi.number().integer().required(),
+    isShared: Joi.boolean().default(false),
+});
+
+schemas.updateCustomReport = Joi.object({
+    reportName: Joi.string().max(200),
+    description: Joi.string().max(1000).allow(null, ''),
+    definition: Joi.object(),
+    isShared: Joi.boolean(),
+});
+
 module.exports = { validate, validateQuery, schemas };

@@ -26,9 +26,9 @@ function assertWriteAccess() {
  * and safe DELETE handling.
  */
 export const api = {
-    async get<T>(endpoint: string): Promise<T> {
+    async get<T>(endpoint: string, extraHeaders?: Record<string, string>): Promise<T> {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-            headers: { ...getEntityHeaders() },
+            headers: { ...getEntityHeaders(), ...extraHeaders },
             signal: AbortSignal.timeout(REQUEST_TIMEOUT),
         });
         if (!response.ok) {
@@ -37,13 +37,14 @@ export const api = {
         return response.json();
     },
 
-    async post<T, D = unknown>(endpoint: string, data: D): Promise<T> {
+    async post<T, D = unknown>(endpoint: string, data: D, extraHeaders?: Record<string, string>): Promise<T> {
         assertWriteAccess();
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 ...getEntityHeaders(),
+                ...extraHeaders,
             },
             body: JSON.stringify(data),
             signal: AbortSignal.timeout(REQUEST_TIMEOUT),
@@ -55,13 +56,14 @@ export const api = {
         return response.json();
     },
 
-    async put<T, D = unknown>(endpoint: string, data: D): Promise<T> {
+    async put<T, D = unknown>(endpoint: string, data: D, extraHeaders?: Record<string, string>): Promise<T> {
         assertWriteAccess();
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 ...getEntityHeaders(),
+                ...extraHeaders,
             },
             body: JSON.stringify(data),
             signal: AbortSignal.timeout(REQUEST_TIMEOUT),
@@ -106,11 +108,30 @@ export const api = {
         return response.json();
     },
 
-    async delete<T = void>(endpoint: string): Promise<T> {
+    /** POST that does NOT require write access (for read-only queries like report execution) */
+    async query<T, D = unknown>(endpoint: string, data: D, extraHeaders?: Record<string, string>): Promise<T> {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...getEntityHeaders(),
+                ...extraHeaders,
+            },
+            body: JSON.stringify(data),
+            signal: AbortSignal.timeout(REQUEST_TIMEOUT),
+        });
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || error.error || `API Error: ${response.statusText}`);
+        }
+        return response.json();
+    },
+
+    async delete<T = void>(endpoint: string, extraHeaders?: Record<string, string>): Promise<T> {
         assertWriteAccess();
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'DELETE',
-            headers: { ...getEntityHeaders() },
+            headers: { ...getEntityHeaders(), ...extraHeaders },
             signal: AbortSignal.timeout(REQUEST_TIMEOUT),
         });
         if (!response.ok) {

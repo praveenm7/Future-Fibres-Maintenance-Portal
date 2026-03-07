@@ -27,6 +27,7 @@ const ticketAttachmentsRouter = require('./routes/ticketAttachments');
 const requestLogger = require('./middleware/requestLogger');
 const entityContext = require('./middleware/entityContext');
 const entitiesRouter = require('./routes/entities');
+const customReportsRouter = require('./routes/customReports');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -88,6 +89,7 @@ app.use('/api/shifts', shiftsRouter);
 app.use('/api/support-tickets', supportTicketsRouter);
 app.use('/api/ticket-comments', ticketCommentsRouter);
 app.use('/api/ticket-attachments', ticketAttachmentsRouter);
+app.use('/api/custom-reports', customReportsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
