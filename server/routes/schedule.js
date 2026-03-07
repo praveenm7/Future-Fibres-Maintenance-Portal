@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
 const { generateOccurrences, formatDateStr } = require('../utils/occurrences');
+const requireWriteAccess = require('../middleware/writeProtection');
 
 // --- Helpers ---
 
@@ -117,35 +118,50 @@ router.get('/daily', async (req, res) => {
         // Parallel queries for all needed data
         const [actionsResult, machinesResult, operatorsResult, authResult, execResult, shiftsResult, overridesResult, taskOrderResult] =
             await Promise.all([
-                pool.request().query('SELECT * FROM MaintenanceActions'),
-                pool.request().execute('sp_GetMachinesWithOperator'),
-                pool.request().query(`
+                pool.request()
+                    .input('EntityID', sql.Int, req.entityId)
+                    .query('SELECT ma.* FROM MaintenanceActions ma INNER JOIN Machines m ON ma.MachineID = m.MachineID WHERE m.EntityID = @EntityID'),
+                pool.request()
+                    .input('EntityID', sql.Int, req.entityId)
+                    .execute('sp_GetMachinesWithOperator'),
+                pool.request()
+                    .input('EntityID', sql.Int, req.entityId)
+                    .query(`
                     SELECT o.*, s.ShiftName AS DefaultShiftName, s.StartTime AS DefaultStartTime, s.EndTime AS DefaultEndTime
                     FROM Operators o
                     LEFT JOIN Shifts s ON o.DefaultShiftID = s.ShiftID
-                    WHERE o.IsActive = 1
+                    WHERE o.IsActive = 1 AND o.EntityID = @EntityID
                 `),
-                pool.request().execute('sp_GetAuthorizationMatrix'),
+                pool.request()
+                    .input('EntityID', sql.Int, req.entityId)
+                    .execute('sp_GetAuthorizationMatrix'),
                 pool.request()
                     .input('ScheduledDate', sql.Date, date)
+                    .input('EntityID', sql.Int, req.entityId)
                     .query(`
                         SELECT me.*, o.OperatorName
                         FROM MaintenanceExecutions me
+                        INNER JOIN Machines m ON me.MachineID = m.MachineID
                         LEFT JOIN Operators o ON me.CompletedByID = o.OperatorID
-                        WHERE me.ScheduledDate = @ScheduledDate
+                        WHERE me.ScheduledDate = @ScheduledDate AND m.EntityID = @EntityID
                     `),
-                pool.request().query('SELECT * FROM Shifts WHERE IsActive = 1'),
+                pool.request()
+                    .input('EntityID', sql.Int, req.entityId)
+                    .query('SELECT * FROM Shifts WHERE IsActive = 1 AND EntityID = @EntityID'),
                 pool.request()
                     .input('ShiftDate', sql.Date, date)
+                    .input('EntityID', sql.Int, req.entityId)
                     .query(`
                         SELECT oso.*, s.ShiftName, s.StartTime, s.EndTime
                         FROM OperatorShiftOverrides oso
+                        INNER JOIN Operators o ON oso.OperatorID = o.OperatorID
                         LEFT JOIN Shifts s ON oso.ShiftID = s.ShiftID
-                        WHERE oso.ShiftDate = @ShiftDate
+                        WHERE oso.ShiftDate = @ShiftDate AND o.EntityID = @EntityID
                     `),
                 pool.request()
                     .input('ScheduleDate', sql.Date, date)
-                    .query('SELECT * FROM TaskOrderOverrides WHERE ScheduleDate = @ScheduleDate'),
+                    .input('EntityID', sql.Int, req.entityId)
+                    .query('SELECT t.* FROM TaskOrderOverrides t INNER JOIN MaintenanceActions ma ON t.ActionID = ma.ActionID INNER JOIN Machines m ON ma.MachineID = m.MachineID WHERE t.ScheduleDate = @ScheduleDate AND m.EntityID = @EntityID'),
             ]);
 
         // Build override map: operatorId → override record
@@ -544,16 +560,26 @@ router.get('/weekly', async (req, res) => {
         // Fetch date-independent data ONCE
         const [actionsResult, machinesResult, operatorsResult, authResult, shiftsResult] =
             await Promise.all([
-                pool.request().query('SELECT * FROM MaintenanceActions'),
-                pool.request().execute('sp_GetMachinesWithOperator'),
-                pool.request().query(`
+                pool.request()
+                    .input('EntityID', sql.Int, req.entityId)
+                    .query('SELECT ma.* FROM MaintenanceActions ma INNER JOIN Machines m ON ma.MachineID = m.MachineID WHERE m.EntityID = @EntityID'),
+                pool.request()
+                    .input('EntityID', sql.Int, req.entityId)
+                    .execute('sp_GetMachinesWithOperator'),
+                pool.request()
+                    .input('EntityID', sql.Int, req.entityId)
+                    .query(`
                     SELECT o.*, s.ShiftName AS DefaultShiftName, s.StartTime AS DefaultStartTime, s.EndTime AS DefaultEndTime
                     FROM Operators o
                     LEFT JOIN Shifts s ON o.DefaultShiftID = s.ShiftID
-                    WHERE o.IsActive = 1
+                    WHERE o.IsActive = 1 AND o.EntityID = @EntityID
                 `),
-                pool.request().execute('sp_GetAuthorizationMatrix'),
-                pool.request().query('SELECT * FROM Shifts WHERE IsActive = 1'),
+                pool.request()
+                    .input('EntityID', sql.Int, req.entityId)
+                    .execute('sp_GetAuthorizationMatrix'),
+                pool.request()
+                    .input('EntityID', sql.Int, req.entityId)
+                    .query('SELECT * FROM Shifts WHERE IsActive = 1 AND EntityID = @EntityID'),
             ]);
 
         // Build shared maps
@@ -595,24 +621,29 @@ router.get('/weekly', async (req, res) => {
             pool.request()
                 .input('StartDate', sql.Date, startDate)
                 .input('EndDate', sql.Date, endDate)
+                .input('EntityID', sql.Int, req.entityId)
                 .query(`
                     SELECT me.*, o.OperatorName FROM MaintenanceExecutions me
+                    INNER JOIN Machines m ON me.MachineID = m.MachineID
                     LEFT JOIN Operators o ON me.CompletedByID = o.OperatorID
-                    WHERE me.ScheduledDate BETWEEN @StartDate AND @EndDate
+                    WHERE me.ScheduledDate BETWEEN @StartDate AND @EndDate AND m.EntityID = @EntityID
                 `),
             pool.request()
                 .input('StartDate', sql.Date, startDate)
                 .input('EndDate', sql.Date, endDate)
+                .input('EntityID', sql.Int, req.entityId)
                 .query(`
                     SELECT oso.*, s.ShiftName, s.StartTime, s.EndTime
                     FROM OperatorShiftOverrides oso
+                    INNER JOIN Operators o ON oso.OperatorID = o.OperatorID
                     LEFT JOIN Shifts s ON oso.ShiftID = s.ShiftID
-                    WHERE oso.ShiftDate BETWEEN @StartDate AND @EndDate
+                    WHERE oso.ShiftDate BETWEEN @StartDate AND @EndDate AND o.EntityID = @EntityID
                 `),
             pool.request()
                 .input('StartDate', sql.Date, startDate)
                 .input('EndDate', sql.Date, endDate)
-                .query('SELECT * FROM TaskOrderOverrides WHERE ScheduleDate BETWEEN @StartDate AND @EndDate'),
+                .input('EntityID', sql.Int, req.entityId)
+                .query('SELECT t.* FROM TaskOrderOverrides t INNER JOIN MaintenanceActions ma ON t.ActionID = ma.ActionID INNER JOIN Machines m ON ma.MachineID = m.MachineID WHERE t.ScheduleDate BETWEEN @StartDate AND @EndDate AND m.EntityID = @EntityID'),
         ]);
 
         // Index by date
@@ -936,22 +967,34 @@ router.get('/timing-batch', async (req, res) => {
         // Fetch all data once
         const [actionsResult, machinesResult, operatorsResult, authResult, shiftsResult, execResult, overridesResult] =
             await Promise.all([
-                pool.request().query('SELECT * FROM MaintenanceActions'),
-                pool.request().execute('sp_GetMachinesWithOperator'),
-                pool.request().query(`
+                pool.request()
+                    .input('EntityID', sql.Int, req.entityId)
+                    .query('SELECT ma.* FROM MaintenanceActions ma INNER JOIN Machines m ON ma.MachineID = m.MachineID WHERE m.EntityID = @EntityID'),
+                pool.request()
+                    .input('EntityID', sql.Int, req.entityId)
+                    .execute('sp_GetMachinesWithOperator'),
+                pool.request()
+                    .input('EntityID', sql.Int, req.entityId)
+                    .query(`
                     SELECT o.*, s.ShiftName AS DefaultShiftName, s.StartTime AS DefaultStartTime, s.EndTime AS DefaultEndTime
-                    FROM Operators o LEFT JOIN Shifts s ON o.DefaultShiftID = s.ShiftID WHERE o.IsActive = 1
+                    FROM Operators o LEFT JOIN Shifts s ON o.DefaultShiftID = s.ShiftID WHERE o.IsActive = 1 AND o.EntityID = @EntityID
                 `),
-                pool.request().execute('sp_GetAuthorizationMatrix'),
-                pool.request().query('SELECT * FROM Shifts WHERE IsActive = 1'),
+                pool.request()
+                    .input('EntityID', sql.Int, req.entityId)
+                    .execute('sp_GetAuthorizationMatrix'),
+                pool.request()
+                    .input('EntityID', sql.Int, req.entityId)
+                    .query('SELECT * FROM Shifts WHERE IsActive = 1 AND EntityID = @EntityID'),
                 pool.request()
                     .input('StartDate', sql.Date, from)
                     .input('EndDate', sql.Date, to)
-                    .query(`SELECT me.*, o.OperatorName FROM MaintenanceExecutions me LEFT JOIN Operators o ON me.CompletedByID = o.OperatorID WHERE me.ScheduledDate BETWEEN @StartDate AND @EndDate`),
+                    .input('EntityID', sql.Int, req.entityId)
+                    .query(`SELECT me.*, o.OperatorName FROM MaintenanceExecutions me INNER JOIN Machines m ON me.MachineID = m.MachineID LEFT JOIN Operators o ON me.CompletedByID = o.OperatorID WHERE me.ScheduledDate BETWEEN @StartDate AND @EndDate AND m.EntityID = @EntityID`),
                 pool.request()
                     .input('StartDate', sql.Date, from)
                     .input('EndDate', sql.Date, to)
-                    .query(`SELECT oso.*, s.ShiftName, s.StartTime, s.EndTime FROM OperatorShiftOverrides oso LEFT JOIN Shifts s ON oso.ShiftID = s.ShiftID WHERE oso.ShiftDate BETWEEN @StartDate AND @EndDate`),
+                    .input('EntityID', sql.Int, req.entityId)
+                    .query(`SELECT oso.*, s.ShiftName, s.StartTime, s.EndTime FROM OperatorShiftOverrides oso INNER JOIN Operators o ON oso.OperatorID = o.OperatorID LEFT JOIN Shifts s ON oso.ShiftID = s.ShiftID WHERE oso.ShiftDate BETWEEN @StartDate AND @EndDate AND o.EntityID = @EntityID`),
             ]);
 
         // Build shared maps
@@ -1097,7 +1140,7 @@ router.get('/timing-batch', async (req, res) => {
 });
 
 // POST /api/schedule/task-order — Save manual task ordering for a date
-router.post('/task-order', async (req, res) => {
+router.post('/task-order', requireWriteAccess, async (req, res) => {
     try {
         const { date, overrides } = req.body;
         if (!date || !Array.isArray(overrides)) {
@@ -1106,10 +1149,11 @@ router.post('/task-order', async (req, res) => {
 
         const pool = await poolPromise;
 
-        // Delete existing overrides for this date
+        // Delete existing overrides for this date and entity
         await pool.request()
             .input('ScheduleDate', sql.Date, date)
-            .query('DELETE FROM TaskOrderOverrides WHERE ScheduleDate = @ScheduleDate');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('DELETE FROM TaskOrderOverrides WHERE ScheduleDate = @ScheduleDate AND EntityID = @EntityID');
 
         // Insert new overrides
         for (const { actionId, sortPosition } of overrides) {
@@ -1117,7 +1161,8 @@ router.post('/task-order', async (req, res) => {
                 .input('ScheduleDate', sql.Date, date)
                 .input('ActionID', sql.Int, actionId)
                 .input('SortPosition', sql.Int, sortPosition)
-                .query('INSERT INTO TaskOrderOverrides (ScheduleDate, ActionID, SortPosition) VALUES (@ScheduleDate, @ActionID, @SortPosition)');
+                .input('EntityID', sql.Int, req.entityId)
+                .query('INSERT INTO TaskOrderOverrides (ScheduleDate, ActionID, SortPosition, EntityID) VALUES (@ScheduleDate, @ActionID, @SortPosition, @EntityID)');
         }
 
         res.json({ message: 'Task order saved', count: overrides.length });
@@ -1128,7 +1173,7 @@ router.post('/task-order', async (req, res) => {
 });
 
 // DELETE /api/schedule/task-order?date=2026-03-06 — Reset task ordering for a date
-router.delete('/task-order', async (req, res) => {
+router.delete('/task-order', requireWriteAccess, async (req, res) => {
     try {
         const { date } = req.query;
         if (!date) {
@@ -1138,7 +1183,8 @@ router.delete('/task-order', async (req, res) => {
         const pool = await poolPromise;
         await pool.request()
             .input('ScheduleDate', sql.Date, date)
-            .query('DELETE FROM TaskOrderOverrides WHERE ScheduleDate = @ScheduleDate');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('DELETE FROM TaskOrderOverrides WHERE ScheduleDate = @ScheduleDate AND EntityID = @EntityID');
 
         res.json({ message: 'Task order reset' });
     } catch (err) {

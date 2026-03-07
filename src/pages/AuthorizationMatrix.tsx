@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { useEntity } from '@/contexts/EntityContext';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ActionButton } from '@/components/ui/ActionButton';
@@ -19,6 +20,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export default function AuthorizationMatrix() {
+  const { isReadOnly } = useEntity();
   const {
     useGetMatrices,
     useCreateMatrix,
@@ -173,13 +175,13 @@ export default function AuthorizationMatrix() {
       {/* Mode Tabs */}
       <Tabs value={mode} onValueChange={(v) => setMode(v as 'new' | 'modify' | 'delete')} className="mb-6">
         <TabsList>
-          <TabsTrigger value="new" className="gap-1.5">
+          <TabsTrigger value="new" className="gap-1.5" disabled={isReadOnly}>
             <Plus className="h-4 w-4" /> New User
           </TabsTrigger>
           <TabsTrigger value="modify" className="gap-1.5">
             <Pencil className="h-4 w-4" /> Modify
           </TabsTrigger>
-          <TabsTrigger value="delete" className="gap-1.5">
+          <TabsTrigger value="delete" className="gap-1.5" disabled={isReadOnly}>
             <Trash2 className="h-4 w-4" /> Delete
           </TabsTrigger>
         </TabsList>
@@ -272,7 +274,7 @@ export default function AuthorizationMatrix() {
           <div className="flex gap-4 mt-6">
             {mode === 'delete' ? (
               <ActionButton variant="red" type="button" onClick={handleDelete}
-                disabled={!selectedUserId || deleteMutation.isPending}>
+                disabled={isReadOnly || !selectedUserId || deleteMutation.isPending}>
                 {deleteMutation.isPending ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
@@ -282,7 +284,7 @@ export default function AuthorizationMatrix() {
               </ActionButton>
             ) : (
               <ActionButton variant="green" type="submit"
-                disabled={(mode === 'modify' && !selectedUserId) || createMutation.isPending || updateMutation.isPending}>
+                disabled={isReadOnly || (mode === 'modify' && !selectedUserId) || createMutation.isPending || updateMutation.isPending}>
                 {createMutation.isPending || updateMutation.isPending ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (

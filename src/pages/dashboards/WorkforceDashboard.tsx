@@ -72,7 +72,7 @@ export default function WorkforceDashboard() {
             subtitle="Operator workload distribution and authorization coverage analysis"
         >
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
                 <KPICard
                     title="Active Operators"
                     value={data?.kpis.activeOperators ?? 0}
@@ -85,13 +85,6 @@ export default function WorkforceDashboard() {
                     value={data?.kpis.operatorsWithAuthorizations ?? 0}
                     icon={ShieldCheck}
                     colorClass="text-success"
-                    isLoading={isLoading}
-                />
-                <KPICard
-                    title="Avg NCs/Operator"
-                    value={data?.kpis.avgNCsPerOperator != null ? Math.round(data.kpis.avgNCsPerOperator * 10) / 10 : '-'}
-                    icon={BarChart3}
-                    colorClass="text-info"
                     isLoading={isLoading}
                 />
                 <KPICard
@@ -126,26 +119,8 @@ export default function WorkforceDashboard() {
                 />
             </div>
 
-            {/* Charts Row 1 — existing */}
+            {/* Charts Row 1 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <ChartCard title="NC Workload by Operator">
-                    {data?.ncWorkloadByOperator && data.ncWorkloadByOperator.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data.ncWorkloadByOperator}>
-                                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                                <XAxis dataKey="operatorName" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
-                                <YAxis tick={{ fontSize: 11 }} />
-                                <Tooltip />
-                                <Bar dataKey="ncCount" name="NCs Assigned" fill="hsl(221, 83%, 53%)" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    ) : (
-                        <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                            No workload data available
-                        </div>
-                    )}
-                </ChartCard>
-
                 <ChartCard title="Operators by Department">
                     {data?.operatorsByDepartment && data.operatorsByDepartment.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
@@ -177,7 +152,7 @@ export default function WorkforceDashboard() {
                 </ChartCard>
             </div>
 
-            {/* Charts Row 2 — existing */}
+            {/* Charts Row 2 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <ChartCard title="Authorization Coverage (Groups per Operator)">
                     {data?.authorizationCoverage && data.authorizationCoverage.length > 0 ? (
@@ -193,26 +168,6 @@ export default function WorkforceDashboard() {
                     ) : (
                         <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
                             No authorization data available
-                        </div>
-                    )}
-                </ChartCard>
-
-                <ChartCard title="Operator NC Performance">
-                    {data?.operatorPerformance && data.operatorPerformance.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={data.operatorPerformance}>
-                                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                                <XAxis dataKey="operatorName" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
-                                <YAxis tick={{ fontSize: 11 }} />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="totalAssigned" name="Total Assigned" fill="hsl(221, 83%, 53%)" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="completed" name="Completed" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    ) : (
-                        <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                            No performance data available
                         </div>
                     )}
                 </ChartCard>

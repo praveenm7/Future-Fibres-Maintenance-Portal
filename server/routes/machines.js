@@ -3,6 +3,7 @@ const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
 const { uploadPhoto } = require('../config/upload');
 const { validate, schemas } = require('../middleware/validate');
+const requireWriteAccess = require('../middleware/writeProtection');
 
 // Helper to map machine database record to frontend model
 const mapMachine = (record) => ({
@@ -40,6 +41,7 @@ router.get('/', async (req, res) => {
     try {
         const pool = await poolPromise;
         const result = await pool.request()
+            .input('EntityID', sql.Int, req.entityId)
             .execute('sp_GetMachinesWithOperator');
 
         res.json(result.recordset.map(mapMachine));
@@ -55,6 +57,7 @@ router.get('/:id', async (req, res) => {
         const pool = await poolPromise;
         const result = await pool.request()
             .input('MachineID', sql.Int, req.params.id)
+            .input('EntityID', sql.Int, req.entityId)
             .execute('sp_GetMachineById');
 
         if (result.recordset.length === 0) {
@@ -69,7 +72,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST create new machine (FinalCode generated server-side)
-router.post('/', validate(schemas.createMachine), async (req, res) => {
+router.post('/', requireWriteAccess, validate(schemas.createMachine), async (req, res) => {
     try {
         const {
             type, description, purchasingDate,
@@ -92,6 +95,7 @@ router.post('/', validate(schemas.createMachine), async (req, res) => {
             const codeResult = await transaction.request()
                 .input('Type', sql.NVarChar(50), type)
                 .input('MachineGroup', sql.NVarChar(50), machineGroup)
+                .input('EntityID', sql.Int, req.entityId)
                 .execute('sp_GenerateNextFinalCode');
 
             const generatedCode = codeResult.recordset[0].FinalCode;
@@ -117,20 +121,21 @@ router.post('/', validate(schemas.createMachine), async (req, res) => {
                 .input('MaintenanceOnHold', sql.Bit, maintenanceOnHold || false)
                 .input('PersonInChargeID', sql.Int, personInChargeID || null)
                 .input('ImageUrl', sql.NVarChar(500), imageUrl || null)
+                .input('EntityID', sql.Int, req.entityId)
                 .query(`
             INSERT INTO Machines (
               FinalCode, Type, MachineGroup, Description, PurchasingDate,
               PurchasingCost, PONumber, Area, Manufacturer, Model,
               SerialNumber, ManufacturerYear, Power, PermissionRequired,
               AuthorizationGroup, MaintenanceNeeded, MaintenanceOnHold,
-              PersonInChargeID, ImageUrl
+              PersonInChargeID, ImageUrl, EntityID
             )
             VALUES (
               @FinalCode, @Type, @MachineGroup, @Description, @PurchasingDate,
               @PurchasingCost, @PONumber, @Area, @Manufacturer, @Model,
               @SerialNumber, @ManufacturerYear, @Power, @PermissionRequired,
               @AuthorizationGroup, @MaintenanceNeeded, @MaintenanceOnHold,
-              @PersonInChargeID, @ImageUrl
+              @PersonInChargeID, @ImageUrl, @EntityID
             );
             SELECT SCOPE_IDENTITY() AS MachineID;
           `);
@@ -142,6 +147,7 @@ router.post('/', validate(schemas.createMachine), async (req, res) => {
             // Fetch the newly created machine
             const newMachine = await pool.request()
                 .input('MachineID', sql.Int, newMachineId)
+                .input('EntityID', sql.Int, req.entityId)
                 .execute('sp_GetMachineById');
 
             res.status(201).json(mapMachine(newMachine.recordset[0]));
@@ -156,7 +162,7 @@ router.post('/', validate(schemas.createMachine), async (req, res) => {
 });
 
 // PUT update machine (FinalCode is immutable — assigned at creation only)
-router.put('/:id', validate(schemas.updateMachine), async (req, res) => {
+router.put('/:id', requireWriteAccess, validate(schemas.updateMachine), async (req, res) => {
     try {
         const {
             type, description, purchasingDate,
@@ -190,6 +196,7 @@ router.put('/:id', validate(schemas.updateMachine), async (req, res) => {
             .input('MaintenanceOnHold', sql.Bit, maintenanceOnHold)
             .input('PersonInChargeID', sql.Int, personInChargeID || null)
             .input('ImageUrl', sql.NVarChar(500), imageUrl || null)
+            .input('EntityID', sql.Int, req.entityId)
             .query(`
         UPDATE Machines SET
           Type = @Type,
@@ -210,12 +217,13 @@ router.put('/:id', validate(schemas.updateMachine), async (req, res) => {
           MaintenanceOnHold = @MaintenanceOnHold,
           PersonInChargeID = @PersonInChargeID,
           ImageUrl = @ImageUrl
-        WHERE MachineID = @MachineID
+        WHERE MachineID = @MachineID AND EntityID = @EntityID
       `);
 
         // Fetch updated machine
         const updated = await pool.request()
             .input('MachineID', sql.Int, req.params.id)
+            .input('EntityID', sql.Int, req.entityId)
             .execute('sp_GetMachineById');
 
         res.json(mapMachine(updated.recordset[0]));
@@ -226,12 +234,13 @@ router.put('/:id', validate(schemas.updateMachine), async (req, res) => {
 });
 
 // DELETE machine
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireWriteAccess, async (req, res) => {
     try {
         const pool = await poolPromise;
         await pool.request()
             .input('MachineID', sql.Int, req.params.id)
-            .query('DELETE FROM Machines WHERE MachineID = @MachineID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('DELETE FROM Machines WHERE MachineID = @MachineID AND EntityID = @EntityID');
 
         res.json({ message: 'Machine deleted successfully' });
     } catch (err) {
@@ -246,6 +255,7 @@ router.get('/:id/label', async (req, res) => {
         const pool = await poolPromise;
         const result = await pool.request()
             .input('MachineID', sql.Int, req.params.id)
+            .input('EntityID', sql.Int, req.entityId)
             .execute('sp_GetMachineById');
 
         if (result.recordset.length === 0) {
@@ -333,7 +343,7 @@ router.get('/:id/label', async (req, res) => {
 });
 
 // POST upload photo for a machine
-router.post('/:id/photo', uploadPhoto.single('photo'), async (req, res) => {
+router.post('/:id/photo', requireWriteAccess, uploadPhoto.single('photo'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No photo file provided' });
@@ -345,7 +355,8 @@ router.post('/:id/photo', uploadPhoto.single('photo'), async (req, res) => {
         await pool.request()
             .input('MachineID', sql.Int, req.params.id)
             .input('ImageUrl', sql.NVarChar(500), imageUrl)
-            .query('UPDATE Machines SET ImageUrl = @ImageUrl WHERE MachineID = @MachineID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('UPDATE Machines SET ImageUrl = @ImageUrl WHERE MachineID = @MachineID AND EntityID = @EntityID');
 
         res.json({ imageUrl });
     } catch (err) {

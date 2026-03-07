@@ -1,19 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import type { Shift, OperatorRosterEntry } from '@/types/schedule';
+import { useEntityId } from '@/contexts/EntityContext';
 
 /** Fetch all active shift definitions */
 export function useShifts() {
+    const entityId = useEntityId();
     return useQuery({
-        queryKey: ['shifts'],
+        queryKey: ['shifts', { entityId }],
         queryFn: () => api.get<Shift[]>('/shifts'),
     });
 }
 
 /** Fetch the effective shift roster for all operators on a given date */
 export function useShiftRoster(date: string) {
+    const entityId = useEntityId();
     return useQuery({
-        queryKey: ['shift-roster', date],
+        queryKey: ['shift-roster', date, { entityId }],
         queryFn: () => api.get<OperatorRosterEntry[]>(`/shifts/roster?date=${date}`),
         enabled: !!date,
     });

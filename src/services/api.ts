@@ -2,12 +2,33 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002
 
 const REQUEST_TIMEOUT = 30000; // 30 seconds
 
+/** Read entity IDs from localStorage for every request */
+function getEntityHeaders(): Record<string, string> {
+    const active = localStorage.getItem('ff-active-entity') || '1';
+    const home = localStorage.getItem('ff-home-entity') || '1';
+    return {
+        'X-Entity-ID': active,
+        'X-Home-Entity-ID': home,
+    };
+}
+
+/** Throws if the user is in read-only mode (viewing non-home entity) */
+function assertWriteAccess() {
+    const active = localStorage.getItem('ff-active-entity') || '1';
+    const home = localStorage.getItem('ff-home-entity') || '1';
+    if (active !== home) {
+        throw new Error('Read-only mode: switch to your home entity to make changes');
+    }
+}
+
 /**
- * Generic API Client with typed request/response, timeout, and safe DELETE handling.
+ * Generic API Client with typed request/response, timeout, entity headers,
+ * and safe DELETE handling.
  */
 export const api = {
     async get<T>(endpoint: string): Promise<T> {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            headers: { ...getEntityHeaders() },
             signal: AbortSignal.timeout(REQUEST_TIMEOUT),
         });
         if (!response.ok) {
@@ -17,10 +38,12 @@ export const api = {
     },
 
     async post<T, D = unknown>(endpoint: string, data: D): Promise<T> {
+        assertWriteAccess();
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                ...getEntityHeaders(),
             },
             body: JSON.stringify(data),
             signal: AbortSignal.timeout(REQUEST_TIMEOUT),
@@ -33,10 +56,12 @@ export const api = {
     },
 
     async put<T, D = unknown>(endpoint: string, data: D): Promise<T> {
+        assertWriteAccess();
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
+                ...getEntityHeaders(),
             },
             body: JSON.stringify(data),
             signal: AbortSignal.timeout(REQUEST_TIMEOUT),
@@ -49,8 +74,10 @@ export const api = {
     },
 
     async upload<T>(endpoint: string, formData: FormData): Promise<T> {
+        assertWriteAccess();
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'POST',
+            headers: { ...getEntityHeaders() },
             body: formData,
             signal: AbortSignal.timeout(REQUEST_TIMEOUT),
         });
@@ -62,10 +89,12 @@ export const api = {
     },
 
     async patch<T, D = unknown>(endpoint: string, data: D): Promise<T> {
+        assertWriteAccess();
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
+                ...getEntityHeaders(),
             },
             body: JSON.stringify(data),
             signal: AbortSignal.timeout(REQUEST_TIMEOUT),
@@ -78,8 +107,10 @@ export const api = {
     },
 
     async delete<T = void>(endpoint: string): Promise<T> {
+        assertWriteAccess();
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'DELETE',
+            headers: { ...getEntityHeaders() },
             signal: AbortSignal.timeout(REQUEST_TIMEOUT),
         });
         if (!response.ok) {

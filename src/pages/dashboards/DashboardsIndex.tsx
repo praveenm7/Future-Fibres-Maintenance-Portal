@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import {
     BarChart3,
-    AlertTriangle,
     Wrench,
     Package,
     Users,
@@ -15,12 +14,6 @@ const dashboardItems = [
         label: 'Overview',
         description: 'High-level KPIs across all maintenance areas',
         icon: BarChart3,
-    },
-    {
-        path: '/dashboards/nc-analytics',
-        label: 'NC Analytics',
-        description: 'Non-conformity trends, resolution times, and priority analysis',
-        icon: AlertTriangle,
     },
     {
         path: '/dashboards/equipment-health',

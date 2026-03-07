@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
 const { validate, schemas } = require('../middleware/validate');
+const requireWriteAccess = require('../middleware/writeProtection');
 
 // Helper to map list option database record to frontend model
 const mapListOption = (record) => ({
@@ -50,7 +51,7 @@ router.get('/types', async (req, res) => {
 });
 
 // POST create new list option
-router.post('/', validate(schemas.createListOption), async (req, res) => {
+router.post('/', requireWriteAccess, validate(schemas.createListOption), async (req, res) => {
     try {
         const { listType, optionValue, value, sortOrder, isActive } = req.body;
 
@@ -80,7 +81,7 @@ router.post('/', validate(schemas.createListOption), async (req, res) => {
 });
 
 // PUT update list option
-router.put('/:id', validate(schemas.updateListOption), async (req, res) => {
+router.put('/:id', requireWriteAccess, validate(schemas.updateListOption), async (req, res) => {
     try {
         const { listType, optionValue, value, sortOrder, isActive } = req.body;
 
@@ -112,7 +113,7 @@ router.put('/:id', validate(schemas.updateListOption), async (req, res) => {
 });
 
 // DELETE list option (soft delete)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireWriteAccess, async (req, res) => {
     try {
         const pool = await poolPromise;
         await pool.request()

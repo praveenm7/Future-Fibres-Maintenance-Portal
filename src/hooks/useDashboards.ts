@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
+import { useEntityId } from '@/contexts/EntityContext';
 import type {
     DashboardFilters,
     OverviewDashboardData,
     ExecutionSummaryData,
-    NCAnalyticsDashboardData,
     EquipmentHealthDashboardData,
     SparePartsDashboardData,
     WorkforceDashboardData,
@@ -20,27 +20,19 @@ const buildFilterParams = (filters?: DashboardFilters): string => {
 };
 
 export const useDashboards = () => {
+    const entityId = useEntityId();
+
     const useOverview = () => {
         return useQuery({
-            queryKey: ['dashboards', 'overview'],
+            queryKey: ['dashboards', 'overview', { entityId }],
             queryFn: () => api.get<OverviewDashboardData>('/dashboards/overview'),
-            staleTime: 60000,
-        });
-    };
-
-    const useNCAnalytics = (filters?: DashboardFilters) => {
-        return useQuery({
-            queryKey: ['dashboards', 'nc-analytics', filters?.area, filters?.machineType],
-            queryFn: () => api.get<NCAnalyticsDashboardData>(
-                `/dashboards/nc-analytics${buildFilterParams(filters)}`
-            ),
             staleTime: 60000,
         });
     };
 
     const useEquipmentHealth = (filters?: DashboardFilters) => {
         return useQuery({
-            queryKey: ['dashboards', 'equipment-health', filters?.area, filters?.machineType],
+            queryKey: ['dashboards', 'equipment-health', filters?.area, filters?.machineType, { entityId }],
             queryFn: () => api.get<EquipmentHealthDashboardData>(
                 `/dashboards/equipment-health${buildFilterParams(filters)}`
             ),
@@ -50,7 +42,7 @@ export const useDashboards = () => {
 
     const useSparePartsAnalytics = (filters?: DashboardFilters) => {
         return useQuery({
-            queryKey: ['dashboards', 'spare-parts', filters?.area, filters?.machineType],
+            queryKey: ['dashboards', 'spare-parts', filters?.area, filters?.machineType, { entityId }],
             queryFn: () => api.get<SparePartsDashboardData>(
                 `/dashboards/spare-parts${buildFilterParams(filters)}`
             ),
@@ -60,7 +52,7 @@ export const useDashboards = () => {
 
     const useExecutionSummary = (filters?: DashboardFilters) => {
         return useQuery({
-            queryKey: ['dashboards', 'execution-summary', filters?.area, filters?.machineType],
+            queryKey: ['dashboards', 'execution-summary', filters?.area, filters?.machineType, { entityId }],
             queryFn: () => api.get<ExecutionSummaryData>(
                 `/dashboards/execution-summary${buildFilterParams(filters)}`
             ),
@@ -70,7 +62,7 @@ export const useDashboards = () => {
 
     const useWorkforce = () => {
         return useQuery({
-            queryKey: ['dashboards', 'workforce'],
+            queryKey: ['dashboards', 'workforce', { entityId }],
             queryFn: () => api.get<WorkforceDashboardData>('/dashboards/workforce'),
             staleTime: 60000,
         });
@@ -79,7 +71,6 @@ export const useDashboards = () => {
     return {
         useOverview,
         useExecutionSummary,
-        useNCAnalytics,
         useEquipmentHealth,
         useSparePartsAnalytics,
         useWorkforce,

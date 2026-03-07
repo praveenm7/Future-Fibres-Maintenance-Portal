@@ -2,13 +2,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { AuthorizationMatrix } from '@/types/maintenance';
 import { toast } from 'sonner';
+import { useEntityId } from '@/contexts/EntityContext';
 
 export const useAuthMatrix = () => {
     const queryClient = useQueryClient();
+    const entityId = useEntityId();
 
     const useGetMatrices = () => {
         return useQuery({
-            queryKey: ['auth-matrix'],
+            queryKey: ['auth-matrix', { entityId }],
             queryFn: () => api.get<AuthorizationMatrix[]>('/auth-matrix'),
         });
     };

@@ -10,8 +10,6 @@ const { sql, poolPromise } = require('./config/database');
 // Import routes
 const machinesRouter = require('./routes/machines');
 const maintenanceActionsRouter = require('./routes/maintenanceActions');
-const nonConformitiesRouter = require('./routes/nonConformities');
-const ncCommentsRouter = require('./routes/ncComments');
 const sparePartsRouter = require('./routes/spareParts');
 const operatorsRouter = require('./routes/operators');
 const listOptionsRouter = require('./routes/listOptions');
@@ -27,6 +25,8 @@ const supportTicketsRouter = require('./routes/supportTickets');
 const ticketCommentsRouter = require('./routes/ticketComments');
 const ticketAttachmentsRouter = require('./routes/ticketAttachments');
 const requestLogger = require('./middleware/requestLogger');
+const entityContext = require('./middleware/entityContext');
+const entitiesRouter = require('./routes/entities');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -64,11 +64,16 @@ app.use((req, res, next) => {
 // Request logger middleware (database)
 app.use(requestLogger);
 
-// Routes
+// Entity context middleware — must be before routes
+// Exempt: /api/health, /api/entities, /
+app.use('/api/', entityContext);
+
+// Routes (entity-exempt)
+app.use('/api/entities', entitiesRouter);
+
+// Routes (entity-scoped)
 app.use('/api/machines', machinesRouter);
 app.use('/api/maintenance-actions', maintenanceActionsRouter);
-app.use('/api/non-conformities', nonConformitiesRouter);
-app.use('/api/nc-comments', ncCommentsRouter);
 app.use('/api/spare-parts', sparePartsRouter);
 app.use('/api/operators', operatorsRouter);
 app.use('/api/list-options', listOptionsRouter);
@@ -100,10 +105,9 @@ app.get('/', (req, res) => {
         version: '1.0.0',
         endpoints: {
             health: '/api/health',
+            entities: '/api/entities',
             machines: '/api/machines',
             maintenanceActions: '/api/maintenance-actions',
-            nonConformities: '/api/non-conformities',
-            ncComments: '/api/nc-comments',
             spareParts: '/api/spare-parts',
             operators: '/api/operators',
             listOptions: '/api/list-options',

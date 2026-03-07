@@ -2,13 +2,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { MaintenanceExecution, ExecutionStats } from '@/types/maintenance';
 import { toast } from 'sonner';
+import { useEntityId } from '@/contexts/EntityContext';
 
 export const useMaintenanceExecutions = () => {
     const queryClient = useQueryClient();
+    const entityId = useEntityId();
 
     const useGetExecutions = (from: string, to: string) => {
         return useQuery({
-            queryKey: ['maintenance-executions', from, to],
+            queryKey: ['maintenance-executions', from, to, { entityId }],
             queryFn: () => api.get<MaintenanceExecution[]>(`/maintenance-executions?from=${from}&to=${to}`),
             enabled: !!from && !!to,
         });
@@ -74,7 +76,7 @@ export const useMaintenanceExecutions = () => {
             ? `/maintenance-executions/stats?machineId=${machineId}`
             : '/maintenance-executions/stats';
         return useQuery({
-            queryKey: ['maintenance-execution-stats', machineId],
+            queryKey: ['maintenance-execution-stats', machineId, { entityId }],
             queryFn: () => api.get<ExecutionStats[]>(endpoint),
             enabled: !!machineId,
         });

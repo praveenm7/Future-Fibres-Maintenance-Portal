@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
 const { validate, schemas } = require('../middleware/validate');
+const requireWriteAccess = require('../middleware/writeProtection');
 
 // Helper to map ticket comment database record to frontend model
 const mapTicketComment = (record) => ({
@@ -22,14 +23,17 @@ router.get('/', async (req, res) => {
         const { ticketId } = req.query;
 
         const request = pool.request();
+        request.input('EntityID', sql.Int, req.entityId);
         let query = `
             SELECT c.*, o.OperatorName
             FROM TicketComments c
+            INNER JOIN SupportTickets t ON c.TicketID = t.TicketID
             LEFT JOIN Operators o ON c.OperatorID = o.OperatorID
+            WHERE t.EntityID = @EntityID
         `;
 
         if (ticketId) {
-            query += ' WHERE c.TicketID = @TicketID';
+            query += ' AND c.TicketID = @TicketID';
             request.input('TicketID', sql.Int, ticketId);
         }
         query += ' ORDER BY c.CommentDate ASC';
@@ -43,7 +47,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST create new ticket comment
-router.post('/', validate(schemas.createTicketComment), async (req, res) => {
+router.post('/', requireWriteAccess, validate(schemas.createTicketComment), async (req, res) => {
     try {
         const { ticketId, comment, operatorId } = req.body;
 
@@ -77,7 +81,7 @@ router.post('/', validate(schemas.createTicketComment), async (req, res) => {
 });
 
 // DELETE ticket comment
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireWriteAccess, async (req, res) => {
     try {
         const pool = await poolPromise;
         await pool.request()

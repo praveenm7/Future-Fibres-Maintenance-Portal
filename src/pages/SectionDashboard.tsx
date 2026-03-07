@@ -3,14 +3,11 @@ import {
     Settings,
     Wrench,
     FileText,
-    AlertTriangle,
-    MessageSquare,
     Package,
     Users,
     List,
     Calendar,
     LayoutDashboard,
-    ClipboardList,
     BarChart3,
     Shield,
     ArrowRight,
@@ -35,18 +32,6 @@ const formItems = [
         label: 'Maintenance Plan',
         description: 'Set up the maintenance plan for a machine',
         icon: Wrench
-    },
-    {
-        path: '/non-conformities',
-        label: 'Non-Conformities',
-        description: 'Manage maintenance non-conformities',
-        icon: AlertTriangle
-    },
-    {
-        path: '/nc-comments',
-        label: 'NC Comments',
-        description: 'Manage comments for each non-conformity',
-        icon: MessageSquare
     },
     {
         path: '/spare-parts',
@@ -80,12 +65,6 @@ const reportItems = [
         label: 'Tooling & Machinery List',
         description: 'View the complete list of tooling and machinery',
         icon: LayoutDashboard
-    },
-    {
-        path: '/reports/nc-maintenance',
-        label: 'NC Maintenance',
-        description: 'View the list of maintenance non-conformities',
-        icon: ClipboardList
     },
     {
         path: '/reports/maintenance-summary',

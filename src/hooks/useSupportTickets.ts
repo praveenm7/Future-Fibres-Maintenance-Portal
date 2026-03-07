@@ -2,20 +2,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import type { SupportTicket, TicketComment, TicketAttachment, SupportDashboardData } from '@/types/support';
 import { toast } from 'sonner';
+import { useEntityId } from '@/contexts/EntityContext';
 
 export const useSupportTickets = () => {
     const queryClient = useQueryClient();
+    const entityId = useEntityId();
 
     const useGetTickets = () => {
         return useQuery({
-            queryKey: ['support-tickets'],
+            queryKey: ['support-tickets', { entityId }],
             queryFn: () => api.get<SupportTicket[]>('/support-tickets'),
         });
     };
 
     const useGetTicket = (id: string) => {
         return useQuery({
-            queryKey: ['support-tickets', id],
+            queryKey: ['support-tickets', id, { entityId }],
             queryFn: () => api.get<SupportTicket>(`/support-tickets/${id}`),
             enabled: !!id,
         });
@@ -82,7 +84,7 @@ export const useSupportTickets = () => {
     // Comments
     const useGetTicketComments = (ticketId: string) => {
         return useQuery({
-            queryKey: ['ticket-comments', ticketId],
+            queryKey: ['ticket-comments', ticketId, { entityId }],
             queryFn: () => api.get<TicketComment[]>(`/ticket-comments?ticketId=${ticketId}`),
             enabled: !!ticketId,
         });
@@ -120,7 +122,7 @@ export const useSupportTickets = () => {
     // Attachments
     const useGetTicketAttachments = (ticketId: string) => {
         return useQuery({
-            queryKey: ['ticket-attachments', ticketId],
+            queryKey: ['ticket-attachments', ticketId, { entityId }],
             queryFn: () => api.get<TicketAttachment[]>(`/ticket-attachments?ticketId=${ticketId}`),
             enabled: !!ticketId,
         });
@@ -158,7 +160,7 @@ export const useSupportTickets = () => {
     // Dashboard
     const useSupportDashboard = () => {
         return useQuery({
-            queryKey: ['dashboards', 'support'],
+            queryKey: ['dashboards', 'support', { entityId }],
             queryFn: () => api.get<SupportDashboardData>('/dashboards/support'),
             staleTime: 60000,
         });

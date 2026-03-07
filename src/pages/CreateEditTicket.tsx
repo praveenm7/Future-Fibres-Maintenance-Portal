@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useEntity } from '@/contexts/EntityContext';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -61,6 +62,7 @@ export default function CreateEditTicket() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
+  const { isReadOnly } = useEntity();
 
   // --- Data hooks ---
   const { useGetTicket, useCreateTicket, useUpdateTicket } = useSupportTickets();
@@ -186,6 +188,12 @@ export default function CreateEditTicket() {
             Back to Tickets
           </Button>
         </div>
+
+        {isReadOnly && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+            You are viewing a non-home entity. Ticket creation and editing is disabled.
+          </div>
+        )}
 
         <form onSubmit={handleFormSubmit}>
           {/* Main ticket fields */}
@@ -463,7 +471,7 @@ export default function CreateEditTicket() {
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSaving} className="gap-2 min-w-[140px]">
+            <Button type="submit" disabled={isReadOnly || isSaving} className="gap-2 min-w-[140px]">
               {isSaving ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (

@@ -2,20 +2,22 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { SparePart } from '@/types/maintenance';
 import { toast } from 'sonner';
+import { useEntityId } from '@/contexts/EntityContext';
 
 export const useSpareParts = () => {
     const queryClient = useQueryClient();
+    const entityId = useEntityId();
 
     const useGetParts = (machineId?: string) => {
         return useQuery({
-            queryKey: ['spare-parts', { machineId }],
+            queryKey: ['spare-parts', { machineId, entityId }],
             queryFn: () => api.get<SparePart[]>(machineId ? `/spare-parts?machineId=${machineId}` : '/spare-parts'),
         });
     };
 
     const useGetPart = (id: string | number) => {
         return useQuery({
-            queryKey: ['spare-parts', id],
+            queryKey: ['spare-parts', id, { entityId }],
             queryFn: () => api.get<SparePart>(`/spare-parts/${id}`),
             enabled: !!id,
         });

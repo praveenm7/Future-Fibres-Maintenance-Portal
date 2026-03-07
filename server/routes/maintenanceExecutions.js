@@ -3,6 +3,7 @@ const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
 const { generateOccurrences } = require('../utils/occurrences');
 const { validate, schemas } = require('../middleware/validate');
+const requireWriteAccess = require('../middleware/writeProtection');
 
 // Helper to map execution database record to frontend model
 const mapExecution = (record) => ({
@@ -29,6 +30,7 @@ router.get('/stats', async (req, res) => {
         // Start from actions LEFT JOIN executions so actions with 0 records are included
         const result = await pool.request()
             .input('MachineID', sql.Int, machineId || null)
+            .input('EntityID', sql.Int, req.entityId)
             .query(`
                 SELECT
                     ma.ActionID,
@@ -40,8 +42,10 @@ router.get('/stats', async (req, res) => {
                     MAX(CASE WHEN me.Status = 'COMPLETED' THEN me.CompletedDate END) AS LastCompletedDate,
                     AVG(CASE WHEN me.Status = 'COMPLETED' THEN me.ActualTime END) AS AvgActualTime
                 FROM MaintenanceActions ma
+                INNER JOIN Machines m ON ma.MachineID = m.MachineID
                 LEFT JOIN MaintenanceExecutions me ON ma.ActionID = me.ActionID
                 WHERE (@MachineID IS NULL OR ma.MachineID = @MachineID)
+                  AND m.EntityID = @EntityID
                 GROUP BY ma.ActionID, ma.Periodicity, ma.Month
             `);
 
@@ -89,11 +93,14 @@ router.get('/', async (req, res) => {
         const result = await pool.request()
             .input('FromDate', sql.Date, from)
             .input('ToDate', sql.Date, to)
+            .input('EntityID', sql.Int, req.entityId)
             .query(`
                 SELECT me.*, o.OperatorName
                 FROM MaintenanceExecutions me
+                INNER JOIN Machines m ON me.MachineID = m.MachineID
                 LEFT JOIN Operators o ON me.CompletedByID = o.OperatorID
                 WHERE me.ScheduledDate >= @FromDate AND me.ScheduledDate <= @ToDate
+                  AND m.EntityID = @EntityID
                 ORDER BY me.ScheduledDate, me.ActionID
             `);
 
@@ -105,7 +112,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST create or upsert execution (mark complete)
-router.post('/', validate(schemas.createExecution), async (req, res) => {
+router.post('/', requireWriteAccess, validate(schemas.createExecution), async (req, res) => {
     try {
         const { actionId, machineId, scheduledDate, status, actualTime, completedById, notes } = req.body;
 
@@ -121,6 +128,7 @@ router.post('/', validate(schemas.createExecution), async (req, res) => {
             .input('CompletedByID', sql.Int, completedById || null)
             .input('CompletedDate', sql.DateTime, status === 'COMPLETED' ? new Date() : null)
             .input('Notes', sql.NVarChar(1000), notes || null)
+            .input('EntityID', sql.Int, req.entityId)
             .query(`
                 MERGE MaintenanceExecutions AS target
                 USING (SELECT @ActionID AS ActionID, @ScheduledDate AS ScheduledDate) AS source
@@ -134,8 +142,8 @@ router.post('/', validate(schemas.createExecution), async (req, res) => {
                         Notes = @Notes,
                         UpdatedDate = GETDATE()
                 WHEN NOT MATCHED THEN
-                    INSERT (ActionID, MachineID, ScheduledDate, Status, ActualTime, CompletedByID, CompletedDate, Notes)
-                    VALUES (@ActionID, @MachineID, @ScheduledDate, @Status, @ActualTime, @CompletedByID, @CompletedDate, @Notes)
+                    INSERT (ActionID, MachineID, ScheduledDate, Status, ActualTime, CompletedByID, CompletedDate, Notes, EntityID)
+                    VALUES (@ActionID, @MachineID, @ScheduledDate, @Status, @ActualTime, @CompletedByID, @CompletedDate, @Notes, @EntityID)
                 OUTPUT inserted.ExecutionID;
             `);
 
@@ -159,7 +167,7 @@ router.post('/', validate(schemas.createExecution), async (req, res) => {
 });
 
 // PUT update execution
-router.put('/:id', validate(schemas.updateExecution), async (req, res) => {
+router.put('/:id', requireWriteAccess, validate(schemas.updateExecution), async (req, res) => {
     try {
         const { status, actualTime, completedById, notes } = req.body;
 
@@ -171,6 +179,7 @@ router.put('/:id', validate(schemas.updateExecution), async (req, res) => {
             .input('CompletedByID', sql.Int, completedById || null)
             .input('CompletedDate', sql.DateTime, status === 'COMPLETED' ? new Date() : null)
             .input('Notes', sql.NVarChar(1000), notes || null)
+            .input('EntityID', sql.Int, req.entityId)
             .query(`
                 UPDATE MaintenanceExecutions SET
                     Status = @Status,
@@ -179,7 +188,7 @@ router.put('/:id', validate(schemas.updateExecution), async (req, res) => {
                     CompletedDate = @CompletedDate,
                     Notes = @Notes,
                     UpdatedDate = GETDATE()
-                WHERE ExecutionID = @ExecutionID
+                WHERE ExecutionID = @ExecutionID AND EntityID = @EntityID
             `);
 
         const updated = await pool.request()
@@ -203,12 +212,13 @@ router.put('/:id', validate(schemas.updateExecution), async (req, res) => {
 });
 
 // DELETE execution (revert to no record = pending)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireWriteAccess, async (req, res) => {
     try {
         const pool = await poolPromise;
         await pool.request()
             .input('ExecutionID', sql.Int, req.params.id)
-            .query('DELETE FROM MaintenanceExecutions WHERE ExecutionID = @ExecutionID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('DELETE FROM MaintenanceExecutions WHERE ExecutionID = @ExecutionID AND EntityID = @EntityID');
 
         res.json({ message: 'Execution deleted successfully' });
     } catch (err) {

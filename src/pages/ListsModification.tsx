@@ -14,10 +14,8 @@ const LIST_TYPES = [
   { value: 'MACHINE_GROUP', label: 'Machine Groups' },
   { value: 'AREA', label: 'Areas' },
   { value: 'PERIODICITY', label: 'Periodicities' },
-  { value: 'NC_STATUS', label: 'NC Statuses' },
-  { value: 'NC_CATEGORY', label: 'NC Categories' },
-  { value: 'NC_PRIORITY', label: 'NC Priorities' },
   { value: 'AUTHORIZATION_GROUP', label: 'Authorization Groups' },
+  { value: 'TICKET_CATEGORY', label: 'Ticket Categories' },
 ];
 
 interface ListItem extends ListOption {

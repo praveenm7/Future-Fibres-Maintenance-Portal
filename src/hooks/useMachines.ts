@@ -2,14 +2,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { Machine } from '@/types/maintenance';
 import { toast } from 'sonner';
+import { useEntityId } from '@/contexts/EntityContext';
 
 export const useMachines = () => {
     const queryClient = useQueryClient();
+    const entityId = useEntityId();
 
     // Fetch all machines
     const useGetMachines = () => {
         return useQuery({
-            queryKey: ['machines'],
+            queryKey: ['machines', { entityId }],
             queryFn: () => api.get<Machine[]>('/machines'),
         });
     };
@@ -17,7 +19,7 @@ export const useMachines = () => {
     // Fetch single machine
     const useGetMachine = (id: string | number) => {
         return useQuery({
-            queryKey: ['machines', id],
+            queryKey: ['machines', id, { entityId }],
             queryFn: () => api.get<Machine>(`/machines/${id}`),
             enabled: !!id,
         });

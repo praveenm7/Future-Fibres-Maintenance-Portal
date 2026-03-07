@@ -1,17 +1,13 @@
 import {
     Factory,
     Wrench,
-    AlertTriangle,
-    Clock,
     Package,
     ShieldCheck,
     CheckCircle2,
     TrendingUp,
 } from 'lucide-react';
 import {
-    PieChart, Pie, Cell,
-    BarChart, Bar,
-    AreaChart, Area,
+    BarChart, Bar, Cell,
     XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from 'recharts';
 import { useDashboards } from '@/hooks/useDashboards';
@@ -19,13 +15,6 @@ import { KPICard } from '@/components/dashboards/KPICard';
 import { DashboardShell } from '@/components/dashboards/DashboardShell';
 import { ChartCard } from '@/components/dashboards/ChartCard';
 import { TodaysScheduleWidget } from '@/components/dashboards/TodaysScheduleWidget';
-
-const STATUS_COLORS: Record<string, string> = {
-    'PENDING': 'hsl(48, 96%, 51%)',
-    'IN PROGRESS': 'hsl(221, 83%, 53%)',
-    'COMPLETED': 'hsl(142, 76%, 36%)',
-    'CANCELLED': 'hsl(215, 16%, 47%)',
-};
 
 const AREA_COLORS = [
     'hsl(221, 83%, 53%)',
@@ -53,7 +42,7 @@ export default function OverviewDashboard() {
             subtitle="High-level operational snapshot across all maintenance areas"
         >
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
                 <KPICard
                     title="Total Machines"
                     value={data?.kpis.totalMachines ?? 0}
@@ -66,20 +55,6 @@ export default function OverviewDashboard() {
                     value={data?.kpis.machinesNeedingMaintenance ?? 0}
                     icon={Wrench}
                     colorClass="text-warning"
-                    isLoading={isLoading}
-                />
-                <KPICard
-                    title="Active NCs"
-                    value={data?.kpis.activeNCs ?? 0}
-                    icon={AlertTriangle}
-                    colorClass="text-destructive"
-                    isLoading={isLoading}
-                />
-                <KPICard
-                    title="Overdue NCs"
-                    value={data?.kpis.overdueNCs ?? 0}
-                    icon={Clock}
-                    colorClass="text-destructive"
                     isLoading={isLoading}
                 />
                 <KPICard
@@ -120,37 +95,7 @@ export default function OverviewDashboard() {
             </div>
 
             {/* Charts Row 1 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <ChartCard title="NC Status Distribution">
-                    {data?.ncStatusDistribution && data.ncStatusDistribution.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={data.ncStatusDistribution}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={100}
-                                    dataKey="count"
-                                    nameKey="status"
-                                    label={({ status, count }) => `${status}: ${count}`}
-                                    labelLine={false}
-                                >
-                                    {data.ncStatusDistribution.map((entry) => (
-                                        <Cell key={entry.status} fill={STATUS_COLORS[entry.status] || '#8884d8'} />
-                                    ))}
-                                </Pie>
-                                <Tooltip />
-                                <Legend />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    ) : (
-                        <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                            No NC data available
-                        </div>
-                    )}
-                </ChartCard>
-
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                 <ChartCard title="Machines by Area">
                     {data?.machinesByArea && data.machinesByArea.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
@@ -169,34 +114,6 @@ export default function OverviewDashboard() {
                     ) : (
                         <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
                             No machine data available
-                        </div>
-                    )}
-                </ChartCard>
-            </div>
-
-            {/* Charts Row 2 */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <ChartCard title="NC Trend (Last 12 Months)">
-                    {data?.ncMonthlyTrend && data.ncMonthlyTrend.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={data.ncMonthlyTrend}>
-                                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                                <XAxis dataKey="month" tickFormatter={formatMonth} tick={{ fontSize: 11 }} />
-                                <YAxis tick={{ fontSize: 11 }} />
-                                <Tooltip labelFormatter={(v) => v} />
-                                <Area
-                                    type="monotone"
-                                    dataKey="count"
-                                    name="NCs Created"
-                                    stroke="hsl(221, 83%, 53%)"
-                                    fill="hsl(221, 83%, 53%)"
-                                    fillOpacity={0.2}
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
-                    ) : (
-                        <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                            No trend data available
                         </div>
                     )}
                 </ChartCard>

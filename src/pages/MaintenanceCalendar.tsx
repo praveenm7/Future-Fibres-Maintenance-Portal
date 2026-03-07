@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useEntity } from '@/contexts/EntityContext';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -34,6 +35,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { ScheduleConfig, ScheduledTask } from '@/types/schedule';
 
 export default function MaintenanceCalendar() {
+  const { isReadOnly } = useEntity();
   // Deep-link support: read URL params for direct navigation
   const [searchParams] = useSearchParams();
   const initialView = searchParams.get('view') as ViewMode | null;
@@ -341,7 +343,7 @@ export default function MaintenanceCalendar() {
         onScheduleViewModeChange={setScheduleViewMode}
         onScheduleConfigOpen={() => setScheduleConfigOpen(true)}
         onTaskPriorityOpen={() => setTaskPriorityOpen(true)}
-        onCreateAction={() => { setCreateActionDate(null); setCreateActionOpen(true); }}
+        onCreateAction={isReadOnly ? undefined : () => { setCreateActionDate(null); setCreateActionOpen(true); }}
       />
 
       <div className="flex flex-1 min-h-0 -mx-4 md:-mx-6 lg:-mx-8">
@@ -375,7 +377,7 @@ export default function MaintenanceCalendar() {
                   eventsByDate={filteredEventsByDate}
                   onDateClick={handleDateClick}
                   onEventClick={handleEventClick}
-                  onCreateAction={handleCreateActionForDate}
+                  onCreateAction={isReadOnly ? undefined : handleCreateActionForDate}
                   timings={timingBatch?.timings}
                 />
               )}
@@ -384,7 +386,7 @@ export default function MaintenanceCalendar() {
                   currentDate={currentDate}
                   eventsByDate={filteredEventsByDate}
                   onEventClick={handleEventClick}
-                  onCreateAction={handleCreateActionForDate}
+                  onCreateAction={isReadOnly ? undefined : handleCreateActionForDate}
                 />
               )}
 
@@ -394,7 +396,7 @@ export default function MaintenanceCalendar() {
                   events={currentDayEvents}
                   onEventClick={handleEventClick}
                   onToggleComplete={handleToggleComplete}
-                  onCreateAction={handleCreateActionForDate}
+                  onCreateAction={isReadOnly ? undefined : handleCreateActionForDate}
                 />
               )}
             </>

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { toast } from 'sonner';
+import { useEntityId } from '@/contexts/EntityContext';
 import type {
     TableInfo,
     TableSchema,
@@ -17,6 +18,7 @@ import type {
 
 export const useAdmin = () => {
     const queryClient = useQueryClient();
+    const entityId = useEntityId();
 
     // =============================================
     // ADMIN DASHBOARD
@@ -24,7 +26,7 @@ export const useAdmin = () => {
 
     const useAdminOverview = () => {
         return useQuery({
-            queryKey: ['admin', 'overview'],
+            queryKey: ['admin', 'overview', { entityId }],
             queryFn: () => api.get<AdminOverview>('/admin/metrics/overview'),
             refetchInterval: 30000, // Refresh every 30s
         });
@@ -36,14 +38,14 @@ export const useAdmin = () => {
 
     const useDbTables = () => {
         return useQuery({
-            queryKey: ['admin', 'db', 'tables'],
+            queryKey: ['admin', 'db', 'tables', { entityId }],
             queryFn: () => api.get<TableInfo[]>('/admin/db/tables'),
         });
     };
 
     const useDbTableSchema = (tableName: string) => {
         return useQuery({
-            queryKey: ['admin', 'db', 'schema', tableName],
+            queryKey: ['admin', 'db', 'schema', tableName, { entityId }],
             queryFn: () => api.get<TableSchema>(`/admin/db/tables/${tableName}/schema`),
             enabled: !!tableName,
         });
@@ -51,7 +53,7 @@ export const useAdmin = () => {
 
     const useDbTableData = (tableName: string, page: number = 1, pageSize: number = 50, search: string = '') => {
         return useQuery({
-            queryKey: ['admin', 'db', 'data', tableName, page, pageSize, search],
+            queryKey: ['admin', 'db', 'data', tableName, page, pageSize, search, { entityId }],
             queryFn: () => api.get<TableDataResponse>(
                 `/admin/db/tables/${tableName}/data?page=${page}&pageSize=${pageSize}&search=${encodeURIComponent(search)}`
             ),
@@ -93,7 +95,7 @@ export const useAdmin = () => {
 
     const useApiActivity = (hours: number = 24) => {
         return useQuery({
-            queryKey: ['admin', 'api-activity', hours],
+            queryKey: ['admin', 'api-activity', hours, { entityId }],
             queryFn: () => api.get<ApiActivityStat[]>(`/admin/metrics/api-activity?hours=${hours}`),
             refetchInterval: 30000,
         });
@@ -101,7 +103,7 @@ export const useAdmin = () => {
 
     const useApiTimeline = (hours: number = 24) => {
         return useQuery({
-            queryKey: ['admin', 'api-timeline', hours],
+            queryKey: ['admin', 'api-timeline', hours, { entityId }],
             queryFn: () => api.get<ApiTimelineEntry[]>(`/admin/metrics/api-timeline?hours=${hours}`),
             refetchInterval: 30000,
         });
@@ -109,7 +111,7 @@ export const useAdmin = () => {
 
     const useSystemHealth = () => {
         return useQuery({
-            queryKey: ['admin', 'system-health'],
+            queryKey: ['admin', 'system-health', { entityId }],
             queryFn: () => api.get<SystemHealth>('/admin/metrics/system-health'),
             refetchInterval: 10000, // Refresh every 10s
         });
@@ -117,14 +119,14 @@ export const useAdmin = () => {
 
     const useErrorLogs = (page: number = 1, pageSize: number = 20) => {
         return useQuery({
-            queryKey: ['admin', 'errors', page, pageSize],
+            queryKey: ['admin', 'errors', page, pageSize, { entityId }],
             queryFn: () => api.get<PaginatedResponse<ErrorLogEntry>>(`/admin/metrics/errors?page=${page}&pageSize=${pageSize}`),
         });
     };
 
     const useActivityLog = (page: number = 1, pageSize: number = 50, method?: string) => {
         return useQuery({
-            queryKey: ['admin', 'activity-log', page, pageSize, method],
+            queryKey: ['admin', 'activity-log', page, pageSize, method, { entityId }],
             queryFn: () => {
                 let url = `/admin/metrics/activity-log?page=${page}&pageSize=${pageSize}`;
                 if (method) url += `&method=${method}`;
@@ -139,7 +141,7 @@ export const useAdmin = () => {
 
     const useAdminUsers = () => {
         return useQuery({
-            queryKey: ['admin', 'users'],
+            queryKey: ['admin', 'users', { entityId }],
             queryFn: () => api.get<AdminUser[]>('/admin/users'),
         });
     };

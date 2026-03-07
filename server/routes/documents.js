@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
 const { uploadDocument } = require('../config/upload');
+const requireWriteAccess = require('../middleware/writeProtection');
 
 // GET /api/documents?machineId=123&category=DOCUMENT
 router.get('/', async (req, res) => {
@@ -10,17 +11,18 @@ router.get('/', async (req, res) => {
         const pool = await poolPromise;
         const request = pool.request();
 
-        let query = 'SELECT * FROM MachineDocuments WHERE 1=1';
+        let query = 'SELECT d.* FROM MachineDocuments d INNER JOIN Machines m ON d.MachineID = m.MachineID WHERE m.EntityID = @EntityID';
+        request.input('EntityID', sql.Int, req.entityId);
 
         if (machineId) {
-            query += ' AND MachineID = @MachineID';
+            query += ' AND d.MachineID = @MachineID';
             request.input('MachineID', sql.Int, machineId);
         }
         if (category) {
-            query += ' AND Category = @Category';
+            query += ' AND d.Category = @Category';
             request.input('Category', sql.NVarChar(50), category);
         }
-        query += ' ORDER BY UploadedDate DESC';
+        query += ' ORDER BY d.UploadedDate DESC';
 
         const result = await request.query(query);
 
@@ -42,7 +44,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/documents (multipart: file + machineId + category)
-router.post('/', uploadDocument.single('file'), async (req, res) => {
+router.post('/', requireWriteAccess, uploadDocument.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file provided' });
@@ -80,7 +82,7 @@ router.post('/', uploadDocument.single('file'), async (req, res) => {
 });
 
 // DELETE /api/documents/:id
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireWriteAccess, async (req, res) => {
     try {
         const pool = await poolPromise;
         await pool.request()

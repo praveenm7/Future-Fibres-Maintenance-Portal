@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
 const { validate, schemas } = require('../middleware/validate');
+const requireWriteAccess = require('../middleware/writeProtection');
 
 // Helper to map ticket database record to frontend model
 const mapTicket = (record) => ({
@@ -51,7 +52,7 @@ const SINGLE_TICKET_QUERY = `
     LEFT JOIN Operators sub ON t.SubmittedByID = sub.OperatorID
     LEFT JOIN Operators asgn ON t.AssignedToID = asgn.OperatorID
     LEFT JOIN Operators appr ON t.ApprovedByID = appr.OperatorID
-    WHERE t.TicketID = @TicketID
+    WHERE t.TicketID = @TicketID AND t.EntityID = @EntityID
 `;
 
 // GET all support tickets
@@ -59,6 +60,7 @@ router.get('/', async (req, res) => {
     try {
         const pool = await poolPromise;
         const result = await pool.request()
+            .input('EntityID', sql.Int, req.entityId)
             .execute('sp_GetSupportTicketsWithDetails');
 
         res.json(result.recordset.map(mapTicket));
@@ -74,6 +76,7 @@ router.get('/:id', async (req, res) => {
         const pool = await poolPromise;
         const result = await pool.request()
             .input('TicketID', sql.Int, req.params.id)
+            .input('EntityID', sql.Int, req.entityId)
             .query(SINGLE_TICKET_QUERY);
 
         if (result.recordset.length === 0) {
@@ -88,7 +91,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST create new support ticket
-router.post('/', validate(schemas.createTicket), async (req, res) => {
+router.post('/', requireWriteAccess, validate(schemas.createTicket), async (req, res) => {
     try {
         const { machineId, title, description, category, priority, submittedById } = req.body;
 
@@ -100,12 +103,14 @@ router.post('/', validate(schemas.createTicket), async (req, res) => {
             .input('Category', sql.NVarChar(100), category)
             .input('Priority', sql.NVarChar(20), priority)
             .input('SubmittedByID', sql.Int, submittedById)
+            .input('EntityID', sql.Int, req.entityId)
             .execute('sp_CreateSupportTicket');
 
         const newTicketId = result.recordset[0].TicketID;
 
         const newTicket = await pool.request()
             .input('TicketID', sql.Int, newTicketId)
+            .input('EntityID', sql.Int, req.entityId)
             .query(SINGLE_TICKET_QUERY);
 
         res.status(201).json(mapTicket(newTicket.recordset[0]));
@@ -116,7 +121,7 @@ router.post('/', validate(schemas.createTicket), async (req, res) => {
 });
 
 // PUT update support ticket
-router.put('/:id', validate(schemas.updateTicket), async (req, res) => {
+router.put('/:id', requireWriteAccess, validate(schemas.updateTicket), async (req, res) => {
     try {
         const {
             machineId, title, description, category, priority, status,
@@ -136,6 +141,7 @@ router.put('/:id', validate(schemas.updateTicket), async (req, res) => {
             .input('ApprovedByID', sql.Int, approvedById || null)
             .input('DueDate', sql.Date, dueDate || null)
             .input('ResolutionNotes', sql.NVarChar(sql.MAX), resolutionNotes || null)
+            .input('EntityID', sql.Int, req.entityId)
             .query(`
                 UPDATE SupportTickets SET
                     MachineID = @MachineID,
@@ -150,11 +156,12 @@ router.put('/:id', validate(schemas.updateTicket), async (req, res) => {
                     ResolutionNotes = @ResolutionNotes,
                     ResolvedDate = CASE WHEN @Status = 'RESOLVED' AND ResolvedDate IS NULL THEN GETDATE() ELSE ResolvedDate END,
                     ClosedDate = CASE WHEN @Status = 'CLOSED' AND ClosedDate IS NULL THEN GETDATE() ELSE ClosedDate END
-                WHERE TicketID = @TicketID
+                WHERE TicketID = @TicketID AND EntityID = @EntityID
             `);
 
         const updated = await pool.request()
             .input('TicketID', sql.Int, req.params.id)
+            .input('EntityID', sql.Int, req.entityId)
             .query(SINGLE_TICKET_QUERY);
 
         res.json(mapTicket(updated.recordset[0]));
@@ -165,7 +172,7 @@ router.put('/:id', validate(schemas.updateTicket), async (req, res) => {
 });
 
 // PATCH update ticket status (workflow transitions)
-router.patch('/:id/status', validate(schemas.updateTicketStatus), async (req, res) => {
+router.patch('/:id/status', requireWriteAccess, validate(schemas.updateTicketStatus), async (req, res) => {
     try {
         const { status, assignedToId, approvedById, dueDate, resolutionNotes } = req.body;
 
@@ -174,7 +181,8 @@ router.patch('/:id/status', validate(schemas.updateTicketStatus), async (req, re
         // Get current ticket status for audit comment
         const current = await pool.request()
             .input('TicketID', sql.Int, req.params.id)
-            .query('SELECT Status FROM SupportTickets WHERE TicketID = @TicketID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('SELECT Status FROM SupportTickets WHERE TicketID = @TicketID AND EntityID = @EntityID');
 
         if (current.recordset.length === 0) {
             return res.status(404).json({ error: 'Support ticket not found' });
@@ -213,7 +221,8 @@ router.patch('/:id/status', validate(schemas.updateTicketStatus), async (req, re
             setClauses.push('ClosedDate = CASE WHEN ClosedDate IS NULL THEN GETDATE() ELSE ClosedDate END');
         }
 
-        await request.query(`UPDATE SupportTickets SET ${setClauses.join(', ')} WHERE TicketID = @TicketID`);
+        request.input('EntityID', sql.Int, req.entityId);
+        await request.query(`UPDATE SupportTickets SET ${setClauses.join(', ')} WHERE TicketID = @TicketID AND EntityID = @EntityID`);
 
         // Auto-create system comment for status change
         if (oldStatus !== status) {
@@ -229,6 +238,7 @@ router.patch('/:id/status', validate(schemas.updateTicketStatus), async (req, re
 
         const updated = await pool.request()
             .input('TicketID', sql.Int, req.params.id)
+            .input('EntityID', sql.Int, req.entityId)
             .query(SINGLE_TICKET_QUERY);
 
         res.json(mapTicket(updated.recordset[0]));
@@ -239,12 +249,13 @@ router.patch('/:id/status', validate(schemas.updateTicketStatus), async (req, re
 });
 
 // DELETE support ticket
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireWriteAccess, async (req, res) => {
     try {
         const pool = await poolPromise;
         await pool.request()
             .input('TicketID', sql.Int, req.params.id)
-            .query('DELETE FROM SupportTickets WHERE TicketID = @TicketID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('DELETE FROM SupportTickets WHERE TicketID = @TicketID AND EntityID = @EntityID');
 
         res.json({ message: 'Support ticket deleted successfully' });
     } catch (err) {

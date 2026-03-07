@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const os = require('os');
 const { sql, poolPromise } = require('../config/database');
+const requireWriteAccess = require('../middleware/writeProtection');
 
 // Server start time for uptime calculation
 const serverStartTime = Date.now();
@@ -236,7 +237,7 @@ router.get('/db/tables/:name/data', async (req, res) => {
 });
 
 // PUT /db/tables/:name/rows/:id — Update a row
-router.put('/db/tables/:name/rows/:id', async (req, res) => {
+router.put('/db/tables/:name/rows/:id', requireWriteAccess, async (req, res) => {
     try {
         const pool = await poolPromise;
         const tableName = req.params.name;
@@ -302,7 +303,7 @@ router.put('/db/tables/:name/rows/:id', async (req, res) => {
 });
 
 // DELETE /db/tables/:name/rows/:id — Delete a row
-router.delete('/db/tables/:name/rows/:id', async (req, res) => {
+router.delete('/db/tables/:name/rows/:id', requireWriteAccess, async (req, res) => {
     try {
         const pool = await poolPromise;
         const tableName = req.params.name;
@@ -345,7 +346,6 @@ router.get('/metrics/overview', async (req, res) => {
             SELECT
                 (SELECT COUNT(*) FROM Operators WHERE IsActive = 1) AS totalUsers,
                 (SELECT COUNT(*) FROM Machines) AS totalMachines,
-                (SELECT COUNT(*) FROM NonConformities) AS totalNCs,
                 (SELECT COUNT(*) FROM MaintenanceActions) AS totalActions,
                 (SELECT COUNT(*) FROM SpareParts) AS totalSpareParts,
                 (SELECT COUNT(*) FROM ApiRequestLogs WHERE CreatedDate >= CAST(GETUTCDATE() AS DATE)) AS requestsToday,
@@ -357,7 +357,7 @@ router.get('/metrics/overview', async (req, res) => {
 
         res.json({
             ...stats,
-            totalRecords: stats.totalMachines + stats.totalNCs + stats.totalActions + stats.totalSpareParts,
+            totalRecords: stats.totalMachines + stats.totalActions + stats.totalSpareParts,
             serverUptime: uptimeMs,
             serverUptimeFormatted: formatUptime(uptimeMs)
         });
@@ -619,7 +619,7 @@ router.get('/users', async (req, res) => {
 });
 
 // PUT /users/:id/role — Update an operator's role
-router.put('/users/:id/role', async (req, res) => {
+router.put('/users/:id/role', requireWriteAccess, async (req, res) => {
     try {
         const pool = await poolPromise;
         const { role } = req.body;

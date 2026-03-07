@@ -2,13 +2,15 @@ const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
 const { validate, schemas } = require('../middleware/validate');
+const requireWriteAccess = require('../middleware/writeProtection');
 
 // GET /api/shifts — list all shift definitions
 router.get('/', async (req, res) => {
     try {
         const pool = await poolPromise;
         const result = await pool.request()
-            .query('SELECT * FROM Shifts WHERE IsActive = 1 ORDER BY ShiftID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('SELECT * FROM Shifts WHERE IsActive = 1 AND EntityID = @EntityID ORDER BY ShiftID');
 
         res.json(result.recordset.map(s => ({
             shiftId: s.ShiftID.toString(),
@@ -33,6 +35,7 @@ router.get('/roster', async (req, res) => {
         const pool = await poolPromise;
         const result = await pool.request()
             .input('ShiftDate', sql.Date, date)
+            .input('EntityID', sql.Int, req.entityId)
             .query(`
                 SELECT
                     o.OperatorID,
@@ -51,7 +54,7 @@ router.get('/roster', async (req, res) => {
                 LEFT JOIN Shifts ds ON o.DefaultShiftID = ds.ShiftID
                 LEFT JOIN OperatorShiftOverrides oso ON o.OperatorID = oso.OperatorID AND oso.ShiftDate = @ShiftDate
                 LEFT JOIN Shifts os ON oso.ShiftID = os.ShiftID
-                WHERE o.IsActive = 1
+                WHERE o.IsActive = 1 AND o.EntityID = @EntityID
                 ORDER BY o.OperatorName
             `);
 
@@ -100,7 +103,7 @@ router.get('/roster', async (req, res) => {
 });
 
 // PUT /api/shifts/operators/:id/default — set operator's default shift
-router.put('/operators/:id/default', validate(schemas.setDefaultShift), async (req, res) => {
+router.put('/operators/:id/default', requireWriteAccess, validate(schemas.setDefaultShift), async (req, res) => {
     try {
         const { shiftId } = req.body; // null to unset
 
@@ -108,7 +111,8 @@ router.put('/operators/:id/default', validate(schemas.setDefaultShift), async (r
         await pool.request()
             .input('OperatorID', sql.Int, req.params.id)
             .input('DefaultShiftID', sql.Int, shiftId || null)
-            .query('UPDATE Operators SET DefaultShiftID = @DefaultShiftID WHERE OperatorID = @OperatorID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('UPDATE Operators SET DefaultShiftID = @DefaultShiftID WHERE OperatorID = @OperatorID AND EntityID = @EntityID');
 
         res.json({ message: 'Default shift updated' });
     } catch (err) {
@@ -118,7 +122,7 @@ router.put('/operators/:id/default', validate(schemas.setDefaultShift), async (r
 });
 
 // POST /api/shifts/overrides — create/update a shift override for an operator on a date
-router.post('/overrides', validate(schemas.createShiftOverride), async (req, res) => {
+router.post('/overrides', requireWriteAccess, validate(schemas.createShiftOverride), async (req, res) => {
     try {
         const { operatorId, date, shiftId } = req.body; // shiftId null = day off
 
@@ -147,7 +151,7 @@ router.post('/overrides', validate(schemas.createShiftOverride), async (req, res
 });
 
 // DELETE /api/shifts/overrides — remove a shift override (revert to default)
-router.delete('/overrides', async (req, res) => {
+router.delete('/overrides', requireWriteAccess, async (req, res) => {
     try {
         const { operatorId, date } = req.query;
 

@@ -12,42 +12,18 @@ export interface DashboardFilters {
 export interface OverviewKPIs {
     totalMachines: number;
     machinesNeedingMaintenance: number;
-    activeNCs: number;
-    overdueNCs: number;
     criticalSpareParts: number;
     complianceRate: number;
 }
 
 export interface OverviewDashboardData {
     kpis: OverviewKPIs;
-    ncStatusDistribution: Array<{ status: string; count: number }>;
     machinesByArea: Array<{ area: string; count: number }>;
-    ncMonthlyTrend: Array<{ month: string; count: number }>;
     maintenanceByPeriodicity: Array<{
         periodicity: string;
         idealCount: number;
         mandatoryCount: number;
     }>;
-}
-
-// --- NC Analytics Dashboard ---
-
-export interface NCAnalyticsKPIs {
-    totalNCs: number;
-    openNCs: number;
-    avgResolutionDays: number | null;
-    ncsThisMonth: number;
-    highPriorityOpen: number;
-    completionRate: number;
-}
-
-export interface NCAnalyticsDashboardData {
-    kpis: NCAnalyticsKPIs;
-    ncsByStatus: Array<{ status: string; count: number }>;
-    monthlyTrendByCategory: Array<{ month: string; category: string; count: number }>;
-    priorityDistribution: Array<{ priority: number; count: number }>;
-    avgResolutionByArea: Array<{ area: string; avgDays: number; completedCount: number }>;
-    topMachinesByNCs: Array<{ finalCode: string; description: string; ncCount: number }>;
 }
 
 // --- Equipment Health Dashboard ---
@@ -115,7 +91,6 @@ export interface SparePartsDashboardData {
 export interface WorkforceKPIs {
     activeOperators: number;
     operatorsWithAuthorizations: number;
-    avgNCsPerOperator: number | null;
     unassignedMachines: number;
     departmentsCount: number;
 }
@@ -151,14 +126,8 @@ export interface CompletionTrendEntry {
 
 export interface WorkforceDashboardData {
     kpis: WorkforceKPIs;
-    ncWorkloadByOperator: Array<{ operatorName: string; ncCount: number }>;
     operatorsByDepartment: Array<{ department: string; count: number }>;
     authorizationCoverage: Array<{ operatorName: string; authorizedGroups: number }>;
-    operatorPerformance: Array<{
-        operatorName: string;
-        totalAssigned: number;
-        completed: number;
-    }>;
     operatorEfficiency: OperatorEfficiencyEntry[];
     operatorCompletionRates: OperatorCompletionRateEntry[];
     shiftCoverage: ShiftCoverageEntry[];

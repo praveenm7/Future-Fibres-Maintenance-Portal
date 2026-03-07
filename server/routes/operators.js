@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
 const { validate, schemas } = require('../middleware/validate');
+const requireWriteAccess = require('../middleware/writeProtection');
 
 // Helper to map operator database record to frontend model
 const mapOperator = (record) => ({
@@ -19,7 +20,8 @@ router.get('/', async (req, res) => {
     try {
         const pool = await poolPromise;
         const result = await pool.request()
-            .query('SELECT * FROM Operators WHERE IsActive = 1 ORDER BY OperatorName');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('SELECT * FROM Operators WHERE IsActive = 1 AND EntityID = @EntityID ORDER BY OperatorName');
 
         res.json(result.recordset.map(mapOperator));
     } catch (err) {
@@ -34,7 +36,8 @@ router.get('/:id', async (req, res) => {
         const pool = await poolPromise;
         const result = await pool.request()
             .input('OperatorID', sql.Int, req.params.id)
-            .query('SELECT * FROM Operators WHERE OperatorID = @OperatorID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('SELECT * FROM Operators WHERE OperatorID = @OperatorID AND EntityID = @EntityID');
 
         if (result.recordset.length === 0) {
             return res.status(404).json({ error: 'Operator not found' });
@@ -48,7 +51,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST create new operator
-router.post('/', validate(schemas.createOperator), async (req, res) => {
+router.post('/', requireWriteAccess, validate(schemas.createOperator), async (req, res) => {
     try {
         const { operatorName, email, department, isActive } = req.body;
 
@@ -58,9 +61,10 @@ router.post('/', validate(schemas.createOperator), async (req, res) => {
             .input('Email', sql.NVarChar(100), email)
             .input('Department', sql.NVarChar(50), department)
             .input('IsActive', sql.Bit, isActive !== undefined ? isActive : true)
+            .input('EntityID', sql.Int, req.entityId)
             .query(`
-        INSERT INTO Operators (OperatorName, Email, Department, IsActive)
-        VALUES (@OperatorName, @Email, @Department, @IsActive);
+        INSERT INTO Operators (OperatorName, Email, Department, IsActive, EntityID)
+        VALUES (@OperatorName, @Email, @Department, @IsActive, @EntityID);
         SELECT SCOPE_IDENTITY() AS OperatorID;
       `);
 
@@ -68,7 +72,8 @@ router.post('/', validate(schemas.createOperator), async (req, res) => {
 
         const newOperator = await pool.request()
             .input('OperatorID', sql.Int, newOperatorId)
-            .query('SELECT * FROM Operators WHERE OperatorID = @OperatorID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('SELECT * FROM Operators WHERE OperatorID = @OperatorID AND EntityID = @EntityID');
 
         res.status(201).json(mapOperator(newOperator.recordset[0]));
     } catch (err) {
@@ -78,7 +83,7 @@ router.post('/', validate(schemas.createOperator), async (req, res) => {
 });
 
 // PUT update operator
-router.put('/:id', validate(schemas.updateOperator), async (req, res) => {
+router.put('/:id', requireWriteAccess, validate(schemas.updateOperator), async (req, res) => {
     try {
         const { operatorName, email, department, isActive } = req.body;
 
@@ -89,18 +94,20 @@ router.put('/:id', validate(schemas.updateOperator), async (req, res) => {
             .input('Email', sql.NVarChar(100), email)
             .input('Department', sql.NVarChar(50), department)
             .input('IsActive', sql.Bit, isActive)
+            .input('EntityID', sql.Int, req.entityId)
             .query(`
         UPDATE Operators SET
           OperatorName = @OperatorName,
           Email = @Email,
           Department = @Department,
           IsActive = @IsActive
-        WHERE OperatorID = @OperatorID
+        WHERE OperatorID = @OperatorID AND EntityID = @EntityID
       `);
 
         const updated = await pool.request()
             .input('OperatorID', sql.Int, req.params.id)
-            .query('SELECT * FROM Operators WHERE OperatorID = @OperatorID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('SELECT * FROM Operators WHERE OperatorID = @OperatorID AND EntityID = @EntityID');
 
         res.json(mapOperator(updated.recordset[0]));
     } catch (err) {
@@ -110,12 +117,13 @@ router.put('/:id', validate(schemas.updateOperator), async (req, res) => {
 });
 
 // DELETE operator (soft delete - set IsActive to false)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireWriteAccess, async (req, res) => {
     try {
         const pool = await poolPromise;
         await pool.request()
             .input('OperatorID', sql.Int, req.params.id)
-            .query('UPDATE Operators SET IsActive = 0 WHERE OperatorID = @OperatorID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('UPDATE Operators SET IsActive = 0 WHERE OperatorID = @OperatorID AND EntityID = @EntityID');
 
         res.json({ message: 'Operator deactivated successfully' });
     } catch (err) {

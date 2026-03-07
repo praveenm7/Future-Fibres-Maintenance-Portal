@@ -22,7 +22,7 @@ export function BottomNav() {
   const isActive = (path: string) => {
     if (path === '/admin') return location.pathname.startsWith('/admin');
     if (path === '/forms') {
-      return ['/forms', '/machines', '/maintenance-plan', '/non-conformities', '/nc-comments', '/spare-parts', '/authorization-matrix', '/lists'].includes(location.pathname);
+      return ['/forms', '/machines', '/maintenance-plan', '/spare-parts', '/authorization-matrix', '/lists'].includes(location.pathname);
     }
     if (path === '/reports') return location.pathname.startsWith('/reports');
     if (path === '/dashboards') return location.pathname.startsWith('/dashboards');

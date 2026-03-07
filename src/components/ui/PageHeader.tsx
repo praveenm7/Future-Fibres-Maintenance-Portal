@@ -20,21 +20,17 @@ const ROUTE_MAP: Record<string, { label: string; section?: string }> = {
   // Forms
   '/machines': { label: 'Machine Management', section: 'Forms' },
   '/maintenance-plan': { label: 'Maintenance Plan', section: 'Forms' },
-  '/non-conformities': { label: "Maintenance NC's", section: 'Forms' },
-  '/nc-comments': { label: "NC's Comments", section: 'Forms' },
   '/spare-parts': { label: 'Spare Parts', section: 'Forms' },
   '/authorization-matrix': { label: 'Authorization Matrix', section: 'Forms' },
   '/lists': { label: 'Lists Modification', section: 'Forms' },
   '/maintenance-calendar': { label: 'Maintenance Calendar', section: 'Forms' },
   // Reports
   '/reports/machinery-list': { label: 'Tooling & Machinery List', section: 'Reports' },
-  '/reports/nc-maintenance': { label: 'NC Maintenance', section: 'Reports' },
   '/reports/maintenance-summary': { label: 'Maintenance Summary', section: 'Reports' },
   '/reports/maintenance-plan': { label: 'Maintenance Plan', section: 'Reports' },
   '/reports/authorization': { label: 'Authorization Matrix', section: 'Reports' },
   // Dashboards
   '/dashboards/overview': { label: 'Overview', section: 'Dashboards' },
-  '/dashboards/nc-analytics': { label: 'NC Analytics', section: 'Dashboards' },
   '/dashboards/equipment-health': { label: 'Equipment Health', section: 'Dashboards' },
   '/dashboards/spare-parts': { label: 'Spare Parts', section: 'Dashboards' },
   '/dashboards/workforce': { label: 'Workforce', section: 'Dashboards' },

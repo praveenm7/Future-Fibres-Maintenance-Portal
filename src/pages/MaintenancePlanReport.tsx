@@ -5,11 +5,10 @@ import { useMachines } from '@/hooks/useMachines';
 import { useMaintenanceActions } from '@/hooks/useMaintenanceActions';
 import { useMaintenanceExecutions } from '@/hooks/useMaintenanceExecutions';
 import { useSpareParts } from '@/hooks/useSpareParts';
-import { useNonConformities } from '@/hooks/useNonConformities';
-import { exportToExcel, formatDateForExport, getExportTimestamp } from '@/lib/exportExcel';
+import { exportToExcel, getExportTimestamp } from '@/lib/exportExcel';
 import { printReport } from '@/lib/printReport';
 import {
-  Loader2, Wrench, Package, AlertTriangle, ImageIcon,
+  Loader2, Wrench, Package, ImageIcon,
   Check, ExternalLink, MapPin, Factory, Hash, User, Minus, TrendingUp
 } from 'lucide-react';
 import { QueryError } from '@/components/ui/QueryError';
@@ -27,28 +26,6 @@ function formatDate(dateStr?: string) {
   }
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const config: Record<string, { dot: string; text: string }> = {
-    'PENDING': { dot: 'bg-amber-400', text: 'text-amber-700 dark:text-amber-400' },
-    'IN PROGRESS': { dot: 'bg-blue-400', text: 'text-blue-700 dark:text-blue-400' },
-    'COMPLETED': { dot: 'bg-emerald-400', text: 'text-emerald-700 dark:text-emerald-400' },
-    'CANCELLED': { dot: 'bg-gray-400', text: 'text-gray-500' },
-  };
-  const c = config[status] || config['PENDING'];
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${c.text}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${c.dot}`}></span>
-      {status === 'IN PROGRESS' ? 'In Progress' : status.charAt(0) + status.slice(1).toLowerCase()}
-    </span>
-  );
-}
-
-function PriorityBadge({ priority }: { priority: number }) {
-  if (priority >= 3) return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400">High</span>;
-  if (priority === 2) return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">Medium</span>;
-  return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">Low</span>;
-}
-
 function PeriodicityBadge({ periodicity }: { periodicity: string }) {
   return (
     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
@@ -62,8 +39,6 @@ export default function MaintenancePlanReport() {
   const { useGetActions } = useMaintenanceActions();
   const { useGetExecutionStats } = useMaintenanceExecutions();
   const { useGetParts } = useSpareParts();
-  const { useGetNCs } = useNonConformities();
-
   const { data: machines = [], isLoading: loadingMachines, isError: errorMachines, refetch: refetchMachines } = useGetMachines();
   const [selectedMachineId, setSelectedMachineId] = useState<string>('');
 
@@ -76,7 +51,6 @@ export default function MaintenancePlanReport() {
   const { data: machineActions = [], isLoading: loadingActions, isError: errorActions, refetch: refetchActions } = useGetActions(selectedMachineId);
   const { data: executionStats = [] } = useGetExecutionStats(selectedMachineId);
   const { data: machineParts = [], isLoading: loadingParts, isError: errorParts, refetch: refetchParts } = useGetParts(selectedMachineId);
-  const { data: machineNCs = [], isLoading: loadingNCs, isError: errorNCs, refetch: refetchNCs } = useGetNCs(selectedMachineId);
 
   // Build a lookup map for execution stats by actionId
   const statsMap = useMemo(() => new Map(executionStats.map(s => [s.actionId, s])), [executionStats]);
@@ -90,9 +64,9 @@ export default function MaintenancePlanReport() {
   }, [executionStats]);
 
   const selectedMachine = machines.find(m => m.id === selectedMachineId);
-  const isLoadingData = loadingActions || loadingParts || loadingNCs;
-  const hasDataError = errorActions || errorParts || errorNCs;
-  const refetchAllData = () => { refetchActions(); refetchParts(); refetchNCs(); };
+  const isLoadingData = loadingActions || loadingParts;
+  const hasDataError = errorActions || errorParts;
+  const refetchAllData = () => { refetchActions(); refetchParts(); };
 
   const handlePrint = () => {
     if (!selectedMachine) return;
@@ -120,20 +94,10 @@ export default function MaintenancePlanReport() {
       machineParts.map(p => `<tr><td>${p.description}</td><td>${p.reference}</td><td style="text-align:center">${p.quantity}</td><td>${p.link || '-'}</td></tr>`).join('')}
     </tbody></table>`;
 
-    const ncsTable = `<div class="section-title">Non-Conformities</div>
-    <table><thead><tr><th>NC Code</th><th>Operator</th><th>Created</th><th>Initiated</th><th>Finished</th><th>Status</th><th>Category</th><th>Priority</th></tr></thead>
-    <tbody>${machineNCs.length === 0 ? '<tr><td colspan="8" style="text-align:center">No non-conformities</td></tr>' :
-      machineNCs.map(nc => {
-        const pLabel = nc.priority >= 3 ? 'High' : nc.priority === 2 ? 'Medium' : 'Low';
-        const sLabel = nc.status === 'IN PROGRESS' ? 'In Progress' : nc.status.charAt(0) + nc.status.slice(1).toLowerCase();
-        return `<tr><td>${nc.ncCode}</td><td>${nc.maintenanceOperator || '-'}</td><td>${formatDate(nc.creationDate)}</td><td>${formatDate(nc.initiationDate)}</td><td>${formatDate(nc.finishDate)}</td><td>${sLabel}</td><td>${nc.category || '-'}</td><td>${pLabel}</td></tr>`;
-      }).join('')}
-    </tbody></table>`;
-
     printReport({
       title: `Maintenance Plan — ${selectedMachine.finalCode}`,
       subtitle: selectedMachine.description,
-      htmlContent: machineHeader + actionsTable + partsTable + ncsTable,
+      htmlContent: machineHeader + actionsTable + partsTable,
     });
   };
 
@@ -161,18 +125,6 @@ export default function MaintenancePlanReport() {
           headers: ['Description', 'Reference', 'Quantity', 'Link'],
           rows: machineParts.map(p => [p.description, p.reference, p.quantity, p.link || '']),
         },
-        {
-          name: 'Non-Conformities',
-          headers: ['NC Code', 'Operator', 'Created', 'Initiated', 'Finished', 'Status', 'Category', 'Priority'],
-          rows: machineNCs.map(nc => {
-            const pLabel = nc.priority >= 3 ? 'High' : nc.priority === 2 ? 'Medium' : 'Low';
-            return [
-              nc.ncCode, nc.maintenanceOperator || '',
-              formatDateForExport(nc.creationDate), formatDateForExport(nc.initiationDate),
-              formatDateForExport(nc.finishDate), nc.status, nc.category || '', pLabel
-            ];
-          }),
-        },
       ],
     });
   };
@@ -190,7 +142,7 @@ export default function MaintenancePlanReport() {
 
   return (
     <div>
-      <PageHeader title="Maintenance Plan" subtitle="View maintenance actions, spare parts, and NCs per machine" />
+      <PageHeader title="Maintenance Plan" subtitle="View maintenance actions and spare parts per machine" />
 
       {/* Machine Selector */}
       <div className="bg-card border border-border rounded-lg mb-6 overflow-hidden">
@@ -221,7 +173,6 @@ export default function MaintenancePlanReport() {
             <div className="flex border-t sm:border-t-0 sm:border-l border-border divide-x divide-border">
               <QuickStat icon={<Wrench className="h-3.5 w-3.5" />} value={machineActions.length} label="Actions" />
               <QuickStat icon={<Package className="h-3.5 w-3.5" />} value={machineParts.length} label="Parts" />
-              <QuickStat icon={<AlertTriangle className="h-3.5 w-3.5" />} value={machineNCs.length} label="NCs" />
               {overallCompletionRate !== null && (
                 <QuickStat icon={<TrendingUp className="h-3.5 w-3.5" />} value={overallCompletionRate} label="% Done" />
               )}
@@ -386,52 +337,6 @@ export default function MaintenancePlanReport() {
             </div>
           </SectionCard>
 
-          {/* Non-Conformities */}
-          <SectionCard
-            icon={<AlertTriangle className="h-3.5 w-3.5" />}
-            title="Non-Conformities"
-            count={machineNCs.length}
-          >
-            <div className="relative isolate overflow-x-auto">
-              <table className="data-table text-xs">
-                <thead>
-                  <tr>
-                    <th>NC Code</th>
-                    <th>Operator</th>
-                    <th>Created</th>
-                    <th>Initiated</th>
-                    <th>Finished</th>
-                    <th>Status</th>
-                    <th>Category</th>
-                    <th className="text-center">Priority</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {machineNCs.length === 0 ? (
-                    <tr>
-                      <td colSpan={8} className="text-center py-8 text-muted-foreground">
-                        <AlertTriangle className="h-6 w-6 mx-auto mb-1.5 opacity-15" />
-                        <p className="text-xs">No non-conformities recorded</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    machineNCs.map((nc) => (
-                      <tr key={nc.id}>
-                        <td className="font-mono font-semibold whitespace-nowrap">{nc.ncCode}</td>
-                        <td className="text-muted-foreground">{nc.maintenanceOperator || '-'}</td>
-                        <td className="whitespace-nowrap text-muted-foreground">{formatDate(nc.creationDate)}</td>
-                        <td className="whitespace-nowrap text-muted-foreground">{formatDate(nc.initiationDate)}</td>
-                        <td className="whitespace-nowrap text-muted-foreground">{formatDate(nc.finishDate)}</td>
-                        <td><StatusBadge status={nc.status} /></td>
-                        <td className="text-muted-foreground">{nc.category || '-'}</td>
-                        <td className="text-center"><PriorityBadge priority={nc.priority} /></td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </SectionCard>
         </div>
 
         {/* Machine Info Sidebar */}
@@ -469,36 +374,6 @@ export default function MaintenancePlanReport() {
             </div>
           </div>
 
-          {/* NC Status Summary */}
-          {machineNCs.length > 0 && (
-            <div className="bg-card border border-border rounded-lg overflow-hidden">
-              <div className="px-4 py-2.5 border-b border-border bg-muted/20">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">NC Status Summary</p>
-              </div>
-              <div className="p-3 space-y-2.5">
-                {(['PENDING', 'IN PROGRESS', 'COMPLETED', 'CANCELLED'] as const).map((statusKey) => {
-                  const count = machineNCs.filter(nc => nc.status === statusKey).length;
-                  if (count === 0) return null;
-                  const dotColor: Record<string, string> = {
-                    'PENDING': 'bg-amber-400',
-                    'IN PROGRESS': 'bg-blue-400',
-                    'COMPLETED': 'bg-emerald-400',
-                    'CANCELLED': 'bg-gray-400',
-                  };
-                  const statusLabel = statusKey === 'IN PROGRESS' ? 'In Progress' : statusKey.charAt(0) + statusKey.slice(1).toLowerCase();
-                  return (
-                    <div key={statusKey} className="flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <span className={`h-1.5 w-1.5 rounded-full ${dotColor[statusKey]}`}></span>
-                        {statusLabel}
-                      </span>
-                      <span className="text-sm font-semibold">{count}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

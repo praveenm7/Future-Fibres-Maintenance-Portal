@@ -2,13 +2,10 @@ import { Link } from 'react-router-dom';
 import {
   Settings,
   Wrench,
-  AlertTriangle,
-  MessageSquare,
   Package,
   Users,
   List,
   LayoutDashboard,
-  ClipboardList,
   BarChart3,
   FileText,
   Shield
@@ -29,32 +26,20 @@ const formItems = [
     icon: Wrench
   },
   {
-    path: '/non-conformities',
-    label: '03-MAINTENANCE NO CONFORMITIES',
-    description: 'MANAGE MAINTENANCE NO CONFORMITIES',
-    icon: AlertTriangle
-  },
-  {
-    path: '/nc-comments',
-    label: '04-NC\'S COMMENTS',
-    description: 'MANAGE COMMENTS FOR EACH NC',
-    icon: MessageSquare
-  },
-  {
     path: '/spare-parts',
-    label: '05-SPARE PARTS',
+    label: '03-SPARE PARTS',
     description: 'MANAGE SPARE PARTS FOR EACH MACHINE',
     icon: Package
   },
   {
     path: '/authorization-matrix',
-    label: '06-AUTHORIZATION MATRIX',
+    label: '04-AUTHORIZATION MATRIX',
     description: 'MANAGE AUTHORIZATION TOOLING FOR PERSONAL',
     icon: Users
   },
   {
     path: '/lists',
-    label: '07-LISTS MODIFICATION',
+    label: '05-LISTS MODIFICATION',
     description: 'MANAGE LISTS',
     icon: List
   },
@@ -68,26 +53,20 @@ const reportItems = [
     icon: LayoutDashboard
   },
   {
-    path: '/reports/nc-maintenance',
-    label: '02-NC\'S MAINTENANCE',
-    description: 'SHOW THE MAIN LIST OF MAINTENANCE NC\'S',
-    icon: ClipboardList
-  },
-  {
     path: '/reports/maintenance-summary',
-    label: '03-MAINTENANCE SUMMARY',
+    label: '02-MAINTENANCE SUMMARY',
     description: 'SHOW THE SUMMARY OF THE MAINTENANCE PLAN',
     icon: BarChart3
   },
   {
     path: '/reports/maintenance-plan',
-    label: '04-MAINTENANCE PLAN',
+    label: '03-MAINTENANCE PLAN',
     description: 'SHOW FOR A SPECIFIC MACHINE THE MAINTENANCE PLAN',
     icon: FileText
   },
   {
     path: '/reports/authorization',
-    label: '05-AUTHORIZATION MATRIX',
+    label: '04-AUTHORIZATION MATRIX',
     description: 'SHOW AUTHORIZATION MACHINE LIST FOR A SPECIFIC USER',
     icon: Shield
   },
@@ -105,21 +84,13 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Quick View */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-card border border-border p-4 rounded-lg shadow-sm">
           <div className="text-xs text-muted-foreground uppercase font-bold mb-1">Total Machines</div>
           {loadingStats ? (
             <div className="h-8 w-16 bg-muted animate-pulse rounded" />
           ) : (
             <div className="text-2xl font-bold text-primary">{stats?.totalMachines || 0}</div>
-          )}
-        </div>
-        <div className="bg-card border border-border p-4 rounded-lg shadow-sm">
-          <div className="text-xs text-muted-foreground uppercase font-bold mb-1">Active NCs</div>
-          {loadingStats ? (
-            <div className="h-8 w-16 bg-muted animate-pulse rounded" />
-          ) : (
-            <div className="text-2xl font-bold text-destructive">{stats?.activeNCs || 0}</div>
           )}
         </div>
         <div className="bg-card border border-border p-4 rounded-lg shadow-sm">

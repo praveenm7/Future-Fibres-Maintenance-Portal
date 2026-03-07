@@ -1,10 +1,13 @@
 import { Link } from 'react-router-dom';
-import { ClipboardList, FileBarChart, BarChart3, Headset, CircleUser, Shield, LogOut } from 'lucide-react';
+import { ClipboardList, FileBarChart, BarChart3, Headset, CircleUser, Shield, LogOut, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { useEntity } from '@/contexts/EntityContext';
+import { cn } from '@/lib/utils';
 
 export default function LandingPage() {
     const { toast } = useToast();
+    const { entities, activeEntity, homeEntity, setActiveEntity } = useEntity();
 
     const handleLogout = () => {
         toast({
@@ -31,8 +34,40 @@ export default function LandingPage() {
                     </span>
                 </div>
 
-                {/* Right: North Technology Group + User + Admin + Logout */}
+                {/* Right: Entity Switcher + User + Admin + Logout */}
                 <div className="flex items-center gap-1">
+                    {/* Entity Switcher */}
+                    <div className="flex rounded-lg bg-muted p-0.5 mr-2">
+                        {entities.map((entity) => {
+                            const isActive = entity.id === activeEntity.id;
+                            const isHome = entity.id === homeEntity.id;
+                            const colorMap: Record<string, string> = {
+                                FFSL: 'bg-emerald-600 text-white shadow-sm',
+                                FFVL: 'bg-orange-600 text-white shadow-sm',
+                            };
+                            return (
+                                <button
+                                    key={entity.id}
+                                    onClick={() => setActiveEntity(entity)}
+                                    className={cn(
+                                        'flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-semibold transition-all',
+                                        isActive
+                                            ? colorMap[entity.code] || 'bg-primary text-primary-foreground shadow-sm'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-background'
+                                    )}
+                                    title={`${entity.name} (${entity.country})${!isHome ? ' — View Only' : ''}`}
+                                >
+                                    <span>{entity.code}</span>
+                                    {isActive && !isHome && (
+                                        <Eye className="h-3 w-3 opacity-80" />
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <div className="h-5 w-px bg-border mx-1 hidden md:block" />
+
                     <span className="text-xs text-muted-foreground hidden md:block mr-2">
                         North Technology Group
                     </span>
@@ -73,7 +108,13 @@ export default function LandingPage() {
                 <div className="text-center mb-12">
                     <h1 className="text-3xl font-semibold tracking-tight text-foreground mb-3">Maintenance Portal</h1>
                     <p className="text-base text-muted-foreground max-w-xl mx-auto">
-                        Welcome. Select a section to get started.
+                        Welcome to <span className={cn(
+                            'font-semibold',
+                            activeEntity.code === 'FFSL' ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'
+                        )}>{activeEntity.name}</span>.
+                        {activeEntity.id !== homeEntity.id
+                            ? ' You are viewing in read-only mode.'
+                            : ' Select a section to get started.'}
                     </p>
                 </div>
 
@@ -88,7 +129,7 @@ export default function LandingPage() {
                             </div>
                             <h2 className="text-xl font-semibold text-foreground">Forms</h2>
                             <p className="text-sm text-muted-foreground">
-                                Manage machines, maintenance plans, non-conformities, and spare parts.
+                                Manage machines, maintenance plans, and spare parts.
                             </p>
                         </div>
                     </Link>

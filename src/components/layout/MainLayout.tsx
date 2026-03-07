@@ -4,13 +4,10 @@ import {
   Settings,
   Wrench,
   FileText,
-  AlertTriangle,
-  MessageSquare,
   Package,
   Users,
   List,
   LayoutDashboard,
-  ClipboardList,
   BarChart3,
   Shield,
   ChevronLeft,
@@ -32,9 +29,12 @@ import {
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { BottomNav } from '@/components/layout/BottomNav';
+import { EntityToggle } from '@/components/entity/EntityToggle';
+import { EntityPickerDialog } from '@/components/entity/EntityPickerDialog';
+import { useEntity } from '@/contexts/EntityContext';
 import { useSidebarBadges } from '@/hooks/useSidebarBadges';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import { WifiOff } from 'lucide-react';
+import { WifiOff, Eye } from 'lucide-react';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -61,8 +61,6 @@ const sections: NavSection[] = [
     links: [
       { path: '/machines', label: 'Machine Management', icon: Settings },
       { path: '/maintenance-plan', label: 'Maintenance Plan', icon: Wrench },
-      { path: '/non-conformities', label: 'Maintenance NC\'s', icon: AlertTriangle, badgeKey: 'nonConformities' },
-      { path: '/nc-comments', label: 'NC\'s Comments', icon: MessageSquare },
       { path: '/spare-parts', label: 'Spare Parts', icon: Package, badgeKey: 'spareParts' },
       { path: '/authorization-matrix', label: 'Authorization Matrix', icon: Users },
       { path: '/lists', label: 'Lists Modification', icon: List },
@@ -74,7 +72,6 @@ const sections: NavSection[] = [
     label: 'Reports',
     links: [
       { path: '/reports/machinery-list', label: 'Tooling & Machinery List', icon: LayoutDashboard },
-      { path: '/reports/nc-maintenance', label: 'NC\'s Maintenance', icon: ClipboardList },
       { path: '/reports/maintenance-summary', label: 'Maintenance Summary', icon: BarChart3 },
       { path: '/reports/maintenance-plan', label: 'Maintenance Plan', icon: FileText },
       { path: '/reports/authorization', label: 'Authorization Matrix', icon: Shield },
@@ -85,7 +82,6 @@ const sections: NavSection[] = [
     label: 'Dashboards',
     links: [
       { path: '/dashboards/overview', label: 'Overview', icon: TrendingUp },
-      { path: '/dashboards/nc-analytics', label: 'NC Analytics', icon: AlertTriangle },
       { path: '/dashboards/equipment-health', label: 'Equipment Health', icon: Wrench },
       { path: '/dashboards/spare-parts', label: 'Spare Parts', icon: Package },
       { path: '/dashboards/workforce', label: 'Workforce', icon: Users },
@@ -139,6 +135,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Entity context
+  const { activeEntity, homeEntity, isReadOnly } = useEntity();
 
   // Badge counts (only fetch when sidebar is open)
   const badges = useSidebarBadges(isSidebarOpen);
@@ -239,6 +238,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
             </Link>
           )}
         </div>
+
+        {/* Entity Toggle */}
+        <EntityToggle collapsed={!isSidebarOpen} />
 
         {/* Toggle Button */}
         <button
@@ -434,6 +436,18 @@ export default function MainLayout({ children }: MainLayoutProps) {
           </div>
         )}
 
+        {isReadOnly && (
+          <div className="flex-shrink-0 px-4 md:px-6 lg:px-10 pt-3">
+            <div className="flex items-center gap-2 rounded-lg bg-blue-500/15 border border-blue-500/30 px-4 py-2.5 text-sm text-blue-700 dark:text-blue-400">
+              <Eye className="h-4 w-4 shrink-0" />
+              <span>
+                Viewing <strong>{activeEntity.code}</strong> ({activeEntity.country}) — read-only.
+                Switch to <strong>{homeEntity.code}</strong> to make changes.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Page header renders here via portal — outside the scroll container */}
         <div id="page-header-slot" className="flex-shrink-0" />
 
@@ -454,6 +468,9 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
       {/* Bottom Navigation - mobile only */}
       <BottomNav />
+
+      {/* First-visit entity picker */}
+      <EntityPickerDialog />
     </div>
   );
 }

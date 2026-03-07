@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import type { MaintenanceSummaryRow } from '@/types/maintenance';
+import { useEntityId } from '@/contexts/EntityContext';
 
 interface DashboardStats {
     totalMachines: number;
@@ -23,23 +24,25 @@ interface MaintenanceReportRow {
 }
 
 export const useDashboard = () => {
+    const entityId = useEntityId();
+
     const useGetStats = () => {
         return useQuery({
-            queryKey: ['dashboard', 'stats'],
+            queryKey: ['dashboard', 'stats', { entityId }],
             queryFn: () => api.get<DashboardStats>('/dashboard/stats'),
         });
     };
 
     const useGetMaintenanceReport = (periodicity: string = 'WEEKLY') => {
         return useQuery({
-            queryKey: ['dashboard', 'report', periodicity],
+            queryKey: ['dashboard', 'report', periodicity, { entityId }],
             queryFn: () => api.get<MaintenanceReportRow[]>(`/dashboard/maintenance-report?periodicity=${periodicity}`),
         });
     };
 
     const useGetMaintenanceSummary = (periodicity: string, year: number) => {
         return useQuery({
-            queryKey: ['dashboard', 'summary', periodicity, year],
+            queryKey: ['dashboard', 'summary', periodicity, year, { entityId }],
             queryFn: () => api.get<MaintenanceSummaryRow[]>(
                 `/dashboard/maintenance-summary?periodicity=${periodicity}&year=${year}`
             ),

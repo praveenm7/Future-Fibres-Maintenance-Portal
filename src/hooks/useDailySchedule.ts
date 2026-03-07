@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import type { DailySchedule, ScheduleConfig } from '@/types/schedule';
+import { useEntityId } from '@/contexts/EntityContext';
 
 export function useDailySchedule(date: string, config: Partial<ScheduleConfig> = {}) {
+    const entityId = useEntityId();
     const params = new URLSearchParams({ date });
     if (config.breakDuration != null) params.set('breakDuration', config.breakDuration.toString());
     if (config.bufferMinutes != null) params.set('buffer', config.bufferMinutes.toString());
@@ -10,7 +12,7 @@ export function useDailySchedule(date: string, config: Partial<ScheduleConfig> =
     if (config.prioritizeMandatory != null) params.set('prioritizeMandatory', config.prioritizeMandatory.toString());
 
     return useQuery({
-        queryKey: ['daily-schedule', date, config.breakDuration, config.bufferMinutes, config.groupByMachine, config.prioritizeMandatory],
+        queryKey: ['daily-schedule', date, config.breakDuration, config.bufferMinutes, config.groupByMachine, config.prioritizeMandatory, { entityId }],
         queryFn: () => api.get<DailySchedule>(`/schedule/daily?${params.toString()}`),
         enabled: !!date,
         staleTime: 2 * 60 * 1000,

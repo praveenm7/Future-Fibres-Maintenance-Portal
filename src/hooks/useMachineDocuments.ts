@@ -2,13 +2,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { MachineDocument } from '@/types/maintenance';
 import { toast } from 'sonner';
+import { useEntityId } from '@/contexts/EntityContext';
 
 export const useMachineDocuments = () => {
     const queryClient = useQueryClient();
+    const entityId = useEntityId();
 
     const useGetDocuments = (machineId?: string) => {
         return useQuery({
-            queryKey: ['machine-documents', { machineId }],
+            queryKey: ['machine-documents', { machineId, entityId }],
             queryFn: () => {
                 const params = new URLSearchParams();
                 if (machineId) params.append('machineId', machineId);

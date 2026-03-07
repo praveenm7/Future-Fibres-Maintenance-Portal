@@ -1,9 +1,9 @@
 -- =============================================
 -- Future Fibres Maintenance Portal
--- Seed Data Script
+-- Seed Data Script (Current State)
 -- =============================================
--- This script populates the database with initial data
--- converted from the existing mock data
+-- Populates the database with initial reference
+-- data for a fresh setup.
 -- =============================================
 
 USE FutureFibresMaintenance;
@@ -13,17 +13,29 @@ PRINT 'Starting data seeding...';
 GO
 
 -- =============================================
+-- Seed Entities
+-- =============================================
+IF NOT EXISTS (SELECT 1 FROM [dbo].[Entities])
+BEGIN
+    INSERT INTO [dbo].[Entities] ([EntityID], [EntityCode], [EntityName], [Country]) VALUES
+        (1, 'FFSL', 'Future Fibres Sri Lanka', 'Sri Lanka'),
+        (2, 'FFVL', 'Future Fibres Valencia', 'Spain');
+    PRINT 'Entities seeded successfully.';
+END
+GO
+
+-- =============================================
 -- Seed Operators
 -- =============================================
 SET IDENTITY_INSERT [dbo].[Operators] ON;
 GO
 
-INSERT INTO [dbo].[Operators] ([OperatorID], [OperatorName], [Email], [Department], [IsActive])
-VALUES 
-    (1, 'FERNANDO', 'fernando@futurefibres.com', 'IHM', 1),
-    (2, 'OSCAR', 'oscar@futurefibres.com', 'IHM', 1),
-    (3, 'MIGUEL', 'miguel@futurefibres.com', 'PRODUCTION', 1),
-    (4, 'ADMIN', 'admin@futurefibres.com', 'MANAGEMENT', 1);
+INSERT INTO [dbo].[Operators] ([OperatorID], [OperatorName], [Email], [Department], [IsActive], [Role], [EntityID])
+VALUES
+    (1, 'FERNANDO', 'fernando@futurefibres.com', 'IHM', 1, 'USER', 1),
+    (2, 'OSCAR', 'oscar@futurefibres.com', 'IHM', 1, 'USER', 1),
+    (3, 'MIGUEL', 'miguel@futurefibres.com', 'PRODUCTION', 1, 'USER', 1),
+    (4, 'ADMIN', 'admin@futurefibres.com', 'MANAGEMENT', 1, 'ADMIN', 1);
 GO
 
 SET IDENTITY_INSERT [dbo].[Operators] OFF;
@@ -38,26 +50,26 @@ GO
 SET IDENTITY_INSERT [dbo].[Machines] ON;
 GO
 
-INSERT INTO [dbo].[Machines] 
-    ([MachineID], [FinalCode], [Type], [MachineGroup], [Description], [PurchasingDate], 
-     [PurchasingCost], [PONumber], [Area], [Manufacturer], [Model], [SerialNumber], 
-     [ManufacturerYear], [Power], [PermissionRequired], [AuthorizationGroup], 
-     [MaintenanceNeeded], [MaintenanceOnHold], [PersonInChargeID], [ImageUrl])
-VALUES 
-    (1, 'M-EC6-0001', 'MACHINE', 'EC6', 'CNC 3 AXIS MILL', '2025-01-01',
+INSERT INTO [dbo].[Machines]
+    ([MachineID], [FinalCode], [Type], [MachineGroup], [Description], [PurchasingDate],
+     [PurchasingCost], [PONumber], [Area], [Manufacturer], [Model], [SerialNumber],
+     [ManufacturerYear], [Power], [PermissionRequired], [AuthorizationGroup],
+     [MaintenanceNeeded], [MaintenanceOnHold], [PersonInChargeID], [ImageUrl], [EntityID])
+VALUES
+    (1, 'FFSL-M-EC6-0001', 'MACHINE', 'EC6', 'CNC 3 AXIS MILL', '2025-01-01',
      25000.00, 'PO001111', 'IHM', 'HAAS', 'TM-1P', '20/04/4780',
      '2008', '9600W', 1, 'HAAS',
-     1, 0, 1, '/placeholder.svg'),
+     1, 0, 1, '/placeholder.svg', 1),
 
-    (2, 'M-EC6-0002', 'MACHINE', 'EC6', 'FRESADORA CNC HAAS', '2024-03-15',
+    (2, 'FFSL-M-EC6-0002', 'MACHINE', 'EC6', 'FRESADORA CNC HAAS', '2024-03-15',
      35000.00, 'PO001112', 'IHM', 'HAAS', 'TM-1P', '20/05/5890',
      '2020', '11000W', 1, 'MACHINING CENTER',
-     1, 0, 2, '/placeholder.svg'),
+     1, 0, 2, '/placeholder.svg', 1),
 
-    (3, 'T-EC4-0001', 'TOOLING', 'EC4', 'MAST CUTTING BENCH', '2023-06-20',
+    (3, 'FFSL-T-EC4-0001', 'TOOLING', 'EC4', 'MAST CUTTING BENCH', '2023-06-20',
      8500.00, 'PO001200', 'PRODUCTION', 'CUSTOM', 'MCB-200', '23/06/1234',
      '2023', '2200W', 1, 'MAST CUTTING',
-     1, 0, 3, '/placeholder.svg');
+     1, 0, 3, '/placeholder.svg', 1);
 GO
 
 SET IDENTITY_INSERT [dbo].[Machines] OFF;
@@ -72,16 +84,16 @@ GO
 SET IDENTITY_INSERT [dbo].[MaintenanceActions] ON;
 GO
 
-INSERT INTO [dbo].[MaintenanceActions] 
-    ([ActionID], [MachineID], [Action], [Periodicity], [TimeNeeded], [MaintenanceInCharge], [Status])
-VALUES 
-    (1, 1, 'SOPLAR Y RETIRAR RESTOS DE VIRUTA', 'BEFORE EACH USE', 5, 0, 'MANDATORY'),
-    (2, 1, 'SOPLAR TODA LA FRESA Y LIMPIAR RESTOS DE TALADRINA', 'BEFORE EACH USE', 2, 0, 'IDEAL'),
-    (3, 1, 'ACEITAR CON WD-40 TODAS LAS PARTES METALICAS', 'WEEKLY', 2, 0, 'MANDATORY'),
-    (4, 1, 'COMPROBAR NIVEL DE TALADRINA. RELLENAR SI ES NECESARIO', 'WEEKLY', 5, 0, 'IDEAL'),
-    (5, 1, 'VACIAR VIRUTA DEL DEPOSITO', 'WEEKLY', 1, 0, 'MANDATORY'),
-    (6, 1, 'ENGRASAR LAS GUIAS Y PATINES', 'MONTHLY', 5, 1, 'MANDATORY'),
-    (7, 1, 'LIMPIAR Y RETIRAR OXIDO DONDE LO HUBIERA', 'MONTHLY', 10, 0, 'IDEAL');
+INSERT INTO [dbo].[MaintenanceActions]
+    ([ActionID], [MachineID], [Action], [Periodicity], [TimeNeeded], [MaintenanceInCharge], [Status], [EntityID])
+VALUES
+    (1, 1, 'SOPLAR Y RETIRAR RESTOS DE VIRUTA', 'BEFORE EACH USE', 5, 0, 'MANDATORY', 1),
+    (2, 1, 'SOPLAR TODA LA FRESA Y LIMPIAR RESTOS DE TALADRINA', 'BEFORE EACH USE', 2, 0, 'IDEAL', 1),
+    (3, 1, 'ACEITAR CON WD-40 TODAS LAS PARTES METALICAS', 'WEEKLY', 2, 0, 'MANDATORY', 1),
+    (4, 1, 'COMPROBAR NIVEL DE TALADRINA. RELLENAR SI ES NECESARIO', 'WEEKLY', 5, 0, 'IDEAL', 1),
+    (5, 1, 'VACIAR VIRUTA DEL DEPOSITO', 'WEEKLY', 1, 0, 'MANDATORY', 1),
+    (6, 1, 'ENGRASAR LAS GUIAS Y PATINES', 'MONTHLY', 5, 1, 'MANDATORY', 1),
+    (7, 1, 'LIMPIAR Y RETIRAR OXIDO DONDE LO HUBIERA', 'MONTHLY', 10, 0, 'IDEAL', 1);
 GO
 
 SET IDENTITY_INSERT [dbo].[MaintenanceActions] OFF;
@@ -91,61 +103,19 @@ PRINT 'MaintenanceActions seeded successfully.';
 GO
 
 -- =============================================
--- Seed NonConformities
--- =============================================
-SET IDENTITY_INSERT [dbo].[NonConformities] ON;
-GO
-
-INSERT INTO [dbo].[NonConformities] 
-    ([NCID], [NCCode], [MachineID], [Area], [MaintenanceOperatorID], [CreationDate], 
-     [InitiationDate], [Status], [Priority], [Category])
-VALUES 
-    (1, 'NC2024-0001', 1, 'IHM', 1, '2025-01-01', '2025-01-15', 'PENDING', 1, 'FAILURE'),
-    (2, 'NC2024-0002', 2, 'IHM', 1, '2025-01-01', '2025-01-15', 'PENDING', 2, 'FAILURE'),
-    (3, 'NC2024-0003', 1, 'IHM', 2, '2025-01-05', '2025-01-20', 'IN PROGRESS', 3, 'PREVENTIVE');
-GO
-
-SET IDENTITY_INSERT [dbo].[NonConformities] OFF;
-GO
-
-PRINT 'NonConformities seeded successfully.';
-GO
-
--- =============================================
--- Seed NCComments
--- =============================================
-SET IDENTITY_INSERT [dbo].[NCComments] ON;
-GO
-
-INSERT INTO [dbo].[NCComments] 
-    ([CommentID], [NCID], [CommentDate], [Comment], [OperatorID])
-VALUES 
-    (1, 1, '2025-01-15', 'Initial inspection completed', 1),
-    (2, 1, '2025-01-20', 'Parts ordered', 1),
-    (3, 1, '2025-01-25', 'Waiting for delivery', 1),
-    (4, 2, '2025-01-15', 'Issue identified', 2);
-GO
-
-SET IDENTITY_INSERT [dbo].[NCComments] OFF;
-GO
-
-PRINT 'NCComments seeded successfully.';
-GO
-
--- =============================================
 -- Seed SpareParts
 -- =============================================
 SET IDENTITY_INSERT [dbo].[SpareParts] ON;
 GO
 
-INSERT INTO [dbo].[SpareParts] 
-    ([SparePartID], [MachineID], [Description], [Reference], [Quantity], [Link])
-VALUES 
-    (1, 1, 'ITEM 1', 'REF0001', 10, 'WWW.SPAREPARTS.COM'),
-    (2, 1, 'ITEM 2', 'REF0002', 11, 'WWW.SPAREPARTS.COM'),
-    (3, 1, 'ITEM 3', 'REF0003', 12, 'WWW.SPAREPARTS.COM'),
-    (4, 2, 'ITEM 4', 'REF0004', 13, 'WWW.SPAREPARTS.COM'),
-    (5, 2, 'ITEM 5', 'REF0005', 14, 'WWW.SPAREPARTS.COM');
+INSERT INTO [dbo].[SpareParts]
+    ([SparePartID], [MachineID], [Description], [Reference], [Quantity], [Link], [EntityID])
+VALUES
+    (1, 1, 'ITEM 1', 'REF0001', 10, 'WWW.SPAREPARTS.COM', 1),
+    (2, 1, 'ITEM 2', 'REF0002', 11, 'WWW.SPAREPARTS.COM', 1),
+    (3, 1, 'ITEM 3', 'REF0003', 12, 'WWW.SPAREPARTS.COM', 1),
+    (4, 2, 'ITEM 4', 'REF0004', 13, 'WWW.SPAREPARTS.COM', 1),
+    (5, 2, 'ITEM 5', 'REF0005', 14, 'WWW.SPAREPARTS.COM', 1);
 GO
 
 SET IDENTITY_INSERT [dbo].[SpareParts] OFF;
@@ -160,19 +130,32 @@ GO
 SET IDENTITY_INSERT [dbo].[AuthorizationMatrix] ON;
 GO
 
--- Sample authorization data (JSON format)
-INSERT INTO [dbo].[AuthorizationMatrix] 
-    ([AuthMatrixID], [OperatorID], [UpdatedDate], [Authorizations])
-VALUES 
-    (1, 1, '2025-01-01', '{"HAAS":true,"MACHINING CENTER":true,"MAST CUTTING BENCH":false,"PAINT CABIN":false,"FORKLIFT":true}'),
-    (2, 2, '2025-01-01', '{"HAAS":true,"MACHINING CENTER":true,"MAST CUTTING BENCH":true,"PAINT CABIN":true,"FORKLIFT":false}'),
-    (3, 3, '2025-01-01', '{"HAAS":false,"MACHINING CENTER":false,"MAST CUTTING BENCH":true,"PAINT CABIN":false,"FORKLIFT":true}');
+INSERT INTO [dbo].[AuthorizationMatrix]
+    ([AuthMatrixID], [OperatorID], [UpdatedDate], [Authorizations], [EntityID])
+VALUES
+    (1, 1, '2025-01-01', '{"HAAS":true,"MACHINING CENTER":true,"MAST CUTTING BENCH":false,"PAINT CABIN":false,"FORKLIFT":true}', 1),
+    (2, 2, '2025-01-01', '{"HAAS":true,"MACHINING CENTER":true,"MAST CUTTING BENCH":true,"PAINT CABIN":true,"FORKLIFT":false}', 1),
+    (3, 3, '2025-01-01', '{"HAAS":false,"MACHINING CENTER":false,"MAST CUTTING BENCH":true,"PAINT CABIN":false,"FORKLIFT":true}', 1);
 GO
 
 SET IDENTITY_INSERT [dbo].[AuthorizationMatrix] OFF;
 GO
 
 PRINT 'AuthorizationMatrix seeded successfully.';
+GO
+
+-- =============================================
+-- Seed Shifts
+-- =============================================
+IF NOT EXISTS (SELECT 1 FROM [dbo].[Shifts])
+BEGIN
+    INSERT INTO [dbo].[Shifts] ([ShiftName], [StartTime], [EndTime], [EntityID]) VALUES
+        ('Morning',   '06:00', '14:00', 1),
+        ('Day',       '06:00', '18:00', 1),
+        ('Afternoon', '14:00', '22:00', 1),
+        ('Night',     '18:00', '06:00', 1);
+    PRINT 'Shifts seeded successfully.';
+END
 GO
 
 -- =============================================
@@ -183,13 +166,13 @@ GO
 
 -- Machine Types
 INSERT INTO [dbo].[ListOptions] ([ListOptionID], [ListType], [OptionValue], [SortOrder], [IsActive])
-VALUES 
+VALUES
     (1, 'MACHINE_TYPE', 'MACHINE', 1, 1),
     (2, 'MACHINE_TYPE', 'TOOLING', 2, 1);
 
 -- Machine Groups
 INSERT INTO [dbo].[ListOptions] ([ListOptionID], [ListType], [OptionValue], [SortOrder], [IsActive])
-VALUES 
+VALUES
     (3, 'MACHINE_GROUP', 'EC4', 1, 1),
     (4, 'MACHINE_GROUP', 'EC5', 2, 1),
     (5, 'MACHINE_GROUP', 'EC6', 3, 1),
@@ -197,7 +180,7 @@ VALUES
 
 -- Areas
 INSERT INTO [dbo].[ListOptions] ([ListOptionID], [ListType], [OptionValue], [SortOrder], [IsActive])
-VALUES 
+VALUES
     (7, 'AREA', 'IHM', 1, 1),
     (8, 'AREA', 'PRODUCTION', 2, 1),
     (9, 'AREA', 'ASSEMBLY', 3, 1),
@@ -205,30 +188,17 @@ VALUES
 
 -- Periodicities
 INSERT INTO [dbo].[ListOptions] ([ListOptionID], [ListType], [OptionValue], [SortOrder], [IsActive])
-VALUES 
+VALUES
     (11, 'PERIODICITY', 'BEFORE EACH USE', 1, 1),
-    (12, 'PERIODICITY', 'WEEKLY', 2, 1),
-    (13, 'PERIODICITY', 'MONTHLY', 3, 1),
-    (14, 'PERIODICITY', 'QUARTERLY', 4, 1),
-    (15, 'PERIODICITY', 'YEARLY', 5, 1);
-
--- NC Statuses
-INSERT INTO [dbo].[ListOptions] ([ListOptionID], [ListType], [OptionValue], [SortOrder], [IsActive])
-VALUES 
-    (16, 'NC_STATUS', 'PENDING', 1, 1),
-    (17, 'NC_STATUS', 'IN PROGRESS', 2, 1),
-    (18, 'NC_STATUS', 'COMPLETED', 3, 1),
-    (19, 'NC_STATUS', 'CANCELLED', 4, 1);
-
--- NC Categories
-INSERT INTO [dbo].[ListOptions] ([ListOptionID], [ListType], [OptionValue], [SortOrder], [IsActive])
-VALUES 
-    (20, 'NC_CATEGORY', 'FAILURE', 1, 1),
-    (21, 'NC_CATEGORY', 'PREVENTIVE', 2, 1);
+    (12, 'PERIODICITY', 'DAILY', 2, 1),
+    (13, 'PERIODICITY', 'WEEKLY', 3, 1),
+    (14, 'PERIODICITY', 'MONTHLY', 4, 1),
+    (15, 'PERIODICITY', 'QUARTERLY', 5, 1),
+    (16, 'PERIODICITY', 'YEARLY', 6, 1);
 
 -- Authorization Groups
 INSERT INTO [dbo].[ListOptions] ([ListOptionID], [ListType], [OptionValue], [SortOrder], [IsActive])
-VALUES 
+VALUES
     (22, 'AUTHORIZATION_GROUP', 'MAST CUTTING BENCH', 1, 1),
     (23, 'AUTHORIZATION_GROUP', 'MAST SANDER BENCH', 2, 1),
     (24, 'AUTHORIZATION_GROUP', 'BEND TEST', 3, 1),
@@ -263,19 +233,17 @@ VALUES
     (53, 'AUTHORIZATION_GROUP', 'SERVICE TESTBEDS', 32, 1),
     (54, 'AUTHORIZATION_GROUP', 'HAAS', 33, 1);
 
--- NC Priorities (1-10)
+-- Ticket Categories
 INSERT INTO [dbo].[ListOptions] ([ListOptionID], [ListType], [OptionValue], [SortOrder], [IsActive])
 VALUES
-    (55, 'NC_PRIORITY', '1', 1, 1),
-    (56, 'NC_PRIORITY', '2', 2, 1),
-    (57, 'NC_PRIORITY', '3', 3, 1),
-    (58, 'NC_PRIORITY', '4', 4, 1),
-    (59, 'NC_PRIORITY', '5', 5, 1),
-    (60, 'NC_PRIORITY', '6', 6, 1),
-    (61, 'NC_PRIORITY', '7', 7, 1),
-    (62, 'NC_PRIORITY', '8', 8, 1),
-    (63, 'NC_PRIORITY', '9', 9, 1),
-    (64, 'NC_PRIORITY', '10', 10, 1);
+    (55, 'TICKET_CATEGORY', 'BREAKDOWN', 1, 1),
+    (56, 'TICKET_CATEGORY', 'PREVENTIVE', 2, 1),
+    (57, 'TICKET_CATEGORY', 'CORRECTIVE', 3, 1),
+    (58, 'TICKET_CATEGORY', 'SAFETY', 4, 1),
+    (59, 'TICKET_CATEGORY', 'CALIBRATION', 5, 1),
+    (60, 'TICKET_CATEGORY', 'ELECTRICAL', 6, 1),
+    (61, 'TICKET_CATEGORY', 'MECHANICAL', 7, 1),
+    (62, 'TICKET_CATEGORY', 'OTHER', 8, 1);
 GO
 
 SET IDENTITY_INSERT [dbo].[ListOptions] OFF;
@@ -285,28 +253,21 @@ PRINT 'ListOptions seeded successfully.';
 GO
 
 -- =============================================
--- Verification Queries
+-- Verification
 -- =============================================
 PRINT '';
 PRINT '=============================================';
 PRINT 'Data Seeding Summary:';
 PRINT '=============================================';
 
-SELECT 'Operators' AS TableName, COUNT(*) AS RecordCount FROM [dbo].[Operators]
-UNION ALL
-SELECT 'Machines', COUNT(*) FROM [dbo].[Machines]
-UNION ALL
-SELECT 'MaintenanceActions', COUNT(*) FROM [dbo].[MaintenanceActions]
-UNION ALL
-SELECT 'NonConformities', COUNT(*) FROM [dbo].[NonConformities]
-UNION ALL
-SELECT 'NCComments', COUNT(*) FROM [dbo].[NCComments]
-UNION ALL
-SELECT 'SpareParts', COUNT(*) FROM [dbo].[SpareParts]
-UNION ALL
-SELECT 'AuthorizationMatrix', COUNT(*) FROM [dbo].[AuthorizationMatrix]
-UNION ALL
-SELECT 'ListOptions', COUNT(*) FROM [dbo].[ListOptions];
+SELECT 'Entities' AS TableName, COUNT(*) AS RecordCount FROM [dbo].[Entities]
+UNION ALL SELECT 'Operators', COUNT(*) FROM [dbo].[Operators]
+UNION ALL SELECT 'Machines', COUNT(*) FROM [dbo].[Machines]
+UNION ALL SELECT 'MaintenanceActions', COUNT(*) FROM [dbo].[MaintenanceActions]
+UNION ALL SELECT 'SpareParts', COUNT(*) FROM [dbo].[SpareParts]
+UNION ALL SELECT 'AuthorizationMatrix', COUNT(*) FROM [dbo].[AuthorizationMatrix]
+UNION ALL SELECT 'Shifts', COUNT(*) FROM [dbo].[Shifts]
+UNION ALL SELECT 'ListOptions', COUNT(*) FROM [dbo].[ListOptions];
 
 PRINT '';
 PRINT 'Data seeding completed successfully!';

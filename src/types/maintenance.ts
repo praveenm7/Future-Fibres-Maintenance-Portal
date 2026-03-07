@@ -40,28 +40,6 @@ export interface MaintenanceAction {
   month?: string;
 }
 
-export interface NonConformity {
-  id: string;
-  ncCode: string;
-  machineId: string;
-  area: string;
-  maintenanceOperator: string;
-  creationDate: string;
-  initiationDate: string;
-  finishDate?: string;
-  status: 'PENDING' | 'IN PROGRESS' | 'COMPLETED' | 'CANCELLED';
-  priority: number;
-  category?: string;
-}
-
-export interface NCComment {
-  id: string;
-  ncId: string;
-  date: string;
-  comment: string;
-  operator?: string;
-}
-
 export interface SparePart {
   id: string;
   machineId: string;

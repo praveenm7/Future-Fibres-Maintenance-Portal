@@ -2,12 +2,14 @@ const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
 const { generateOccurrences, formatDateStr } = require('../utils/occurrences');
+const requireWriteAccess = require('../middleware/writeProtection');
 
 // GET dashboard statistics
 router.get('/stats', async (req, res) => {
     try {
         const pool = await poolPromise;
         const result = await pool.request()
+            .input('EntityID', sql.Int, req.entityId)
             .execute('sp_GetDashboardStats');
 
         const stats = result.recordset[0];
@@ -33,6 +35,7 @@ router.get('/maintenance-report', async (req, res) => {
 
         const result = await pool.request()
             .input('Periodicity', sql.NVarChar(50), periodicity || null)
+            .input('EntityID', sql.Int, req.entityId)
             .execute('sp_GetMaintenanceReport');
 
         res.json(result.recordset.map(r => ({
@@ -79,19 +82,23 @@ router.get('/maintenance-summary', async (req, res) => {
         const yearEndDate = new Date(Date.UTC(year, 11, 31));
 
         // Query 1: Machines with maintenance needed
-        const machinesResult = await pool.request().query(`
+        const machinesResult = await pool.request()
+            .input('EntityID', sql.Int, req.entityId)
+            .query(`
             SELECT m.MachineID, m.FinalCode, m.[Description], m.Area
             FROM Machines m
-            WHERE m.MaintenanceNeeded = 1
+            WHERE m.MaintenanceNeeded = 1 AND m.EntityID = @EntityID
             ORDER BY m.FinalCode
         `);
 
         // Query 2: Actions (exclude BEFORE EACH USE)
         const actionsReq = pool.request();
+        actionsReq.input('EntityID2', sql.Int, req.entityId);
         let actionsQuery = `
             SELECT ma.ActionID, ma.MachineID, ma.Periodicity, ma.Status, ma.Month
             FROM MaintenanceActions ma
-            WHERE ma.Periodicity != 'BEFORE EACH USE'
+            INNER JOIN Machines m ON ma.MachineID = m.MachineID
+            WHERE ma.Periodicity != 'BEFORE EACH USE' AND m.EntityID = @EntityID2
         `;
         if (periodicity && periodicity !== 'ALL') {
             actionsReq.input('Periodicity', sql.NVarChar(50), periodicity);
@@ -104,13 +111,16 @@ router.get('/maintenance-summary', async (req, res) => {
         const execResult = await pool.request()
             .input('YearStart', sql.Date, yearStart)
             .input('YearEnd', sql.Date, yearEnd)
+            .input('EntityID', sql.Int, req.entityId)
             .query(`
                 SELECT me.ActionID, me.MachineID,
                        CONVERT(VARCHAR(10), me.ScheduledDate, 120) AS ScheduledDateStr
                 FROM MaintenanceExecutions me
+                INNER JOIN Machines m ON me.MachineID = m.MachineID
                 WHERE me.Status = 'COMPLETED'
                   AND me.ScheduledDate >= @YearStart
                   AND me.ScheduledDate <= @YearEnd
+                  AND m.EntityID = @EntityID
             `);
 
         // Build completion lookup: "actionId-YYYY-MM-DD" -> true

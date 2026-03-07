@@ -90,37 +90,6 @@ schemas.createMaintenanceAction = Joi.object({
 
 schemas.updateMaintenanceAction = schemas.createMaintenanceAction;
 
-// --- Non-Conformities ---
-schemas.createNonConformity = Joi.object({
-    machineId: Joi.number().integer().required(),
-    area: Joi.string().max(100).required(),
-    maintenanceOperatorId: Joi.number().integer().required(),
-    creationDate: Joi.date().iso().allow(null, ''),
-    status: Joi.string().max(50).required(),
-    priority: Joi.number().integer().min(1).required(),
-    category: Joi.string().max(100).required(),
-});
-
-schemas.updateNonConformity = Joi.object({
-    machineId: Joi.number().integer().required(),
-    area: Joi.string().max(100).required(),
-    maintenanceOperatorId: Joi.number().integer().required(),
-    creationDate: Joi.date().iso().allow(null, ''),
-    initiationDate: Joi.date().iso().allow(null, ''),
-    finishDate: Joi.date().iso().allow(null, ''),
-    status: Joi.string().max(50).required(),
-    priority: Joi.number().integer().min(1).required(),
-    category: Joi.string().max(100).required(),
-});
-
-// --- NC Comments ---
-schemas.createNCComment = Joi.object({
-    ncId: Joi.number().integer().required(),
-    commentDate: Joi.date().iso().allow(null, ''),
-    comment: Joi.string().max(1000).required(),
-    operatorId: Joi.number().integer().required(),
-});
-
 // --- Spare Parts ---
 schemas.createSparePart = Joi.object({
     machineId: Joi.number().integer().required(),

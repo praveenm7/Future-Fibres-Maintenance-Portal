@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { useEntity } from '@/contexts/EntityContext';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ActionButton } from '@/components/ui/ActionButton';
@@ -26,6 +27,7 @@ const defaultValues: SparePartFormValues = {
 };
 
 export default function SpareParts() {
+  const { isReadOnly } = useEntity();
   const { useGetMachines } = useMachines();
   const {
     useGetParts,
@@ -239,18 +241,18 @@ export default function SpareParts() {
 
         {/* Table Actions */}
         <div className="flex gap-2 flex-wrap">
-          <ActionButton variant="green" className="gap-2" onClick={resetForm} disabled={mode === 'new' && !selectedRowId}>
+          <ActionButton variant="green" className="gap-2" onClick={resetForm} disabled={isReadOnly || (mode === 'new' && !selectedRowId)}>
             <Plus className="h-4 w-4" /> Add New
           </ActionButton>
-          <ActionButton variant="blue" className="gap-2" disabled={!selectedRowId || updateMutation.isPending}
+          <ActionButton variant="blue" className="gap-2" disabled={isReadOnly || !selectedRowId || updateMutation.isPending}
             onClick={() => { const input = document.getElementById('part-description'); if (input) input.focus(); }}>
             <Pencil className="h-4 w-4" /> {selectedRowId ? 'Edit Selected' : 'Select to Edit'}
           </ActionButton>
-          <ActionButton variant="red" className="gap-2" disabled={!selectedRowId || deleteMutation.isPending} onClick={handleDelete}>
+          <ActionButton variant="red" className="gap-2" disabled={isReadOnly || !selectedRowId || deleteMutation.isPending} onClick={handleDelete}>
             {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
             {selectedRowId ? 'Delete Selected' : 'Delete'}
           </ActionButton>
-          <Button variant="outline" size="sm" className="gap-2 ml-auto" onClick={() => setImportDialogOpen(true)}>
+          <Button variant="outline" size="sm" className="gap-2 ml-auto" onClick={() => setImportDialogOpen(true)} disabled={isReadOnly}>
             <Upload className="h-4 w-4" /> Import
           </Button>
         </div>
@@ -284,7 +286,7 @@ export default function SpareParts() {
             </div>
             <div className="pt-4">
               <ActionButton variant={mode === 'edit' ? 'blue' : 'green'} className="min-w-[140px]"
-                type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                type="submit" disabled={isReadOnly || createMutation.isPending || updateMutation.isPending}>
                 {createMutation.isPending || updateMutation.isPending ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (

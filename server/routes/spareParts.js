@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
 const { validate, schemas } = require('../middleware/validate');
+const requireWriteAccess = require('../middleware/writeProtection');
 
 // Helper to map spare part database record to frontend model
 const mapSparePart = (record) => ({
@@ -25,10 +26,12 @@ router.get('/', async (req, res) => {
         if (machineId) {
             result = await pool.request()
                 .input('MachineID', sql.Int, machineId)
+                .input('EntityID', sql.Int, req.entityId)
                 .execute('sp_GetSparePartsByMachine');
         } else {
             result = await pool.request()
-                .query('SELECT * FROM SpareParts ORDER BY MachineID, Description');
+                .input('EntityID', sql.Int, req.entityId)
+                .query('SELECT sp.* FROM SpareParts sp INNER JOIN Machines m ON sp.MachineID = m.MachineID WHERE m.EntityID = @EntityID ORDER BY sp.MachineID, sp.Description');
         }
 
         res.json(result.recordset.map(mapSparePart));
@@ -39,7 +42,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST create new spare part
-router.post('/', validate(schemas.createSparePart), async (req, res) => {
+router.post('/', requireWriteAccess, validate(schemas.createSparePart), async (req, res) => {
     try {
         const { machineId, description, reference, quantity, link } = req.body;
 
@@ -50,9 +53,10 @@ router.post('/', validate(schemas.createSparePart), async (req, res) => {
             .input('Reference', sql.NVarChar(100), reference)
             .input('Quantity', sql.Int, quantity || 0)
             .input('Link', sql.NVarChar(500), link)
+            .input('EntityID', sql.Int, req.entityId)
             .query(`
-        INSERT INTO SpareParts (MachineID, Description, Reference, Quantity, Link)
-        VALUES (@MachineID, @Description, @Reference, @Quantity, @Link);
+        INSERT INTO SpareParts (MachineID, Description, Reference, Quantity, Link, EntityID)
+        VALUES (@MachineID, @Description, @Reference, @Quantity, @Link, @EntityID);
         SELECT SCOPE_IDENTITY() AS SparePartID;
       `);
 
@@ -60,7 +64,8 @@ router.post('/', validate(schemas.createSparePart), async (req, res) => {
 
         const newPart = await pool.request()
             .input('SparePartID', sql.Int, newPartId)
-            .query('SELECT * FROM SpareParts WHERE SparePartID = @SparePartID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('SELECT * FROM SpareParts WHERE SparePartID = @SparePartID AND EntityID = @EntityID');
 
         res.status(201).json(mapSparePart(newPart.recordset[0]));
     } catch (err) {
@@ -70,7 +75,7 @@ router.post('/', validate(schemas.createSparePart), async (req, res) => {
 });
 
 // PUT update spare part
-router.put('/:id', validate(schemas.updateSparePart), async (req, res) => {
+router.put('/:id', requireWriteAccess, validate(schemas.updateSparePart), async (req, res) => {
     try {
         const { machineId, description, reference, quantity, link } = req.body;
 
@@ -82,6 +87,7 @@ router.put('/:id', validate(schemas.updateSparePart), async (req, res) => {
             .input('Reference', sql.NVarChar(100), reference)
             .input('Quantity', sql.Int, quantity)
             .input('Link', sql.NVarChar(500), link)
+            .input('EntityID', sql.Int, req.entityId)
             .query(`
         UPDATE SpareParts SET
           MachineID = @MachineID,
@@ -89,12 +95,13 @@ router.put('/:id', validate(schemas.updateSparePart), async (req, res) => {
           Reference = @Reference,
           Quantity = @Quantity,
           Link = @Link
-        WHERE SparePartID = @SparePartID
+        WHERE SparePartID = @SparePartID AND EntityID = @EntityID
       `);
 
         const updated = await pool.request()
             .input('SparePartID', sql.Int, req.params.id)
-            .query('SELECT * FROM SpareParts WHERE SparePartID = @SparePartID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('SELECT * FROM SpareParts WHERE SparePartID = @SparePartID AND EntityID = @EntityID');
 
         res.json(mapSparePart(updated.recordset[0]));
     } catch (err) {
@@ -104,12 +111,13 @@ router.put('/:id', validate(schemas.updateSparePart), async (req, res) => {
 });
 
 // DELETE spare part
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireWriteAccess, async (req, res) => {
     try {
         const pool = await poolPromise;
         await pool.request()
             .input('SparePartID', sql.Int, req.params.id)
-            .query('DELETE FROM SpareParts WHERE SparePartID = @SparePartID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('DELETE FROM SpareParts WHERE SparePartID = @SparePartID AND EntityID = @EntityID');
 
         res.json({ message: 'Spare part deleted successfully' });
     } catch (err) {

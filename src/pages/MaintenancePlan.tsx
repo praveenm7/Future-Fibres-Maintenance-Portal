@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { useEntity } from '@/contexts/EntityContext';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ActionButton } from '@/components/ui/ActionButton';
@@ -38,6 +39,7 @@ const defaultValues: MaintenanceActionFormValues = {
 };
 
 export default function MaintenancePlan() {
+  const { isReadOnly } = useEntity();
   const { useGetMachines } = useMachines();
   const {
     useGetActions,
@@ -288,14 +290,14 @@ export default function MaintenancePlan() {
 
           {/* Table Actions */}
           <div className="flex gap-2">
-            <ActionButton variant="green" className="gap-2" onClick={resetForm} disabled={mode === 'new' && !selectedRowId}>
+            <ActionButton variant="green" className="gap-2" onClick={resetForm} disabled={isReadOnly || (mode === 'new' && !selectedRowId)}>
               <Plus className="h-4 w-4" /> Add New
             </ActionButton>
-            <ActionButton variant="blue" className="gap-2" disabled={!selectedRowId || updateMutation.isPending}
+            <ActionButton variant="blue" className="gap-2" disabled={isReadOnly || !selectedRowId || updateMutation.isPending}
               onClick={() => { const input = document.getElementById('action-input'); if (input) input.focus(); }}>
               <Pencil className="h-4 w-4" /> {selectedRowId ? 'Edit Selected' : 'Select to Edit'}
             </ActionButton>
-            <ActionButton variant="red" className="gap-2" disabled={!selectedRowId || deleteMutation.isPending} onClick={handleDelete}>
+            <ActionButton variant="red" className="gap-2" disabled={isReadOnly || !selectedRowId || deleteMutation.isPending} onClick={handleDelete}>
               {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               {selectedRowId ? 'Delete Selected' : 'Delete'}
             </ActionButton>
@@ -340,7 +342,7 @@ export default function MaintenancePlan() {
               </div>
               <div className="pt-2">
                 <ActionButton variant={mode === 'edit' ? 'blue' : 'green'} className="min-w-[140px]"
-                  type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                  type="submit" disabled={isReadOnly || createMutation.isPending || updateMutation.isPending}>
                   {createMutation.isPending || updateMutation.isPending ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : ( mode === 'edit' ? <Save className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" /> )}

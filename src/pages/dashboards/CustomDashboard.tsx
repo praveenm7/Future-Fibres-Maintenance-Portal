@@ -25,11 +25,8 @@ import {
   RotateCcw,
   GripVertical,
   BarChart3,
-  PieChart,
-  TrendingUp,
   Hash,
   Settings2,
-  AlertTriangle,
   Package,
   Users,
   Activity,
@@ -42,11 +39,6 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  PieChart as RechartsPie,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
   CartesianGrid,
 } from 'recharts';
 
@@ -56,8 +48,8 @@ const STORAGE_KEY = 'ff-custom-dashboard';
 
 // --- Widget types ---
 
-type WidgetType = 'kpi-machines' | 'kpi-ncs' | 'kpi-spare-parts' | 'kpi-operators'
-  | 'chart-machines-area' | 'chart-nc-status' | 'chart-nc-trend' | 'chart-spare-stock';
+type WidgetType = 'kpi-machines' | 'kpi-spare-parts' | 'kpi-operators'
+  | 'chart-machines-area' | 'chart-spare-stock';
 
 interface WidgetConfig {
   id: string;
@@ -76,12 +68,9 @@ interface WidgetDefinition {
 
 const WIDGET_CATALOG: WidgetDefinition[] = [
   { type: 'kpi-machines', label: 'Total Machines', description: 'Count of all registered machines', icon: Settings2, category: 'KPI', defaultW: 3, defaultH: 2 },
-  { type: 'kpi-ncs', label: 'Open NCs', description: 'Non-conformities currently open', icon: AlertTriangle, category: 'KPI', defaultW: 3, defaultH: 2 },
   { type: 'kpi-spare-parts', label: 'Spare Parts', description: 'Total spare parts in inventory', icon: Package, category: 'KPI', defaultW: 3, defaultH: 2 },
   { type: 'kpi-operators', label: 'Operators', description: 'Authorized maintenance operators', icon: Users, category: 'KPI', defaultW: 3, defaultH: 2 },
   { type: 'chart-machines-area', label: 'Machines by Area', description: 'Bar chart of machines per area', icon: BarChart3, category: 'Chart', defaultW: 6, defaultH: 4 },
-  { type: 'chart-nc-status', label: 'NC Status', description: 'Pie chart of NC status distribution', icon: PieChart, category: 'Chart', defaultW: 6, defaultH: 4 },
-  { type: 'chart-nc-trend', label: 'NC Trend', description: 'Monthly NC creation trend', icon: TrendingUp, category: 'Chart', defaultW: 6, defaultH: 4 },
   { type: 'chart-spare-stock', label: 'Spare Parts Stock', description: 'Top spare parts by quantity', icon: Hash, category: 'Chart', defaultW: 6, defaultH: 4 },
 ];
 
@@ -109,21 +98,19 @@ function saveDashboard(widgets: WidgetConfig[], layouts: Record<string, LayoutIt
 
 const DEFAULT_WIDGETS: WidgetConfig[] = [
   { id: 'w1', type: 'kpi-machines' },
-  { id: 'w2', type: 'kpi-ncs' },
   { id: 'w3', type: 'kpi-spare-parts' },
   { id: 'w4', type: 'kpi-operators' },
   { id: 'w5', type: 'chart-machines-area' },
-  { id: 'w6', type: 'chart-nc-status' },
+  { id: 'w7', type: 'chart-spare-stock' },
 ];
 
 const DEFAULT_LAYOUTS: Record<string, LayoutItem[]> = {
   lg: [
-    { i: 'w1', x: 0, y: 0, w: 3, h: 2 },
-    { i: 'w2', x: 3, y: 0, w: 3, h: 2 },
-    { i: 'w3', x: 6, y: 0, w: 3, h: 2 },
-    { i: 'w4', x: 9, y: 0, w: 3, h: 2 },
+    { i: 'w1', x: 0, y: 0, w: 4, h: 2 },
+    { i: 'w3', x: 4, y: 0, w: 4, h: 2 },
+    { i: 'w4', x: 8, y: 0, w: 4, h: 2 },
     { i: 'w5', x: 0, y: 2, w: 6, h: 4 },
-    { i: 'w6', x: 6, y: 2, w: 6, h: 4 },
+    { i: 'w7', x: 6, y: 2, w: 6, h: 4 },
   ],
 };
 
@@ -135,9 +122,8 @@ export default function CustomDashboard() {
   const [layouts, setLayouts] = useState<Record<string, LayoutItem[]>>(saved?.layouts || DEFAULT_LAYOUTS);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const { useOverview, useNCAnalytics, useSparePartsAnalytics, useWorkforce } = useDashboards();
+  const { useOverview, useSparePartsAnalytics, useWorkforce } = useDashboards();
   const { data: overview, isLoading: loadingOverview } = useOverview();
-  const { data: ncData } = useNCAnalytics();
   const { data: spareData, isLoading: loadingSP } = useSparePartsAnalytics();
   const { data: workforce, isLoading: loadingWF } = useWorkforce();
 
@@ -199,16 +185,6 @@ export default function CustomDashboard() {
             isLoading={loadingOverview}
           />
         );
-      case 'kpi-ncs':
-        return (
-          <KPICard
-            title="Open NCs"
-            value={overview?.openNCs ?? 0}
-            icon={AlertTriangle}
-            colorClass="text-amber-500"
-            isLoading={loadingOverview}
-          />
-        );
       case 'kpi-spare-parts':
         return (
           <KPICard
@@ -240,43 +216,6 @@ export default function CustomDashboard() {
                 <Tooltip />
                 <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        );
-      case 'chart-nc-status':
-        return (
-          <ChartCard title="NC Status Distribution">
-            <ResponsiveContainer width="100%" height="100%">
-              <RechartsPie>
-                <Pie
-                  data={ncData?.byStatus || []}
-                  dataKey="count"
-                  nameKey="status"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius="70%"
-                  label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                >
-                  {(ncData?.byStatus || []).map((_: unknown, i: number) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </RechartsPie>
-            </ResponsiveContainer>
-          </ChartCard>
-        );
-      case 'chart-nc-trend':
-        return (
-          <ChartCard title="NC Monthly Trend">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={ncData?.monthlyTrend || []}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3 }} />
-              </LineChart>
             </ResponsiveContainer>
           </ChartCard>
         );

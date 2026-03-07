@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
 const { uploadTicketAttachment } = require('../config/upload');
+const requireWriteAccess = require('../middleware/writeProtection');
 const fs = require('fs');
 const path = require('path');
 
@@ -11,15 +12,18 @@ router.get('/', async (req, res) => {
         const { ticketId } = req.query;
         const pool = await poolPromise;
         const request = pool.request();
+        request.input('EntityID', sql.Int, req.entityId);
 
         let query = `
             SELECT a.*, o.OperatorName AS UploadedByName
             FROM TicketAttachments a
+            INNER JOIN SupportTickets t ON a.TicketID = t.TicketID
             LEFT JOIN Operators o ON a.UploadedByID = o.OperatorID
+            WHERE t.EntityID = @EntityID
         `;
 
         if (ticketId) {
-            query += ' WHERE a.TicketID = @TicketID';
+            query += ' AND a.TicketID = @TicketID';
             request.input('TicketID', sql.Int, ticketId);
         }
         query += ' ORDER BY a.UploadedDate DESC';
@@ -45,7 +49,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST /api/ticket-attachments (multipart: file + ticketId + uploadedById)
-router.post('/', uploadTicketAttachment.single('file'), async (req, res) => {
+router.post('/', requireWriteAccess, uploadTicketAttachment.single('file'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file provided' });
@@ -83,7 +87,7 @@ router.post('/', uploadTicketAttachment.single('file'), async (req, res) => {
 });
 
 // DELETE /api/ticket-attachments/:id
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireWriteAccess, async (req, res) => {
     try {
         const pool = await poolPromise;
 

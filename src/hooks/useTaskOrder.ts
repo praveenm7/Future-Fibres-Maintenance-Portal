@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { toast } from 'sonner';
+import { useEntityId } from '@/contexts/EntityContext';
 
 export function useSaveTaskOrder() {
     const queryClient = useQueryClient();
+    const entityId = useEntityId();
 
     return useMutation({
         mutationFn: ({ date, overrides }: { date: string; overrides: { actionId: number; sortPosition: number }[] }) =>
@@ -21,6 +23,7 @@ export function useSaveTaskOrder() {
 
 export function useResetTaskOrder() {
     const queryClient = useQueryClient();
+    const entityId = useEntityId();
 
     return useMutation({
         mutationFn: (date: string) => api.delete(`/schedule/task-order?date=${date}`),

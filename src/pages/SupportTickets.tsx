@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
+import { useEntity } from '@/contexts/EntityContext';
 import { useSupportTickets } from '@/hooks/useSupportTickets';
 import { useOperators } from '@/hooks/useOperators';
 import type {
@@ -159,6 +160,7 @@ function formatFileSize(bytes: number): string {
 // ---------------------------------------------------------------------------
 
 export default function SupportTickets() {
+  const { isReadOnly } = useEntity();
   // --- Hooks (factory pattern) ---
   const {
     useGetTickets,
@@ -654,6 +656,7 @@ export default function SupportTickets() {
                   ticket={selectedTicket}
                   operators={operators}
                   isPending={updateStatus.isPending}
+                  isReadOnly={isReadOnly}
                   assignOperatorId={assignOperatorId}
                   setAssignOperatorId={setAssignOperatorId}
                   assignDueDate={assignDueDate}
@@ -726,7 +729,7 @@ export default function SupportTickets() {
                       <Button
                         size="sm"
                         onClick={handleAddComment}
-                        disabled={!commentText.trim() || !commentOperatorId || addComment.isPending}
+                        disabled={isReadOnly || !commentText.trim() || !commentOperatorId || addComment.isPending}
                         className="self-end shrink-0"
                       >
                         {addComment.isPending ? (
@@ -783,7 +786,7 @@ export default function SupportTickets() {
                       variant="outline"
                       size="sm"
                       onClick={() => fileInputRef.current?.click()}
-                      disabled={uploadAttachment.isPending}
+                      disabled={isReadOnly || uploadAttachment.isPending}
                     >
                       {uploadAttachment.isPending ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -801,7 +804,7 @@ export default function SupportTickets() {
                 <section className="space-y-3 pb-4">
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10">
+                      <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10" disabled={isReadOnly}>
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete Ticket
                       </Button>
@@ -845,6 +848,7 @@ interface WorkflowActionsProps {
   ticket: SupportTicket;
   operators: Array<{ id: string; operatorName: string }>;
   isPending: boolean;
+  isReadOnly: boolean;
   assignOperatorId: string;
   setAssignOperatorId: (v: string) => void;
   assignDueDate: string;
@@ -864,6 +868,7 @@ function WorkflowActions({
   ticket,
   operators,
   isPending,
+  isReadOnly,
   assignOperatorId,
   setAssignOperatorId,
   assignDueDate,
@@ -879,6 +884,17 @@ function WorkflowActions({
   onCancel,
 }: WorkflowActionsProps) {
   const status = ticket.status;
+
+  if (isReadOnly) {
+    return (
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold text-foreground">Actions</h3>
+        <p className="text-sm text-muted-foreground">
+          Read-only mode. Status changes are disabled for non-home entities.
+        </p>
+      </section>
+    );
+  }
 
   if (status === 'CLOSED' || status === 'CANCELLED') {
     return (

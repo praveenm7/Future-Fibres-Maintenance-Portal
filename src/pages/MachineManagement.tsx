@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import { useEntity } from '@/contexts/EntityContext';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { ActionButton } from '@/components/ui/ActionButton';
@@ -47,6 +48,7 @@ const defaultValues: MachineFormValues = {
 
 export default function MachineManagement() {
   const navigate = useNavigate();
+  const { isReadOnly } = useEntity();
   const {
     useGetMachines,
     useCreateMachine,
@@ -297,13 +299,13 @@ export default function MachineManagement() {
       {/* Mode Tabs */}
       <Tabs value={mode} onValueChange={(v) => handleSetMode(v as Mode)} className="mb-6">
         <TabsList>
-          <TabsTrigger value="new" className="gap-1.5">
+          <TabsTrigger value="new" className="gap-1.5" disabled={isReadOnly}>
             <Plus className="h-4 w-4" /> New
           </TabsTrigger>
           <TabsTrigger value="modify" className="gap-1.5">
             <Save className="h-4 w-4" /> Modify
           </TabsTrigger>
-          <TabsTrigger value="delete" className="gap-1.5">
+          <TabsTrigger value="delete" className="gap-1.5" disabled={isReadOnly}>
             <Trash className="h-4 w-4" /> Delete
           </TabsTrigger>
         </TabsList>
@@ -408,7 +410,7 @@ export default function MachineManagement() {
                 type="button"
                 className="justify-center gap-2"
                 onClick={() => setPhotoDialogOpen(true)}
-                disabled={mode === 'delete'}
+                disabled={mode === 'delete' || isReadOnly}
               >
                 <Upload className="h-4 w-4" />
                 Upload Photo
@@ -418,7 +420,7 @@ export default function MachineManagement() {
                 type="button"
                 className="justify-center gap-2"
                 onClick={() => setPrintDialogOpen(true)}
-                disabled={mode === 'delete'}
+                disabled={mode === 'delete' || isReadOnly}
               >
                 <Printer className="h-4 w-4" />
                 Print Label
@@ -428,7 +430,7 @@ export default function MachineManagement() {
                 type="button"
                 className="justify-center gap-2"
                 onClick={() => { setDocCategory('DOCUMENT'); setDocDialogOpen(true); }}
-                disabled={mode === 'delete'}
+                disabled={mode === 'delete' || isReadOnly}
               >
                 <FileText className="h-4 w-4" />
                 Upload Doc
@@ -438,7 +440,7 @@ export default function MachineManagement() {
                 type="button"
                 className="justify-center gap-2"
                 onClick={() => { setDocCategory('MANUAL'); setDocDialogOpen(true); }}
-                disabled={mode === 'delete'}
+                disabled={mode === 'delete' || isReadOnly}
               >
                 <BookOpen className="h-4 w-4" />
                 Upload Manual
@@ -701,7 +703,7 @@ export default function MachineManagement() {
                   className="flex-1"
                   type="button"
                   onClick={handleDeleteAction}
-                  disabled={!selectedMachineId || deleteMachineMutation.isPending}
+                  disabled={isReadOnly || !selectedMachineId || deleteMachineMutation.isPending}
                 >
                   {deleteMachineMutation.isPending ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -715,7 +717,7 @@ export default function MachineManagement() {
                   variant="green"
                   className="flex-1"
                   type="submit"
-                  disabled={createMachineMutation.isPending || updateMachineMutation.isPending}
+                  disabled={isReadOnly || createMachineMutation.isPending || updateMachineMutation.isPending}
                 >
                   {createMachineMutation.isPending || updateMachineMutation.isPending ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { sql, poolPromise } = require('../config/database');
 const { validate, schemas } = require('../middleware/validate');
+const requireWriteAccess = require('../middleware/writeProtection');
 
 // Helper to map maintenance action database record to frontend model
 const mapMaintenanceAction = (record) => ({
@@ -32,10 +33,12 @@ router.get('/', async (req, res) => {
         if (machineId) {
             result = await pool.request()
                 .input('MachineID', sql.Int, machineId)
+                .input('EntityID', sql.Int, req.entityId)
                 .execute('sp_GetMaintenanceActionsByMachine');
         } else {
             result = await pool.request()
-                .query('SELECT * FROM MaintenanceActions ORDER BY MachineID, ActionID');
+                .input('EntityID', sql.Int, req.entityId)
+                .query('SELECT ma.* FROM MaintenanceActions ma INNER JOIN Machines m ON ma.MachineID = m.MachineID WHERE m.EntityID = @EntityID ORDER BY ma.MachineID, ma.ActionID');
         }
 
         res.json(result.recordset.map(mapMaintenanceAction));
@@ -51,7 +54,8 @@ router.get('/:id', async (req, res) => {
         const pool = await poolPromise;
         const result = await pool.request()
             .input('ActionID', sql.Int, req.params.id)
-            .query('SELECT * FROM MaintenanceActions WHERE ActionID = @ActionID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('SELECT ma.* FROM MaintenanceActions ma INNER JOIN Machines m ON ma.MachineID = m.MachineID WHERE ma.ActionID = @ActionID AND m.EntityID = @EntityID');
 
         if (result.recordset.length === 0) {
             return res.status(404).json({ error: 'Maintenance action not found' });
@@ -65,7 +69,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST create new maintenance action
-router.post('/', validate(schemas.createMaintenanceAction), async (req, res) => {
+router.post('/', requireWriteAccess, validate(schemas.createMaintenanceAction), async (req, res) => {
     try {
         const {
             machineId, action, periodicity, intervalMultiplier,
@@ -87,16 +91,17 @@ router.post('/', validate(schemas.createMaintenanceAction), async (req, res) => 
             .input('MaintenanceInCharge', sql.Bit, maintenanceInCharge)
             .input('Status', sql.NVarChar(50), status)
             .input('Month', sql.NVarChar(50), month)
+            .input('EntityID', sql.Int, req.entityId)
             .query(`
         INSERT INTO MaintenanceActions (
           MachineID, Action, Periodicity, IntervalMultiplier,
           DayOfWeek, WeekOfMonth, QuarterMonth, DayOfMonth,
-          TimeNeeded, MaintenanceInCharge, Status, Month
+          TimeNeeded, MaintenanceInCharge, Status, Month, EntityID
         )
         VALUES (
           @MachineID, @Action, @Periodicity, @IntervalMultiplier,
           @DayOfWeek, @WeekOfMonth, @QuarterMonth, @DayOfMonth,
-          @TimeNeeded, @MaintenanceInCharge, @Status, @Month
+          @TimeNeeded, @MaintenanceInCharge, @Status, @Month, @EntityID
         );
         SELECT SCOPE_IDENTITY() AS ActionID;
       `);
@@ -105,7 +110,8 @@ router.post('/', validate(schemas.createMaintenanceAction), async (req, res) => 
 
         const newAction = await pool.request()
             .input('ActionID', sql.Int, newActionId)
-            .query('SELECT * FROM MaintenanceActions WHERE ActionID = @ActionID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('SELECT * FROM MaintenanceActions WHERE ActionID = @ActionID AND EntityID = @EntityID');
 
         res.status(201).json(mapMaintenanceAction(newAction.recordset[0]));
     } catch (err) {
@@ -115,7 +121,7 @@ router.post('/', validate(schemas.createMaintenanceAction), async (req, res) => 
 });
 
 // PUT update maintenance action
-router.put('/:id', validate(schemas.updateMaintenanceAction), async (req, res) => {
+router.put('/:id', requireWriteAccess, validate(schemas.updateMaintenanceAction), async (req, res) => {
     try {
         const {
             machineId, action, periodicity, intervalMultiplier,
@@ -138,6 +144,7 @@ router.put('/:id', validate(schemas.updateMaintenanceAction), async (req, res) =
             .input('MaintenanceInCharge', sql.Bit, maintenanceInCharge)
             .input('Status', sql.NVarChar(50), status)
             .input('Month', sql.NVarChar(50), month)
+            .input('EntityID', sql.Int, req.entityId)
             .query(`
         UPDATE MaintenanceActions SET
           MachineID = @MachineID,
@@ -152,12 +159,13 @@ router.put('/:id', validate(schemas.updateMaintenanceAction), async (req, res) =
           MaintenanceInCharge = @MaintenanceInCharge,
           Status = @Status,
           Month = @Month
-        WHERE ActionID = @ActionID
+        WHERE ActionID = @ActionID AND EntityID = @EntityID
       `);
 
         const updated = await pool.request()
             .input('ActionID', sql.Int, req.params.id)
-            .query('SELECT * FROM MaintenanceActions WHERE ActionID = @ActionID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('SELECT * FROM MaintenanceActions WHERE ActionID = @ActionID AND EntityID = @EntityID');
 
         res.json(mapMaintenanceAction(updated.recordset[0]));
     } catch (err) {
@@ -167,12 +175,13 @@ router.put('/:id', validate(schemas.updateMaintenanceAction), async (req, res) =
 });
 
 // DELETE maintenance action
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireWriteAccess, async (req, res) => {
     try {
         const pool = await poolPromise;
         await pool.request()
             .input('ActionID', sql.Int, req.params.id)
-            .query('DELETE FROM MaintenanceActions WHERE ActionID = @ActionID');
+            .input('EntityID', sql.Int, req.entityId)
+            .query('DELETE FROM MaintenanceActions WHERE ActionID = @ActionID AND EntityID = @EntityID');
 
         res.json({ message: 'Maintenance action deleted successfully' });
     } catch (err) {
